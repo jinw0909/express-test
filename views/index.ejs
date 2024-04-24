@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortune Telling ChatDoge</title>
+    <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+<body>
+<div class="chat-container">
+    <div class="chat-bubble user-bubble">
+        Hello! You may check your fortune.
+    </div>
+    <div class="chat-bubble bot-bubble" id="fortuneResponse">
+        <!-- The fortune response will appear here -->
+    </div>
+    <input type="text" class="chat-input" id="messageInput" placeholder="enter your message...">
+    <button class="send-button" onClick="sendMessage()">Send Request</button>
+</div>
+<script src="/javascripts/script.js"></script>
+</body>
+</html>
+
