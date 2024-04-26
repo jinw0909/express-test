@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortune Telling ChatDoge</title>
+    <style>
+        .question { margin-top: 2rem;}
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="question">
+        <h4>Tell me the weather of San Francisco, Tokyo, and Paris</h4>
+        <button class="send-btn">Send Request</button>
+        <div class="result-div"></div>
+        </div>
+    </div>
+    <div class="question">
+        <h4>Tell me the bitcoin price analysis of the last 7 days</h4>
+        <button class="send-btn-coin">Send Request</button>
+        <div class="result-div-coin"></div>
+        </div>
+    </div>
+<div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    document.querySelector('.send-btn').addEventListener('click', function() {
+       axios.get('/function/data')
+           .then((result) => {
+               console.log(result);
+               document.querySelector('.result-div').textContent =
+                   result.data[0].message['content'];
+           })
+           .catch((err) => {
+               console.error(err);
+           })
+    });
+    document.querySelector('.send-btn-coin').addEventListener('click', function() {
+       axios.get('/function/coin')
+           .then(result => {
+               console.log(result);
+           })
+           .catch(err => {
+               console.error(err);
+           })
+    });
+</script>
+</body>
+</html>
+
