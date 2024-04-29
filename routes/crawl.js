@@ -41,7 +41,7 @@ async function fetchContent(link) {
         // console.log('Text Content: ', textContent);
         // console.log('Text Content inside p:', pTextContent);
         // // console.log(content);
-        const textWithoutImg = textContent.replace(/\<img.*?\>/g, '');
+        const textWithoutImg = textContent.replace(/<img.*?>|<\/img>|<iframe.*?>|<\/iframe>/g, '');
         const index = textWithoutImg.indexOf('속보는 블록미디어 텔레그램으로');
         const finalContent = index !== -1 ? textWithoutImg.slice(0, index) : textWithoutImg;
         return finalContent;
@@ -86,8 +86,39 @@ router.get('/', async function(req, res, next) {
     } catch (error) {
         console.error(error);
     }
-
-
 });
+
+router.get('/articles', async function(req, res, next) {
+    try {
+        const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
+        const latestNews = [];
+        for (let i = 0; i < 5 && i < feed.items.length - 2; i++) {
+            const item = feed.items[i];
+            //console.log("item: ", item);
+            const title = item.title;
+            const link = item.link;
+            // const imageUrl = item.enclosure && item.enclosure.url;
+            const imageUrl = item.imageUrl['$'].url;
+            const date = item.isoDate;
+            const content = await fetchContent(link);
+            const index = i;
+            const publisher = 'blockmedia';
+
+            latestNews.push({
+                index,
+                title,
+                content,
+                imageUrl,
+                date,
+                publisher
+            });
+        }
+
+        res.send(latestNews);
+    } catch (error) {
+        console.error(error);
+    }
+});
+
 
 module.exports = router;

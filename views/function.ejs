@@ -17,15 +17,45 @@
         </div>
     </div>
     <div class="question">
-        <h4>Tell me the bitcoin price analysis of the last 7 days</h4>
+        <h4>Tell me the bitcoin price analysis of the last 7 days and the past 24 hours</h4>
         <button class="send-btn-coin">Send Request</button>
+        <div class="currentTime"></div>
         <div class="result-div-coin"></div>
         </div>
     </div>
+    <div class="question">
+        <h4>Give me the summary of the latest 5 articles from Blockmedia</h4>
+        <button class="send-btn-article">Send Request</button>
+        <div class="currentTime"></div>
+        <div class="result-div-article"></div>
+    </div>
+</div>
 <div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
+
+    function pad(value) {
+        return String(value).padStart(2, '0');
+    }
+    function formatDateTime(date) {
+        const year = date.getFullYear();
+        const month = pad(date.getMonth() + 1); // Months are zero-indexed
+        const day = pad(date.getDate());
+        const hours = pad(date.getHours());
+        const minutes = pad(date.getMinutes());
+        const seconds = pad(date.getSeconds());
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+    function updateTime() {
+        const currentTimeSpan = document.querySelectorAll('.currentTime');
+        const now = new Date();
+        currentTimeSpan.forEach(div => {
+            div.textContent = 'Current time : ' + formatDateTime(now);
+        })
+    }
+
     document.querySelector('.send-btn').addEventListener('click', function() {
        axios.get('/function/data')
            .then((result) => {
@@ -38,14 +68,30 @@
            })
     });
     document.querySelector('.send-btn-coin').addEventListener('click', function() {
+        updateTime();
        axios.get('/function/coin')
            .then(result => {
                console.log(result);
+               document.querySelector('.result-div-coin').textContent =
+                   result.data[0].message['content'];
            })
            .catch(err => {
                console.error(err);
            })
     });
+
+    document.querySelector('.send-btn-article').addEventListener('click', function() {
+        updateTime();
+        axios.get('/function/article')
+            .then(result => {
+                console.log(result);
+                document.querySelector('.result-div-article').textContent =
+                    result.data[0].message['content'];
+            })
+            .catch(err => {
+                console.error(err);
+            })
+    })
 </script>
 </body>
 </html>
