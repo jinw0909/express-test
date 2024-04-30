@@ -4,6 +4,9 @@ var cors = require('cors');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+const db = require('./database');
+const sequelize = require('./sequelize');
+const Coinness = require('./coinness');
 
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
@@ -12,8 +15,18 @@ var usersRouter = require('./routes/users');
 var fortuneTellRouter = require('./routes/fortuneTell');
 var crawlRouter = require('./routes/crawl');
 var functionRouter = require('./routes/function');
+var puppetRouter = require('./routes/puppet');
 
 var app = express();
+
+(async () => {
+  try {
+    await sequelize.sync();
+    console.log('Database synchronized successfully');
+  } catch (error) {
+    console.error('Error synchronizing database:', error);
+  }
+})();
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -32,7 +45,16 @@ app.use('/users', usersRouter);
 app.use('/fortuneTell', fortuneTellRouter);
 app.use('/crawl', crawlRouter);
 app.use('/function', functionRouter);
+app.use('/puppet', puppetRouter);
 
+app.get('/createdb', (req, res) => {
+  let sql = 'CREATE DATABASE testdb';
+  db.query(sql, (err, result) => {
+    if (err) throw err;
+    res.send('Database created');
+    console.log(result);
+  });
+})
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));

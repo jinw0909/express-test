@@ -2,22 +2,8 @@ var express = require('express');
 var router = express.Router();
 const axios = require('axios');
 const cheerio = require('cheerio');
-const Parser = require('rss-parser')
+const Parser = require('rss-parser');
 /* GET home page. */
-
-function extractTextFromNode($, node) {
-    let text = '';
-    if (node.type === 'tag' && node.name === 'p') {
-        // Paragraph element
-        text += $(node).text().trim() + ' ';
-    } else if (node.type === 'tag') {
-        // Element node (HTML element)
-        $(node).contents().each((index, childNode) => {
-            text += extractTextFromNode($, childNode);
-        });
-    }
-    return text;
-}
 
 async function fetchContent(link) {
     try {
@@ -36,7 +22,7 @@ async function fetchContent(link) {
         //     })
         // }
         const pavoContents = $('#pavo_contents');
-        const textContent = pavoContents.text().trim();
+        const textContent = pavoContents.text().trim().replace(/\n/g,'');
         // const pTextContent = pavoContents.find('p').map((index, element) => $(element).text()).get();
         // console.log('Text Content: ', textContent);
         // console.log('Text Content inside p:', pTextContent);
@@ -51,6 +37,25 @@ async function fetchContent(link) {
         return '';
     }
 }
+
+async function fetchArticle(link) {
+    try {
+        const response = await axios.get(link,{
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+            }
+        });
+        const $ = cheerio.load(response.data);
+        const article = $('article');
+        const textContent = article.text().trim();
+        console.log("textContent: ", textContent);
+       return textContent;
+    } catch(err) {
+        console.error(err);
+        return '';
+    }
+}
+
 const parser = new Parser({
     customFields: {
         item: [
@@ -62,7 +67,7 @@ router.get('/', async function(req, res, next) {
     try {
       const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
       const latestNews = [];
-      for (let i = 0; i < 5 && i < feed.items.length - 2; i++) {
+      for (let i = 0; i < 5 && i < feed.items.length; i++) {
           const item = feed.items[i];
           //console.log("item: ", item);
           const title = item.title;
@@ -86,6 +91,47 @@ router.get('/', async function(req, res, next) {
     } catch (error) {
         console.error(error);
     }
+});
+
+router.get('/coinness', async function(req, res) {
+
+    try {
+        const feed = await parser.parseURL('https://cointelegraph.com/rss/tag/bitcoin');
+        const latestNews = [];
+        console.log(feed);
+        for (let i = 0; i < 5 && i < feed.items.length; i++) {
+            const item = feed.items[i];
+            //console.log("item: ", item);
+            const title = item.title;
+            const link = item.link;
+            // const imageUrl = item.enclosure && item.enclosure.url;
+            const imageUrl = item.enclosure && item.enclosure.url
+            const date = item.isoDate;
+            const content = await fetchArticle(link);
+
+            latestNews.push({
+                title,
+                content,
+                imageUrl,
+                date,
+                link
+            });
+        }
+        res.send(latestNews);
+        // res.render('crawl', {latestNews: latestNews});
+    } catch (error) {
+        console.error(error);
+    }
+    // try {
+    //     const response = await axios.get('https://coinness.com/');
+    //     const $ = cheerio.load(response.data);
+    //
+    //     const textContent = $.text().trim();
+    //     // console.log(textContent);
+    //     res.send(textContent);
+    // } catch (err) {
+    //     console.error(err);
+    // }
 });
 
 router.get('/articles', async function(req, res, next) {
@@ -113,7 +159,7 @@ router.get('/articles', async function(req, res, next) {
                 publisher
             });
         }
-
+        console.log("latest news: ", latestNews);
         res.send(latestNews);
     } catch (error) {
         console.error(error);

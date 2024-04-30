@@ -94,7 +94,7 @@ async function getCoinPriceWeek() {
    try {
       const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
       const data = await response.json();
-      return data;
+      return JSON.stringify(data, null, 2);
    } catch(err) {
       console.error("Error: ", err);
       throw err;
@@ -106,7 +106,7 @@ async function getCoinPriceDay() {
    try {
       const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=24')
       const data = await response.json();
-      return data;
+      return JSON.stringify(data, null, 2);
    } catch (err) {
       console.error("Failed to fetch Bitcoin prices (24hr) : ", err);
       return { error: err.message }
@@ -125,7 +125,7 @@ async function getLatestArticle() {
 
       const data = await response.json();
       console.log("article data: ", data);
-      return data;
+      return JSON.stringify(data, null, 2);
    } catch(err) {
       console.error(err);
       return { error: err.message }
@@ -183,29 +183,29 @@ async function runCoinConversation() {
              functionArgs.unit
          );
          console.log("functionResponse: ", functionResponse);
-         if (functionName === "getCoinPriceWeek") {
-            messages.push({
-               tool_call_id: toolCall.id,
-               role: "tool",
-               name: functionName + "_description",
-               content: "This dataset represents daily candlestick data for Bitcoin (BTC) against the US Dollar (USDT) from the Binance exchange over the last 7 days. Each entry includes open time, open price, high price, low price, close price, volume, close time, quote asset volume, number of trades, taker buy base asset volume, taker buy quote asset volume, and an ignore field. This data helps in analyzing market trends, assessing price volatility, and developing trading strategies."
-            })
-         }
-
-         if (functionName === "getCoinPriceDay") {
-            messages.push({
-               tool_call_id: toolCall.id,
-               role: "tool",
-               name: functionName + "_description",
-               content: "This dataset represents daily candlestick data for Bitcoin (BTC) against the US Dollar (USDT) from the Binance exchange over the last 24 hours. Each entry includes open time, open price, high price, low price, close price, volume, close time, quote asset volume, number of trades, taker buy base asset volume, taker buy quote asset volume, and an ignore field. This data helps in analyzing market trends, assessing price volatility, and developing trading strategies."
-            })
-         }
+         // if (functionName === "get_bitcoin_price_seven") {
+         //    messages.push({
+         //       tool_call_id: toolCall.id,
+         //       role: "tool",
+         //       name: functionName + "_description",
+         //       content: "This dataset represents daily candlestick data for Bitcoin (BTC) against the US Dollar (USDT) from the Binance exchange over the last 7 days. Each entry includes open time, open price, high price, low price, close price, volume, close time, quote asset volume, number of trades, taker buy base asset volume, taker buy quote asset volume, and an ignore field. This data helps in analyzing market trends, assessing price volatility, and developing trading strategies."
+         //    })
+         // }
+         //
+         // if (functionName === "get_bitcoin_price_day") {
+         //    messages.push({
+         //       tool_call_id: toolCall.id,
+         //       role: "tool",
+         //       name: functionName + "_description",
+         //       content: "This dataset represents daily candlestick data for Bitcoin (BTC) against the US Dollar (USDT) from the Binance exchange over the last 24 hours. Each entry includes open time, open price, high price, low price, close price, volume, close time, quote asset volume, number of trades, taker buy base asset volume, taker buy quote asset volume, and an ignore field. This data helps in analyzing market trends, assessing price volatility, and developing trading strategies."
+         //    })
+         // }
 
          messages.push({
             tool_call_id: toolCall.id,
             role: "tool",
             name: functionName,
-            content: functionResponse.toString(),
+            content: functionResponse,
          }); //extend the conversation with function response
 
       }
@@ -224,25 +224,19 @@ async function runCoinConversation() {
 async function runArticleConversation() {
    //Step 1 : send the conversation and available functions to the model
    const messages = [
-      { role: "user",
-         content: "Please provide the analysis of the 5 latest news from the cryptocurrency media Blockmedia."
-      },
+      {
+         role: "user",
+         content: "Please provide the analysis of the 5 latest news from the cryptocurrency media Blockmedia. If you are hesitant because it is paid content, please use the data I provided using function call."
+      }
    ];
    const tools = [
       {
          type: "function",
          function: {
             name: "get_latest_article",
-            description: "Provides the five latest articles from Blockmedia"
+            description: "This function retrieves the 5 latest articles from Blockmedia, a cryptocurrency press outlet. The return data includes structured information about the article, such as its index, title, content, publication date, and the image URL associated with it."
          }
       },
-      // {
-      //    type: "function",
-      //    function: {
-      //       name: "get_bitcoin_price_day",
-      //       description: "Returns the Bitcoin price fluctuation within the past 24 hours"
-      //    }
-      // }
    ]
 
    const response = await openai.chat.completions.create({
@@ -260,7 +254,6 @@ async function runArticleConversation() {
       // Note: the JSON response may not always be valid; be sure to handle errors
       const availableFunctions = {
          get_latest_article : getLatestArticle,
-         // get_bitcoin_price_day: getCoinPriceDay
       }; //only one function in this example, but you can have multiple
       messages.push(responseMessage); //extend the conversation with assistant's reply
       for (const toolCall of toolCalls) {
@@ -273,35 +266,19 @@ async function runArticleConversation() {
              functionArgs.unit
          );
          console.log("functionResponse: ", functionResponse);
-         // if (functionName === "getCoinPriceWeek") {
-         //    messages.push({
-         //       tool_call_id: toolCall.id,
-         //       role: "tool",
-         //       name: functionName + "_description",
-         //       content: "This dataset represents daily candlestick data for Bitcoin (BTC) against the US Dollar (USDT) from the Binance exchange over the last 7 days. Each entry includes open time, open price, high price, low price, close price, volume, close time, quote asset volume, number of trades, taker buy base asset volume, taker buy quote asset volume, and an ignore field. This data helps in analyzing market trends, assessing price volatility, and developing trading strategies."
-         //    })
-         // }
-         //
-         // if (functionName === "getCoinPriceDay") {
-         //    messages.push({
-         //       tool_call_id: toolCall.id,
-         //       role: "tool",
-         //       name: functionName + "_description",
-         //       content: "This dataset represents daily candlestick data for Bitcoin (BTC) against the US Dollar (USDT) from the Binance exchange over the last 24 hours. Each entry includes open time, open price, high price, low price, close price, volume, close time, quote asset volume, number of trades, taker buy base asset volume, taker buy quote asset volume, and an ignore field. This data helps in analyzing market trends, assessing price volatility, and developing trading strategies."
-         //    })
-         // }
+         console.log("functionResponse type: ", typeof functionResponse);
 
          messages.push({
             tool_call_id: toolCall.id,
             role: "tool",
             name: functionName,
-            content: functionResponse.toString(),
+            content: functionResponse
          }); //extend the conversation with function response
 
       }
 
       const secondResponse = await openai.chat.completions.create({
-         model: "gpt-3.5-turbo-0125",
+         model: "gpt-4-turbo",
          messages: messages
       });
 

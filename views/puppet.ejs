@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortune Telling ChatDoge</title>
+</head>
+<body>
+<div class="chat-container">
+    <button id="startBtn">Start Crawling</button>
+    <div class="news-container">
+        <% news.forEach((news, index) => { %>
+            <div class="news-item">
+                <h4><%= news.title %></h4>
+                <span><%= news.id %></span>
+                <span><%= news.time %></span>
+                <p><%= news.date %></p>
+                <p><%= news.content %></p>
+            </div>
+        <% }); %>
+    </div>
+</div>
+<script>
+</script>
+</body>
+</html>

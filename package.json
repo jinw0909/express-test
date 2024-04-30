@@ -17,8 +17,12 @@
     "http-errors": "~1.6.3",
     "jsdom": "^24.0.0",
     "morgan": "~1.9.1",
+    "mysql": "^2.18.1",
+    "mysql2": "^3.9.7",
     "openai": "^4.38.3",
     "pug": "2.0.0-beta11",
-    "rss-parser": "^3.13.0"
+    "puppeteer": "^22.7.1",
+    "rss-parser": "^3.13.0",
+    "sequelize": "^6.37.3"
   }
 }
