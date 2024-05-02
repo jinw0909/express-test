@@ -16,6 +16,7 @@ var fortuneTellRouter = require('./routes/fortuneTell');
 var crawlRouter = require('./routes/crawl');
 var functionRouter = require('./routes/function');
 var puppetRouter = require('./routes/puppet');
+var voiceRouter = require('./routes/voice');
 
 var app = express();
 
@@ -46,7 +47,7 @@ app.use('/fortuneTell', fortuneTellRouter);
 app.use('/crawl', crawlRouter);
 app.use('/function', functionRouter);
 app.use('/puppet', puppetRouter);
-
+app.use('/voice', voiceRouter);
 app.get('/createdb', (req, res) => {
   let sql = 'CREATE DATABASE testdb';
   db.query(sql, (err, result) => {

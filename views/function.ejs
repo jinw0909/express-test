@@ -29,6 +29,12 @@
         <div class="currentTime"></div>
         <div class="result-div-article"></div>
     </div>
+    <div class="question">
+        <h4>Give me the titles of the 5 most relevant articles that explains the cryptocurrency market movement within the last 24 hours from Blockmedia</h4>
+        <button class="send-btn-relevant">Send Request</button>
+        <div class="currentTime"></div>
+        <div class="relevant-div-article"></div>
+    </div>
 </div>
 <div>
 </div>
@@ -88,6 +94,19 @@
             .then(result => {
                 console.log(result);
                 document.querySelector('.result-div-article').textContent =
+                    result.data[0].message['content'];
+            })
+            .catch(err => {
+                console.error(err);
+            })
+    });
+
+    document.querySelector('.send-btn-relevant').addEventListener('click', function() {
+        updateTime();
+        axios.get('/function/relevant')
+            .then(result => {
+                console.log(result);
+                document.querySelector('.relevant-div-article').textContent =
                     result.data[0].message['content'];
             })
             .catch(err => {

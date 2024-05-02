@@ -8,6 +8,9 @@ const openai = new OpenAi({
    apiKey : process.env.API_KEY
 });
 
+const Blockmedia = require('../blockmedia');
+const {Sequelize} = require("sequelize");
+
 function getCurrentWeather(location, unit="fhrenheit") {
    if (location.toLowerCase().includes("tokyo")) {
       return JSON.stringify({location: "Tokyo", temperature: "10", unit: "celsius"});
@@ -90,47 +93,7 @@ async function runConversation() {
 
 }
 
-async function getCoinPriceWeek() {
-   try {
-      const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
-      const data = await response.json();
-      return JSON.stringify(data, null, 2);
-   } catch(err) {
-      console.error("Error: ", err);
-      throw err;
-   }
 
-}
-
-async function getCoinPriceDay() {
-   try {
-      const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=24')
-      const data = await response.json();
-      return JSON.stringify(data, null, 2);
-   } catch (err) {
-      console.error("Failed to fetch Bitcoin prices (24hr) : ", err);
-      return { error: err.message }
-   }
-}
-
-async function getLatestArticle() {
-   try {
-      let baseURL = process.env.API_BASE_URL
-      const response = await fetch(`${baseURL}/crawl/articles`);
-
-      // Check if the response was successful
-      if (!response.ok) {
-         throw new Error('Network response was not ok: ' + response.statusText);
-      }
-
-      const data = await response.json();
-      console.log("article data: ", data);
-      return JSON.stringify(data, null, 2);
-   } catch(err) {
-      console.error(err);
-      return { error: err.message }
-   }
-}
 
 async function runCoinConversation() {
    //Step 1 : send the conversation and available functions to the model
@@ -183,23 +146,6 @@ async function runCoinConversation() {
              functionArgs.unit
          );
          console.log("functionResponse: ", functionResponse);
-         // if (functionName === "get_bitcoin_price_seven") {
-         //    messages.push({
-         //       tool_call_id: toolCall.id,
-         //       role: "tool",
-         //       name: functionName + "_description",
-         //       content: "This dataset represents daily candlestick data for Bitcoin (BTC) against the US Dollar (USDT) from the Binance exchange over the last 7 days. Each entry includes open time, open price, high price, low price, close price, volume, close time, quote asset volume, number of trades, taker buy base asset volume, taker buy quote asset volume, and an ignore field. This data helps in analyzing market trends, assessing price volatility, and developing trading strategies."
-         //    })
-         // }
-         //
-         // if (functionName === "get_bitcoin_price_day") {
-         //    messages.push({
-         //       tool_call_id: toolCall.id,
-         //       role: "tool",
-         //       name: functionName + "_description",
-         //       content: "This dataset represents daily candlestick data for Bitcoin (BTC) against the US Dollar (USDT) from the Binance exchange over the last 24 hours. Each entry includes open time, open price, high price, low price, close price, volume, close time, quote asset volume, number of trades, taker buy base asset volume, taker buy quote asset volume, and an ignore field. This data helps in analyzing market trends, assessing price volatility, and developing trading strategies."
-         //    })
-         // }
 
          messages.push({
             tool_call_id: toolCall.id,
@@ -219,6 +165,29 @@ async function runCoinConversation() {
       return secondResponse.choices;
    }
 
+}
+
+async function getCoinPriceWeek() {
+   try {
+      const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
+      const data = await response.json();
+      return JSON.stringify(data, null, 2);
+   } catch(err) {
+      console.error("Error: ", err);
+      throw err;
+   }
+
+}
+
+async function getCoinPriceDay() {
+   try {
+      const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=24')
+      const data = await response.json();
+      return JSON.stringify(data, null, 2);
+   } catch (err) {
+      console.error("Failed to fetch Bitcoin prices (24hr) : ", err);
+      return { error: err.message }
+   }
 }
 
 async function runArticleConversation() {
@@ -265,8 +234,8 @@ async function runArticleConversation() {
              functionArgs.location,
              functionArgs.unit
          );
-         console.log("functionResponse: ", functionResponse);
-         console.log("functionResponse type: ", typeof functionResponse);
+         // console.log("functionResponse: ", functionResponse);
+         // console.log("functionResponse type: ", typeof functionResponse);
 
          messages.push({
             tool_call_id: toolCall.id,
@@ -288,7 +257,126 @@ async function runArticleConversation() {
 
 }
 
+//get latest 5 articles from blockmedia and save it to the db
+//also return the data for further processing (for test only)
+async function getLatestArticle() {
+   try {
+      let baseURL = process.env.API_BASE_URL
+      const response = await fetch(`${baseURL}/crawl/articles`);
+
+      // Check if the response was successful
+      if (!response.ok) {
+         throw new Error('Network response was not ok: ' + response.statusText);
+      }
+
+      const data = await response.json();
+      console.log("article data: ", data);
+      return JSON.stringify(data, null, 2);
+   } catch(err) {
+      console.error(err);
+      return { error: err.message }
+   }
+}
+
+async function runRelevantConversation() {
+   //Step 1 : send the conversation and available functions to the model
+   const messages = [
+      { role: "user", content: "From the articles of Blockmedia within the past 24 hours, give me five articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency market trend"},
+   ];
+   const tools = [
+      {
+         type: "function",
+         function: {
+            name: "get_blockmedia_articles_24",
+            description: "returns the list of all the articles published by Blockmedia within 24 hours in a JSON format",
+            // parameters: {
+            //    type: "object",
+            //    properties: {
+            //       location: {
+            //          type: "string",
+            //          description: "The city and state, e.g. San Francisco, CA",
+            //       },
+            //       unit: {type: "string", enum: ["celsius", "fahrenheit"]}
+            //    },
+            //    required: ["location"]
+            // }
+         }
+      }
+   ]
+
+   const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: messages,
+      tools: tools,
+      tool_choice : "auto", //auto is default, but we'll be explicit
+   });
+   const responseMessage = response.choices[0].message;
+
+   // Step 2: check if the model wanted to call a function
+   const toolCalls = responseMessage.tool_calls;
+   if (responseMessage.tool_calls) {
+      // Step3. call the function
+      // Note: the JSON response may not always be valid; be sure to handle errors
+      const availableFunctions = {
+         get_blockmedia_articles_24 : get24articles
+      }; //only one function in this example, but you can have multiple
+      messages.push(responseMessage); //extend the conversation with assistant's reply
+      for (const toolCall of toolCalls) {
+         const functionName = toolCall.function.name;
+         console.log("functionName: ", functionName);
+         const functionToCall = availableFunctions[functionName];
+         const functionArgs = JSON.parse(toolCall.function.arguments || '{}');
+         const functionResponse = await functionToCall(
+             functionArgs.location,
+             functionArgs.unit
+         );
+         console.log("functionResponse: ", functionResponse);
+         messages.push({
+            tool_call_id: toolCall.id,
+            role: "tool",
+            name: functionName,
+            content: functionResponse,
+         }); //extend the conversation with function response
+      }
+
+      const secondResponse = await openai.chat.completions.create({
+         //model: "gpt-3.5-turbo-0125",
+         model: "gpt-4-turbo",
+         messages: messages
+      });
+      return secondResponse.choices;
+   }
+
+}
+
+async function get24articles() {
+   try {
+      //Calculate the datetime 24 hours ago
+      const yesterday = new Date(new Date() - 24 * 60 * 60 * 1000);
+      const articles = await Blockmedia.findAll({
+         where: {
+            createdAt: {
+               [Sequelize.Op.gte]: yesterday
+            }
+         }
+      })
+      if (!articles.length) {
+         console.log('No articles published in the last 24 hours');
+         return JSON.stringify([]);
+      }
+      // Check if the response was successful
+      console.log("Article data: ", articles);
+      // const data = await response.json();
+      return JSON.stringify(articles, null, 2);
+   } catch(err) {
+      console.error(err);
+      return { error: err.message }
+   }
+}
+
 router.get('/', function(req, res) {
+
+
    res.render('function');
 });
 
@@ -317,6 +405,15 @@ router.get('/article', function(req, res) {
           res.json(result);
        })
        .catch(console.error);
-})
+});
+
+router.get('/relevant', function(req, res) {
+   runRelevantConversation()
+       .then(result => {
+          console.log(result);
+          res.json(result);
+       })
+       .catch(console.error)
+});
 
 module.exports = router;

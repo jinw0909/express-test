@@ -59,30 +59,30 @@ router.get('/', function(req, res, next) {
 
 router.post('/', async function (req, res) {
 
-    try {
-        const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
-        const latestNews = [];
-        for (let i = 0; i < 5 && i < feed.items.length - 2; i++) {
-            const item = feed.items[i];
-            const title = item.title;
-            const link = item.link;
-            // const imageUrl = item.enclosure && item.enclosure.url;
-            const imageUrl = item.imageUrl['$'].url;
-            const date = item.isoDate;
-            const content = await fetchContent(link);
-
-            latestNews.push({
-                title,
-                content,
-                imageUrl,
-                date
-            });
-        }
-
-        console.log(latestNews);
-    } catch (error) {
-        console.error(error);
-    }
+    // try {
+    //     const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
+    //     const latestNews = [];
+    //     for (let i = 0; i < 5 && i < feed.items.length - 2; i++) {
+    //         const item = feed.items[i];
+    //         const title = item.title;
+    //         const link = item.link;
+    //         // const imageUrl = item.enclosure && item.enclosure.url;
+    //         const imageUrl = item.imageUrl['$'].url;
+    //         const date = item.isoDate;
+    //         const content = await fetchContent(link);
+    //
+    //         latestNews.push({
+    //             title,
+    //             content,
+    //             imageUrl,
+    //             date
+    //         });
+    //     }
+    //
+    //     console.log(latestNews);
+    // } catch (error) {
+    //     console.error(error);
+    // }
 
     const completion = await openai.chat.completions.create({
         messages: [

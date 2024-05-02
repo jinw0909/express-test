@@ -3,6 +3,8 @@ var router = express.Router();
 const axios = require('axios');
 const cheerio = require('cheerio');
 const Parser = require('rss-parser');
+const Coinness = require("../coinness");
+const Blockmedia = require("../blockmedia");
 /* GET home page. */
 
 async function fetchContent(link) {
@@ -65,28 +67,31 @@ const parser = new Parser({
 });
 router.get('/', async function(req, res, next) {
     try {
-      const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
-      const latestNews = [];
-      for (let i = 0; i < 5 && i < feed.items.length; i++) {
-          const item = feed.items[i];
-          //console.log("item: ", item);
-          const title = item.title;
-          const link = item.link;
-          // const imageUrl = item.enclosure && item.enclosure.url;
-          const imageUrl = item.imageUrl['$'].url;
-          const date = item.isoDate;
-          const content = await fetchContent(link);
-
-          latestNews.push({
-              title,
-              content,
-              imageUrl,
-              date
-          });
-      }
+      // const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
+      // const latestNews = [];
+      // for (let i = 0; i < 5 && i < feed.items.length; i++) {
+      //     const item = feed.items[i];
+      //     //console.log("item: ", item);
+      //     const title = item.title;
+      //     const link = item.link;
+      //     // const imageUrl = item.enclosure && item.enclosure.url;
+      //     const imageUrl = item.imageUrl['$'].url;
+      //     const date = item.isoDate;
+      //     const content = await fetchContent(link);
+      //
+      //     latestNews.push({
+      //         title,
+      //         content,
+      //         imageUrl,
+      //         date
+      //     });
+      // }
+        const latestNews = await Blockmedia.findAll({
+           order: [['id', 'DESC']],
+            limit: 10
+        });
 
       //console.log(latestNews);
-
       res.render('crawl', {latestNews: latestNews});
     } catch (error) {
         console.error(error);
@@ -138,9 +143,9 @@ router.get('/articles', async function(req, res, next) {
     try {
         const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
         const latestNews = [];
-        for (let i = 0; i < 5 && i < feed.items.length - 2; i++) {
+        for (let i = 0; i < 2 && i < feed.items.length; i++) {
             const item = feed.items[i];
-            //console.log("item: ", item);
+            console.log("item: ", item);
             const title = item.title;
             const link = item.link;
             // const imageUrl = item.enclosure && item.enclosure.url;
@@ -149,17 +154,53 @@ router.get('/articles', async function(req, res, next) {
             const content = await fetchContent(link);
             const index = i;
             const publisher = 'blockmedia';
+            let id = 0;
+
+            let url = item.guid;
+            let match = url.match(/p=(\d+)/);
+            if (match) {
+                id = match[1];
+            } else {
+                console.log("No number found");
+            }
 
             latestNews.push({
-                index,
+                id,
                 title,
                 content,
                 imageUrl,
                 date,
-                publisher
+                publisher,
             });
+
         }
-        console.log("latest news: ", latestNews);
+        // console.log("latest news: ", latestNews);
+        // logic to save crawled news at the database
+        latestNews.forEach(async (item) => {
+            try {
+                // Try to find a Coinness entry with the same id
+                const existingBlockmedia = await Blockmedia.findOne({ where: { id: item.id } });
+
+                // If no entry with the same id exists, create a new one
+                if (!existingBlockmedia) {
+                    const blockmedia = await Blockmedia.create({
+                        id: item.id,
+                        title: item.title,
+                        content: item.content,
+                        imageUrl: item.imageUrl,
+                        date: item.date,
+                        publisher: item.publisher,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                    });
+                    console.log('Blockmedia entry created:', blockmedia.toJSON());
+                } else {
+                    console.log(`Blockmedia entry with id ${item.id} already exists. Skipping insertion.`);
+                }
+            } catch (error) {
+                console.error('Error creating Blockmedia entry: ', error);
+            }
+        });
         res.send(latestNews);
     } catch (error) {
         console.error(error);
