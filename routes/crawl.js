@@ -143,7 +143,7 @@ router.get('/articles', async function(req, res, next) {
     try {
         const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
         const latestNews = [];
-        for (let i = 0; i < 2 && i < feed.items.length; i++) {
+        for (let i = 0; i < 10 && i < feed.items.length; i++) {
             const item = feed.items[i];
             console.log("item: ", item);
             const title = item.title;

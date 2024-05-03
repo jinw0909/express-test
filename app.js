@@ -17,12 +17,13 @@ var crawlRouter = require('./routes/crawl');
 var functionRouter = require('./routes/function');
 var puppetRouter = require('./routes/puppet');
 var voiceRouter = require('./routes/voice');
+var briefRouter = require('./routes/brief');
 
 var app = express();
 
 (async () => {
   try {
-    await sequelize.sync();
+    await sequelize.sync({alter: true});
     console.log('Database synchronized successfully');
   } catch (error) {
     console.error('Error synchronizing database:', error);
@@ -48,6 +49,7 @@ app.use('/crawl', crawlRouter);
 app.use('/function', functionRouter);
 app.use('/puppet', puppetRouter);
 app.use('/voice', voiceRouter);
+app.use('/brief', briefRouter);
 app.get('/createdb', (req, res) => {
   let sql = 'CREATE DATABASE testdb';
   db.query(sql, (err, result) => {

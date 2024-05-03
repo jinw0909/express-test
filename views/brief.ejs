@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortune Telling ChatDoge</title>
+</head>
+<body>
+<div class="container">
+    <div class="send-request">
+        <h4>Return Article Indexes</h4>
+        <span id="flag"></span>
+        <button class="send-btn-index">Send Request</button>
+        <div class="result-div-index"></div>
+    </div>
+    <div class="send-request-create" style="opacity: 0.5;">
+        <h4>Return Created Analysis</h4>
+        <span id="flag2"></span>
+        <button class="send-btn-create">Send Request</button>
+        <div class="result-div-create"></div>
+    </div>
+    <div class="send-request-save">
+        <h4>Save Created Analysis in DB</h4>
+        <span id="flag3"></span>
+        <button class="send-btn-save">Send Request</button>
+        <div class="result-div-save"></div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+
+    let candidates = null;
+
+    document.querySelector('.send-btn-index').addEventListener('click', function() {
+        document.querySelector('#flag').textContent = 'sent';
+        axios.get('/function/index')
+            .then(result => {
+                console.log(result);
+                let cleanJsonStr = result.data[0].message['content'].trim();
+                document.querySelector('.result-div-index').textContent = cleanJsonStr;
+                // Parse the JSON string into a JavaScript object
+                try {
+                    candidates = JSON.parse(cleanJsonStr);
+                } catch (error) {
+                    console.error("Parsing error:", error);
+                    document.querySelector('.result-div-index').textContent = 'Invalid JSON format';
+                }
+                document.querySelector('.send-request-create').style.opacity = "1";
+            })
+            .catch(err => {
+                console.error(err);
+            })
+    });
+
+    document.querySelector('.send-btn-create').addEventListener('click', function() {
+
+        axios.get('/function/index/create').then(response => {
+            console.log('success:', response);
+            const container = document.querySelector('.result-div-create');
+            container.innerHTML = '';
+            let articles = JSON.parse(response.data[0].message['content']);
+            console.log("articles: ", articles);
+            articles.forEach(article => {
+                let divElem = document.createElement('div');
+                divElem.className = 'article';
+                let idDiv = document.createElement('div');
+                idDiv.textContent = `ID: ${article.id}`;
+                divElem.appendChild(idDiv);
+                let contentDiv = document.createElement('div');
+                contentDiv.textContent = `Content: ${article.analysis}`;
+                divElem.appendChild(contentDiv);
+
+                container.appendChild(divElem);
+            });
+        }).catch(postError => {
+            console.error('error:', postError);
+        });
+    });
+
+    document.querySelector('.send-btn-save').addEventListener('click', function() {
+        if (candidates) {
+            document.querySelector('#flag3').textContent = "sent";
+            axios.post('/function/index', {data: candidates}, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then((response) => {
+                console.log('POST success: ', response);
+            }).catch(postError => {
+                console.error('POST error: ', postError);
+            });
+        } else {
+            console.error('No candidates to send');
+            document.querySelector('#flag3').textContent = 'No candidates to send';
+        }
+
+    });
+
+</script>
+</body>
+</html>
