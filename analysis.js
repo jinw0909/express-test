@@ -27,11 +27,31 @@ const Analysis = sequelize.define('Analysis', {
         type:  DataTypes.STRING,
         allowNull: true
     },
+    publisher: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     analysis: {
         type: DataTypes.TEXT,
         allowNull: false
     },
+    analysis_jp : {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    analysis_kr : {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
     mp3 : {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    mp3_jp : {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    mp3_kr : {
         type: DataTypes.STRING,
         allowNull: true
     },

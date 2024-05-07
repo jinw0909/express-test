@@ -371,7 +371,7 @@ async function runIndexConversation() {
       { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. "},
       { role: "user", content: "From the articles of Blockmedia within the past 24 hours, select five articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, and give me each article's id and the reason for its selection in a json format.  I need only the formatted string without any comments or format indicators"},
       { role: "function", name: "get_blockmedia_articles_24", content: "get_blockmedia_articles_24()"},
-      { role: "assistant", content: '[{"id": 523806, "reason": "This article discusses BNP Paribas\'s investment in a Bitcoin spot ETF managed by BlackRock, marking a significant entry by one of Europe\'s largest banks into the cryptocurrency space. The move reflects growing institutional interest in cryptocurrencies, which can be a bullish indicator for the market."}, {"id": 524335, "reason" : "Coinbase, a major cryptocurrency exchange in the U.S., reported a substantial increase in revenue and profits due to the surge in Bitcoin prices. This reflects heightened trading activity and could signify ongoing interest and investment in the cryptocurrency from both retail and institutional investors."}, {"id": 523502, "reason": "The delay in expected rate cuts by the Federal Reserve could have implications for the cryptocurrency market. Typically, lower interest rates can lead to higher investments in risk assets like cryptocurrencies, so any delays can affect market sentiment and investment flows."}, {"id": 523654, "reason": "Although Fed Chair Jerome Powell indicated that an immediate rate hike isn\'t forthcoming, the ongoing concerns about inflation and economic overheating can create a volatile environment for cryptocurrencies, as investors might reassess risk assets."}, {"id": 523725, "reason": "This article covers how Bitcoin adoption in El Salvador and other Latin American countries is influencing the regional economy and sparking a widespread interest in cryptocurrencies. The regional adoption can play a crucial role in highlighting the utility and acceptance of cryptocurrencies on a broader scale. These articles provide insights into regulatory movements, economic conditions, and significant market activities that are crucial for understanding the current trends and future movements of the cryptocurrency market."}]'},
+      { role: "assistant", content: `[{"id": 523806, "reason": "This article discusses BNP Paribas' investment in a Bitcoin spot ETF managed by BlackRock, marking a significant entry by one of Europe's largest banks into the cryptocurrency space. The move reflects growing institutional interest in cryptocurrencies, which can be a bullish indicator for the market."}, {"id": 524335, "reason" : "Coinbase, a major cryptocurrency exchange in the U.S., reported a substantial increase in revenue and profits due to the surge in Bitcoin prices. This reflects heightened trading activity and could signify ongoing interest and investment in the cryptocurrency from both retail and institutional investors."}, {"id": 523502, "reason": "The delay in expected rate cuts by the Federal Reserve could have implications for the cryptocurrency market. Typically, lower interest rates can lead to higher investments in risk assets like cryptocurrencies, so any delays can affect market sentiment and investment flows."}, {"id": 523654, "reason": "Although Fed Chair Jerome Powell indicated that an immediate rate hike isn't forthcoming, the ongoing concerns about inflation and economic overheating can create a volatile environment for cryptocurrencies, as investors might reassess risk assets."}, {"id": 523725, "reason": "This article covers how Bitcoin adoption in El Salvador and other Latin American countries is influencing the regional economy and sparking a widespread interest in cryptocurrencies. The regional adoption can play a crucial role in highlighting the utility and acceptance of cryptocurrencies on a broader scale. These articles provide insights into regulatory movements, economic conditions, and significant market activities that are crucial for understanding the current trends and future movements of the cryptocurrency market."}]`},
       { role: "user", content: "From the articles of Blockmedia within the past 24 hours, select five articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, and give me each article's id and the reason for its selection in a json format. I need only the formatted string without any comments or format indicators"},
    ];
    const tools = [
@@ -436,8 +436,8 @@ async function runCreateConversation(candidates) {
    const messages = [
       { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
       { role: "user", content: `[{ "id": 523806, "reason": "This article details BNP Paribas' investment in a Bitcoin spot ETF managed by BlackRock, marking a noteworthy development of cryptocurrency adoption by major European banks. Interest from leading financial institutions can significantly influence market confidence and investment flows into Bitcoin and other cryptocurrencies." }, { "id": 523694, "reason": "Discussing the Federal Reserve's potential rate decisions, this article outlines the tension between rate hikes and inflation pressures. As cryptocurrencies often react to macroeconomic indicators, insights on inflation and rate changes can impact predictions on cryptocurrency volatility and investor behavior." }, { "id": 523725, "reason": "This article highlights Bitcoin's significant impact on the economy of El Salvador and its ripple effects across Latin America. Understanding regional adoption trends can assist in analyzing the broader acceptance and integration of cryptocurrencies into emerging markets." }, { "id": 524335, "reason": "Coinbase's financial performance, reflecting higher revenue and profits due to Bitcoin's price surge, indicates robust trading activity and market enthusiasm. This data can be pivotal for projecting future market trends and investor sentiment in cryptocurrencies." }, { "id": 524280, "reason": "Though not directly about cryptocurrencies, this article discusses economic indicators and movements in traditional financial markets, such as stock indices and forex changes, which can have correlative impacts on the cryptocurrency market. Understanding these dynamics is essential for comprehensive market analysis." } ] / This is a json format data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. I want each of the analysis to be formatted in JSON {id : integer, analysis: text} so I can save each response in a local database with much ease. I need only the formatted string without any comments or format indicators`},
-      { role: "assistant", content: '{"id" : 523806, "analysis": "BNP Paribas, a leading European bank, has made an investment in BlackRock managed Bitcoin spot ETF, marking a notable entry of a major traditional financial institution into the cryptocurrency space. This investment, although small at 1030 shares totaling $41,684, signals a growing acceptance and potential confidence of institutional investors in cryptocurrency as a legitimate asset class. This move by BNP could pave the way for other traditional financial institutions to consider similar investments, indicating a maturing of the market and potentially enhanced liquidity and stability in the cryptocurrency markets. The involvement of a significant player like BNP Paribas can serve as a validation signal to the market, potentially leading to increased institutional participation."}, {"id" : 523502, "analysis": "This article discussed the Federal Reserve\'s decision to keep interest rates steady, marking the sixth consecutive time this has occurred. With rates upheld between 5.25 to 5.50%, the article highlights the possibility of rate cuts later in the year or possibly next year, reflecting ongoing uncertainty about achieving a 2% inflation target. Such monetary policy decisions are crucial for cryptocurrencies since they are often viewed as a hedge against inflation. Stability or reduction in interest rates could make traditional assets more attractive comparatively, potentially reducing the appeal of riskier assets like cryptocurrencies. However, continued high rates might fuel more interest in cryptocurrencies as an alternative investment."}, {"id": 524335, "analysis": "Coinbase Global reported significantly higher than expected revenue and profits for the first quarter, riding the wave of a bullish Bitcoin market. The company\'s revenue jumped to $1.64 billion, a 53% increase from the previous year, surpassing market expectations of $1.32 billion. This reflects heightened trading activity during periods of high cryptocurrency prices, highlighting the enduring interest and engagement of the public and financial markets with cryptocurrencies. Coinbase’s performance can be seen as a reflection of the broader market sentiment and the potential growth stability of the cryptocurrency industry."}, {"id": 523725, "analysis": "El Salvador’s adoption of Bitcoin as legal tender and its subsequent economic gains amid the highest Bitcoin rally have caught the attention of other Latin American countries. This increasing adoption in Latin America provides key insights into the geopolitical factors affecting the cryptocurrency market. Such moves could potentially spur wider regional adoption, influencing market dynamics and presenting new opportunities for cryptocurrency growth in emerging economies. The success and challenges faced by El Salvador can serve as a model or a warning for other regions considering similar pathways.", {"id" : 523186, "analysis": "The article highlights emerging blockchain technology by focusing on Nibiru Chain, a new contender challenging established platforms like Ethereum. Nibiru Chain, leveraging the Rust language and Cosmos ecosystem compatibility, aims to attract developers by offering unique features such as revenue sharing from transaction fees. The focus on developer incentives can significantly affect the broader cryptocurrency ecosystem by promoting innovation and potentially attracting a community of builders who could drive the adoption and success of new blockchain platforms. This growing ecosystem indicates a possible shift in the blockchain landscape, emphasizing possible decentralization and variety in blockchain technologies."}'},
-      { role: "user", content: `${JSON.stringify(candidates)} / This is a json format data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. I want each of the analysis to be formatted in JSON {id : integer, analysis: text} so I can save each response in a local database with much ease. I need only the formatted string without any comments or format indicators`}
+      { role: "assistant", content: `{"id" : 523806, "analysis": "BNP Paribas, a leading European bank, has made an investment in BlackRock managed Bitcoin spot ETF, marking a notable entry of a major traditional financial institution into the cryptocurrency space. This investment, although small at 1030 shares totaling $41,684, signals a growing acceptance and potential confidence of institutional investors in cryptocurrency as a legitimate asset class. This move by BNP could pave the way for other traditional financial institutions to consider similar investments, indicating a maturing of the market and potentially enhanced liquidity and stability in the cryptocurrency markets. The involvement of a significant player like BNP Paribas can serve as a validation signal to the market, potentially leading to increased institutional participation."}, {"id" : 523502, "analysis": "This article discussed the Federal Reserve's decision to keep interest rates steady, marking the sixth consecutive time this has occurred. With rates upheld between 5.25 to 5.50%, the article highlights the possibility of rate cuts later in the year or possibly next year, reflecting ongoing uncertainty about achieving a 2% inflation target. Such monetary policy decisions are crucial for cryptocurrencies since they are often viewed as a hedge against inflation. Stability or reduction in interest rates could make traditional assets more attractive comparatively, potentially reducing the appeal of riskier assets like cryptocurrencies. However, continued high rates might fuel more interest in cryptocurrencies as an alternative investment."}, {"id": 524335, "analysis": "Coinbase Global reported significantly higher than expected revenue and profits for the first quarter, riding the wave of a bullish Bitcoin market. The company's revenue jumped to $1.64 billion, a 53% increase from the previous year, surpassing market expectations of $1.32 billion. This reflects heightened trading activity during periods of high cryptocurrency prices, highlighting the enduring interest and engagement of the public and financial markets with cryptocurrencies. Coinbase’s performance can be seen as a reflection of the broader market sentiment and the potential growth stability of the cryptocurrency industry."}, {"id": 523725, "analysis": "El Salvador’s adoption of Bitcoin as legal tender and its subsequent economic gains amid the highest Bitcoin rally have caught the attention of other Latin American countries. This increasing adoption in Latin America provides key insights into the geopolitical factors affecting the cryptocurrency market. Such moves could potentially spur wider regional adoption, influencing market dynamics and presenting new opportunities for cryptocurrency growth in emerging economies. The success and challenges faced by El Salvador can serve as a model or a warning for other regions considering similar pathways.", {"id" : 523186, "analysis": "The article highlights emerging blockchain technology by focusing on Nibiru Chain, a new contender challenging established platforms like Ethereum. Nibiru Chain, leveraging the Rust language and Cosmos ecosystem compatibility, aims to attract developers by offering unique features such as revenue sharing from transaction fees. The focus on developer incentives can significantly affect the broader cryptocurrency ecosystem by promoting innovation and potentially attracting a community of builders who could drive the adoption and success of new blockchain platforms. This growing ecosystem indicates a possible shift in the blockchain landscape, emphasizing possible decentralization and variety in blockchain technologies."}`},
+      { role: "user", content: `${JSON.stringify(candidates)} / This is a json format data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. I want each of the analysis to be formatted in JSON {id : integer, analysis: text} so I can save each response in a local database with much ease. I need only the formatted string without any comments or format indicators. When I run JSON.parse() on your reply, ensure that there is no error.`}
    ];
    const tools = [
       {
@@ -523,6 +523,30 @@ async function getCandidates(indexList) {
    }
 }
 
+async function createUnit() {
+   try {
+   } catch (error) {
+      console.error(error);
+      throw error;
+   }
+}
+
+async function getRecent() {
+   try {
+      const recentAnalyses = await Analysis.findAll({
+         order: [['createdAt', 'DESC']], //Order by 'createdAt' in descending order
+         limit: 5
+      });
+      const analysesJson = recentAnalyses.map(analysis => {
+         return { id: analysis.id, analysis: analysis.analysis}
+      });
+      return JSON.stringify(analysesJson);
+   } catch (error) {
+      console.error("Error fetching rectent analysis:", error);
+      throw error;
+   }
+}
+
 
 router.get('/', function(req, res) {
    res.render('function');
@@ -572,44 +596,43 @@ router.get('/index', function(req, res) {
        .catch(console.error);
 });
 
-router.post('/index', function(req, res) {
+router.post('/index', async function(req, res) {
    const candidates = req.body.data;
    console.log('Received candidates: ', candidates);
 
-   runCreateConversation(candidates)
-       .then(result => {
-          console.log(result);
-          const articles = JSON.parse(result[0].message.content);
-          articles.forEach(article => {
-             Analysis.findOrCreate({
-                where: { id: article.id },
-                   defaults: {
-                      id: article.id,
-                      createdAt: new Date(), // Use the current date-time
-                      title: 'Default Title', // Default title, modify as needed
-                      content: 'Default Content', // Default content, modify as needed
-                      date: 'Default Time', // Default time, modify as needed
-                      analysis: article.analysis,
-                      updatedAt: new Date() // Use the current date-time
-                   }
-                })
-                 .then(([model, created]) => {
-                    if (created) {
-                       console.log(`Article with ID ${article.id} was created`);
-                    } else {
-                       console.log(`Article with ID ${article.id} already exists`);
-                    }
-                 })
-                 .catch(err => console.error('Error saving article:', err));
-
-          })
-
-          res.status(200).json(result);
-       })
-       .catch(error => {
-          console.error(error);
-          res.status(500).send("An error occurred");
-       });
+   try {
+      const result = await runCreateConversation(candidates);
+      console.log(result);
+      const articles = JSON.parse(result[0].message.content);
+      for (const article of articles) { // Use a loop that supports await
+         try {
+            const [model, created] = await Analysis.findOrCreate({
+               where: { id: article.id },
+               defaults: {
+                  id: article.id,
+                  createdAt: new Date(),
+                  title: 'Default Title',
+                  content: 'Default Content',
+                  date: 'Default Time',
+                  analysis: article.analysis,
+                  updatedAt: new Date()
+               }
+            });
+            if (created) {
+               console.log(`Analysis with ID ${article.id} was created`);
+            } else {
+               console.log(`Analysis with ID ${article.id} already exists`);
+            }
+         } catch (err) {
+            console.error('Error saving article:', err);
+         }
+      }
+      const recentAnalyses = await getRecent(); // Await here after all articles processed
+      res.status(200).json(recentAnalyses); // Send response only once after all processing
+   } catch (error) {
+      console.error(error);
+      res.status(500).send("An error occurred");
+   }
 })
 
 router.get('/index/create', function(req, res) {

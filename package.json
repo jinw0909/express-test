@@ -6,6 +6,7 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
+    "aws-sdk": "^2.1614.0",
     "axios": "^1.6.8",
     "cheerio": "^1.0.0-rc.12",
     "cookie-parser": "~1.4.4",
@@ -17,6 +18,7 @@
     "http-errors": "~1.6.3",
     "jsdom": "^24.0.0",
     "morgan": "~1.9.1",
+    "multer": "^1.4.5-lts.1",
     "mysql": "^2.18.1",
     "mysql2": "^3.9.7",
     "openai": "^4.38.3",

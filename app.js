@@ -4,6 +4,8 @@ var cors = require('cors');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+const multer = require('multer');
+const AWS = require('aws-sdk');
 const db = require('./database');
 const sequelize = require('./sequelize');
 const Coinness = require('./coinness');
@@ -18,17 +20,21 @@ var functionRouter = require('./routes/function');
 var puppetRouter = require('./routes/puppet');
 var voiceRouter = require('./routes/voice');
 var briefRouter = require('./routes/brief');
+var runRouter = require('./routes/run');
 
 var app = express();
 
+
+
 (async () => {
   try {
-    await sequelize.sync({alter: true});
+    await sequelize.sync();
     console.log('Database synchronized successfully');
   } catch (error) {
     console.error('Error synchronizing database:', error);
   }
 })();
+
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -50,6 +56,7 @@ app.use('/function', functionRouter);
 app.use('/puppet', puppetRouter);
 app.use('/voice', voiceRouter);
 app.use('/brief', briefRouter);
+app.use('/run', runRouter);
 app.get('/createdb', (req, res) => {
   let sql = 'CREATE DATABASE testdb';
   db.query(sql, (err, result) => {

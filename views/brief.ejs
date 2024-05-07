@@ -20,10 +20,16 @@
         <div class="result-div-create"></div>
     </div>
     <div class="send-request-save">
-        <h4>Save Created Analysis in DB</h4>
+        <h4>Save Created Analysis in DB (and return results)</h4>
         <span id="flag3"></span>
         <button class="send-btn-save">Send Request</button>
         <div class="result-div-save"></div>
+    </div>
+    <div class="send-request-construct">
+        <h4>Construct the Full Analysis for the Recent 5</h4>
+        <span id="flag4"></span>
+        <button class="send-btn-construct">Send Request</button>
+        <div class="result-div-construct"></div>
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -87,6 +93,21 @@
                 }
             }).then((response) => {
                 console.log('POST success: ', response);
+                const container = document.querySelector('.result-div-save');
+                container.innerHTML = '';
+                let analysis = JSON.parse(response.data);
+                analysis.forEach(article => {
+                    let divElem = document.createElement('div');
+                    divElem.className = 'analysis';
+                    let idDiv = document.createElement('div');
+                    idDiv.textContent = `ID: ${article.id}`;
+                    divElem.appendChild(idDiv);
+                    let contentDiv = document.createElement('div');
+                    contentDiv.textContent = `analysis: ${article.analysis}`;
+                    divElem.appendChild(contentDiv);
+
+                    container.appendChild(divElem);
+                });
             }).catch(postError => {
                 console.error('POST error: ', postError);
             });
@@ -95,6 +116,17 @@
             document.querySelector('#flag3').textContent = 'No candidates to send';
         }
 
+    });
+
+    document.querySelector('.send-btn-construct').addEventListener('click', function() {
+        document.querySelector('#flag4').textContent = "sent";
+        axios.get('/brief/construct')
+            .then((response) => {
+                console.log("post success: ", response);
+            })
+            .catch(err => {
+                console.error("post failure: ", err);
+            })
     });
 
 </script>
