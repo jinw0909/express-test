@@ -26,12 +26,24 @@ async function getRecent() {
 
 router.get('/', async function(req, res, next) {
     try {
+        const language = req.query.lang || 'English';
         const recentAnalyses = await getRecent();
         console.log("recentAnalyses: ", recentAnalyses);
-        res.render('run', {data: recentAnalyses});
+        res.render('run', {data: recentAnalyses, lang: language});
     } catch (error) {
         console.error(error);
     }
+});
+
+router.post('/', async function(req, res) {
+   try {
+       const lang = req.body.lang;
+       const recentAnalyses = await getRecent();
+       console.log("recentAnalyses: ", recentAnalyses);
+       res.render('run', {data: recentAnalyses, lang: lang});
+   } catch (error) {
+       console.error(error);
+   }
 });
 
 module.exports = router;

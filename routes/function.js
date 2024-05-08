@@ -433,9 +433,9 @@ async function runCreateConversation(candidates) {
    //Step 1 : send the conversation and available functions to the model
    const messages = [
       { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-      { role: "user", content: `[{ "id": 523806, "reason": "This article details BNP Paribas' investment in a Bitcoin spot ETF managed by BlackRock, marking a noteworthy development of cryptocurrency adoption by major European banks. Interest from leading financial institutions can significantly influence market confidence and investment flows into Bitcoin and other cryptocurrencies." }, { "id": 523694, "reason": "Discussing the Federal Reserve's potential rate decisions, this article outlines the tension between rate hikes and inflation pressures. As cryptocurrencies often react to macroeconomic indicators, insights on inflation and rate changes can impact predictions on cryptocurrency volatility and investor behavior." }, { "id": 523725, "reason": "This article highlights Bitcoin's significant impact on the economy of El Salvador and its ripple effects across Latin America. Understanding regional adoption trends can assist in analyzing the broader acceptance and integration of cryptocurrencies into emerging markets." }, { "id": 524335, "reason": "Coinbase's financial performance, reflecting higher revenue and profits due to Bitcoin's price surge, indicates robust trading activity and market enthusiasm. This data can be pivotal for projecting future market trends and investor sentiment in cryptocurrencies." }, { "id": 524280, "reason": "Though not directly about cryptocurrencies, this article discusses economic indicators and movements in traditional financial markets, such as stock indices and forex changes, which can have correlative impacts on the cryptocurrency market. Understanding these dynamics is essential for comprehensive market analysis." } ] /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. I want each of the analysis to be formatted as a javscript object {id : integer, analysis: text} so I can save each response in a local database with much ease. I need only the formatted string without any comments or format indicators`},
-      { role: "assistant", content: '[{"id" : 523806, "analysis": "BNP Paribas, a leading European bank, has made an investment in BlackRock managed Bitcoin spot ETF, marking a notable entry of a major traditional financial institution into the cryptocurrency space. This investment, although small at 1030 shares totaling $41,684, signals a growing acceptance and potential confidence of institutional investors in cryptocurrency as a legitimate asset class. This move by BNP could pave the way for other traditional financial institutions to consider similar investments, indicating a maturing of the market and potentially enhanced liquidity and stability in the cryptocurrency markets. The involvement of a significant player like BNP Paribas can serve as a validation signal to the market, potentially leading to increased institutional participation."}, {"id" : 523502, "analysis": "This article discussed the Federal Reserve\'s decision to keep interest rates steady, marking the sixth consecutive time this has occurred. With rates upheld between 5.25 to 5.50%, the article highlights the possibility of rate cuts later in the year or possibly next year, reflecting ongoing uncertainty about achieving a 2% inflation target. Such monetary policy decisions are crucial for cryptocurrencies since they are often viewed as a hedge against inflation. Stability or reduction in interest rates could make traditional assets more attractive comparatively, potentially reducing the appeal of riskier assets like cryptocurrencies. However, continued high rates might fuel more interest in cryptocurrencies as an alternative investment."}, {"id": 524335, "analysis": "Coinbase Global reported significantly higher than expected revenue and profits for the first quarter, riding the wave of a bullish Bitcoin market. The company\'s revenue jumped to $1.64 billion, a 53% increase from the previous year, surpassing market expectations of $1.32 billion. This reflects heightened trading activity during periods of high cryptocurrency prices, highlighting the enduring interest and engagement of the public and financial markets with cryptocurrencies. Coinbase’s performance can be seen as a reflection of the broader market sentiment and the potential growth stability of the cryptocurrency industry."}, {"id": 523725, "analysis": "El Salvador’s adoption of Bitcoin as legal tender and its subsequent economic gains amid the highest Bitcoin rally have caught the attention of other Latin American countries. This increasing adoption in Latin America provides key insights into the geopolitical factors affecting the cryptocurrency market. Such moves could potentially spur wider regional adoption, influencing market dynamics and presenting new opportunities for cryptocurrency growth in emerging economies. The success and challenges faced by El Salvador can serve as a model or a warning for other regions considering similar pathways.", {"id" : 523186, "analysis": "The article highlights emerging blockchain technology by focusing on Nibiru Chain, a new contender challenging established platforms like Ethereum. Nibiru Chain, leveraging the Rust language and Cosmos ecosystem compatibility, aims to attract developers by offering unique features such as revenue sharing from transaction fees. The focus on developer incentives can significantly affect the broader cryptocurrency ecosystem by promoting innovation and potentially attracting a community of builders who could drive the adoption and success of new blockchain platforms. This growing ecosystem indicates a possible shift in the blockchain landscape, emphasizing possible decentralization and variety in blockchain technologies."}]'},
-      { role: "user", content: `${candidates} / This is a data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. I want each of the analysis to be formatted as a javascript object {id : integer, analysis: text} so I can save each response in a local database with much ease. I need only the formatted string without any comments or format indicators.`}
+      { role: "user", content: `[{ "id": 523806, "reason": "This article details BNP Paribas' investment in a Bitcoin spot ETF managed by BlackRock, marking a noteworthy development of cryptocurrency adoption by major European banks. Interest from leading financial institutions can significantly influence market confidence and investment flows into Bitcoin and other cryptocurrencies." }, { "id": 523694, "reason": "Discussing the Federal Reserve's potential rate decisions, this article outlines the tension between rate hikes and inflation pressures. As cryptocurrencies often react to macroeconomic indicators, insights on inflation and rate changes can impact predictions on cryptocurrency volatility and investor behavior." }, { "id": 523725, "reason": "This article highlights Bitcoin's significant impact on the economy of El Salvador and its ripple effects across Latin America. Understanding regional adoption trends can assist in analyzing the broader acceptance and integration of cryptocurrencies into emerging markets." }, { "id": 524335, "reason": "Coinbase's financial performance, reflecting higher revenue and profits due to Bitcoin's price surge, indicates robust trading activity and market enthusiasm. This data can be pivotal for projecting future market trends and investor sentiment in cryptocurrencies." }, { "id": 524280, "reason": "Though not directly about cryptocurrencies, this article discusses economic indicators and movements in traditional financial markets, such as stock indices and forex changes, which can have correlative impacts on the cryptocurrency market. Understanding these dynamics is essential for comprehensive market analysis." } ] /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least eight sentences or more and the summary has to be at least four sentences or more. The response should be formatted as a javascript object [{id : integer, analysis: text, summary: text}] so I can save each summary and analysis in a local database with much ease. I need only the formatted string without any comments or format indicators`},
+      { role: "assistant", content: '[{"id": 523806, "analysis": "The investment of BNP Paribas in BlackRock\'s Bitcoin spot ETF signifies a substantial move towards cryptocurrency acceptance by major European banks. This event signals broader institutional trust in cryptocurrencies, potentially leading to increased investor confidence and broader market acceptance. BNP\'s decision, although involving a relatively modest sum, reflects a growing interest from traditional financial institutions in the digital asset space. The involvement of other prominent banks like Citigroup and Royal Bank of Canada in similar investments reinforces the trend towards mainstream financial entities embracing cryptocurrencies. This development could indicate a shift in how traditional investment vehicles perceive the stability and potential of cryptocurrencies. It might also influence regulatory stances in the future, as more conventional banks integrate digital assets into their portfolios.", "summary": "BNP Paribas has confirmed its investment in a Bitcoin spot ETF managed by BlackRock, which symbolizes increasing acceptance of cryptocurrencies among major European banks. Other major institutions are also investing in similar products, illustrating a broader trend of traditional financial acceptance. This development could enhance investor confidence and impact the regulatory landscape for cryptocurrencies."}, {"id": 523694, "analysis": "Jerome Powell\'s remarks on maintaining the current interest rates unless inflation pressures worsen highlights key factors affecting the cryptocurrency markets. Cryptocurrencies are sensitive to macroeconomic indicators such as interest rates and inflation, which influence investor behavior and market volatility. In scenarios where traditional financial policies tighten due to inflation, cryptocurrencies might be viewed as alternative investments. However, stable or increasing rates could also deter investments in riskier assets like cryptocurrencies. Powell\'s cautious stance reflects ongoing uncertainties in the economic environment, which can lead to increased market volatility, impacting cryptocurrencies indirectly through shifts in investor sentiment and risk appetite.", "summary": "Federal Reserve Chair Jerome Powell indicated that the Fed is not planning to raise interest rates soon, but may reconsider if inflation remains uncontrolled. This decision influences traditional financial markets and can indirectly affect cryptocurrencies. Powell\'s statements cause market participants to vigilantly monitor the inflation indices, impacting investment strategies including those related to cryptocurrencies."},{"id": 523725, "analysis": "El Salvador\'s adoption of Bitcoin as a legal tender and the resultant economic ripple effects across Latin America signify a pivotal experiment in the integration of cryptocurrencies into a national economy. This bold move by El Salvador has inspired similar interests from other Latin American countries, potentially paving the way for broader regional adoption. The success or failure of this experiment can provide valuable insights into the practical challenges and benefits of widespread cryptocurrency utilization. It also tests the resilience and stability of cryptocurrencies under intense economic pressures and varied regulatory environments. This scenario further illustrates the transformative potential of digital currencies in reshaping economic landscapes, particularly in regions characterized by volatile national currencies and financial instability.", "summary": "El Salvador has risked its economic strategy on the success of Bitcoin, which has also influenced other countries in Latin America. The nation experienced considerable financial outcomes from its Bitcoin investments, reflecting the significant impact cryptocurrencies can have on national economies. Observing El Salvador\'s example, other countries in the region are exploring similar paths, potentially leading to widespread regional adoption of cryptocurrencies."},{"id": 524335, "analysis": "Coinbase\'s reported surge in revenue and profits during a bullish phase for Bitcoin illustrates the high volatility and reward potential inherent in the cryptocurrency market. Their financial performance is a testament to the growing mainstream acceptance of cryptocurrencies and the viability of trading platforms in the fintech sector. The significant increase in trading volume due to rising Bitcoin prices demonstrates the dynamic nature of the crypto market, wherein price movements can dramatically affect trading behaviors and platform revenues. This report can guide potential investors about the current market sentiments and expectations, possibly leading to informed investment decisions. Furthermore, the economic indication of such results from a major player like Coinbase could lead to increased confidence among minor investors and possibly attract new users to the cryptocurrency space.", "summary": "Coinbase Global has announced better-than-expected financial results for the first quarter, driven by a significant increase in Bitcoin prices and trading activity. This performance highlights the platform\'s robust position in the cryptocurrency market and its ability to capitalize on market trends. These results are crucial indicators of both the growing acceptance of cryptocurrencies and the potential for lucrative operations within the cryptocurrency exchanges."},{"id": 524280, "analysis": "The movement in traditional financial markets such as stocks indices and foreign exchange rates can often have correlating impacts on the cryptocurrency market. As seen with the increase in the KOSPI and the decrease in the USD/KRW exchange rate, these traditional market indicators can signal broader economic trends that also affect investor sentiment towards cryptocurrencies. Understanding these correlations is crucial for cryptocurrency investors to anticipate potential market movements and manage risks more effectively. Given the increasing integration of cryptocurrency in broader financial systems, such fluctuations in traditional markets may offer predictive insights into corresponding shifts in the cryptocurrency market, potentially aiding in strategic investment planning.", "summary": "The article reports on the opening figures for KOSPI, KOSDAQ, and the USD/KRW exchange rate. Movements in these traditional financial market indicators are crucial as they can also impact the cryptocurrency market by influencing general investor sentiment and economic conditions. Monitoring these indicators provides valuable insights for managing investments in cryptocurrencies."}]'},
+      { role: "user", content: `${candidates} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least eight sentences or more and the summary has to be at least four sentences or more. The response should be formatted as a javascript object [{id : integer, analysis: text, summary: text}] so I can save each summary and analysis in a local database with much ease. I need only the formatted string without any comments or format indicators`}
    ];
    const tools = [
       {
@@ -494,7 +494,6 @@ async function runCreateConversation(candidates) {
       }
 
       const secondResponse = await openai.chat.completions.create({
-         //model: "gpt-3.5-turbo-0125",
          model: "gpt-4-turbo",
          messages: messages
       });
@@ -509,7 +508,7 @@ async function getCandidates(indexList) {
       const articles = await Blockmedia.findAll({
          where: {
             id : {
-               [Op.in]: indexList
+               [Sequelize.Op.in]: indexList
             }
          }
       })
@@ -528,7 +527,7 @@ async function getRecent() {
          limit: 5
       });
       const analyses = recentAnalyses.map(analysis => {
-         return { id: analysis.id, analysis: analysis.analysis}
+         return { id: analysis.id, analysis: analysis.analysis, summary: analysis.summary}
       });
       return analyses;
    } catch (error) {
@@ -586,6 +585,45 @@ router.get('/index', function(req, res) {
        .catch(console.error);
 });
 
+// router.post('/index', async function(req, res) {
+//    const candidates = req.body.data;
+//    console.log('Received candidates: ', candidates);
+//
+//    try {
+//       const result = await runCreateConversation(candidates);
+//       console.log(result);
+//       console.log("content: ", result[0].message.content);
+//       const articles = JSON.parse(result[0].message.content);
+//       console.log("articles: ", articles);
+//       for (const article of articles) { // Use a loop that supports await
+//          try {
+//             const [model, created] = await Analysis.findOrCreate({
+//                where: { id: article.id },
+//                defaults: {
+//                   id: article.id,
+//                   createdAt: new Date(),
+//                   date: 'Default Time',
+//                   analysis: article.analysis,
+//                   summary: article.summary,
+//                   updatedAt: new Date()
+//                }
+//             });
+//             if (created) {
+//                console.log(`Analysis with ID ${article.id} was created`);
+//             } else {
+//                console.log(`Analysis with ID ${article.id} already exists`);
+//             }
+//          } catch (err) {
+//             console.error('Error saving article:', err);
+//          }
+//       }
+//       const recentAnalyses = await getRecent(); // Await here after all articles processed
+//       res.json(recentAnalyses); // Send response only once after all processing
+//    } catch (error) {
+//       console.error(error);
+//       res.send("An error occurred");
+//    }
+// })
 router.post('/index', async function(req, res) {
    const candidates = req.body.data;
    console.log('Received candidates: ', candidates);
@@ -596,37 +634,34 @@ router.post('/index', async function(req, res) {
       console.log("content: ", result[0].message.content);
       const articles = JSON.parse(result[0].message.content);
       console.log("articles: ", articles);
-      for (const article of articles) { // Use a loop that supports await
+
+      for (const article of articles) { // Loop through each article
          try {
-            const [model, created] = await Analysis.findOrCreate({
-               where: { id: article.id },
-               defaults: {
-                  id: article.id,
-                  createdAt: new Date(),
-                  title: 'Default Title',
-                  content: 'Default Content',
-                  date: 'Default Time',
-                  analysis: article.analysis,
-                  updatedAt: new Date()
-               }
+            const [instance, created] = await Analysis.upsert({
+               id: article.id,
+               analysis: article.analysis,
+               summary: article.summary,
+               createdAt: new Date(), // Consider managing this within Sequelize model definition
+               updatedAt: new Date()  // Sequelize can handle updatedAt automatically
             });
+
             if (created) {
-               console.log(`Analysis with ID ${article.id} was created`);
+               console.log(`Analysis with ID ${article.id} was created.`);
             } else {
-               console.log(`Analysis with ID ${article.id} already exists`);
+               console.log(`Analysis with ID ${article.id} was updated.`);
             }
          } catch (err) {
-            console.error('Error saving article:', err);
+            console.error('Error upserting article:', err);
          }
       }
-      const recentAnalyses = await getRecent(); // Await here after all articles processed
-      res.json(recentAnalyses); // Send response only once after all processing
+
+      const recentAnalyses = await getRecent(); // Fetch recent analyses
+      res.json(recentAnalyses); // Send response with recent analyses
    } catch (error) {
       console.error(error);
       res.send("An error occurred");
    }
-})
-
+});
 router.get('/index/create', function(req, res) {
    // const candidates = req.body.data;
    // console.log('Received candidates: ', candidates);

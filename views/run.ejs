@@ -3,21 +3,55 @@
     <head>
         <title>Recent Analyses</title>
         <style>
-            li {
-                display: none;
-            }
+            /*li {*/
+            /*    display: none;*/
+            /*}*/
         </style>
     </head>
     <body>
     <h1>Recent Analyses</h1>
+    <div>
+        <a href="/run?lang=English" id="selectEn">English</a>
+        <a href="/run?lang=Japanese" id="selectJp">Japanese</a>
+        <a href="/run?lang=Korean" id="selectKr">Korean</a>
+    </div>
     <ul id="analysisList">
         <% data.forEach(function(analysis, index) { %>
             <li id="item<%= index%>">
                 <strong>ID:</strong> <%= analysis.id %><br>
-                <strong>Title: </strong> <%= analysis.title%><br>
+                <strong>Title: </strong>
+                <% if (lang === 'Japanese') { %>
+                    <%= analysis.title_jp %>
+                <% } else if (lang === 'Korean') { %>
+                    <%= analysis.title_kr %>
+                <% } else { %>
+                    <%= analysis.title %>
+                <% } %><br>
                 <strong>Image: </strong> <img src="<%= analysis.imageUrl%>" alt="analysis image"><br>
-                <strong>Content: </strong> <%= analysis.content%><br>
-                <strong>MP3 URL:</strong> <%= analysis.mp3%><audio src="<%= analysis.mp3%>" id="audio<%= index%>"></audio><br>
+                <strong>Content: </strong>
+                <% if (lang === 'Japanese') { %>
+                    <%= analysis.summary_jp %>
+                <% } else if (lang === 'Korean') { %>
+                    <%= analysis.summary_kr %>
+                <% } else { %>
+                    <%= analysis.summary %>
+                <% } %><br>
+                <strong>MP3 URL:</strong>
+                    <% if (lang === 'Japanese') { %>
+                        <%= analysis.mp3_jp %>
+                    <% } else if (lang === 'Korean') { %>
+                        <%= analysis.mp3_kr %>
+                    <% } else { %>
+                        <%= analysis.mp3 %>
+                    <% } %>
+                <audio src="
+                    <% if (lang === 'Japanese') { %>
+                        <%= analysis.mp3_jp %>
+                    <% } else if (lang === 'Korean') { %>
+                        <%= analysis.mp3_kr %>
+                    <% } else { %>
+                        <%= analysis.mp3 %>
+                    <% } %>" id="audio<%= index%>"></audio><br>
                 <strong>Created At:</strong> <%= analysis.createdAt.toISOString() %><br>
             </li>
         <% }) %>

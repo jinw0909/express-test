@@ -13,15 +13,31 @@ const Analysis = sequelize.define('Analysis', {
     },
     title : {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
-    content: {
+    title_jp : {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    title_kr : {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    summary: {
         type: DataTypes.TEXT,
         allowNull: false
     },
+    summary_jp : {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    summary_kr: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
     date: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
     imageUrl : {
         type:  DataTypes.STRING,
