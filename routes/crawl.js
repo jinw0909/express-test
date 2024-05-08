@@ -149,7 +149,10 @@ router.get('/articles', async function(req, res, next) {
             const title = item.title;
             const link = item.link;
             // const imageUrl = item.enclosure && item.enclosure.url;
-            const imageUrl = item.imageUrl['$'].url;
+            let imageUrl = ''
+            if (item.imageUrl) {
+                imageUrl = item.imageUrl['$'].url;
+            }
             const date = item.isoDate;
             const content = await fetchContent(link);
             const index = i;
@@ -178,34 +181,32 @@ router.get('/articles', async function(req, res, next) {
         // logic to save crawled news at the database
         latestNews.forEach(async (item) => {
             try {
-                // Try to find a Coinness entry with the same id
-                const existingBlockmedia = await Blockmedia.findOne({ where: { id: item.id } });
+                // Upsert a Blockmedia entry: update if exists, create if not
+                const [blockmedia, created] = await Blockmedia.upsert({
+                    id: item.id,
+                    title: item.title,
+                    content: item.content,
+                    imageUrl: item.imageUrl,
+                    date: item.date,
+                    publisher: item.publisher,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                });
 
-                // If no entry with the same id exists, create a new one
-                if (!existingBlockmedia) {
-                    const blockmedia = await Blockmedia.create({
-                        id: item.id,
-                        title: item.title,
-                        content: item.content,
-                        imageUrl: item.imageUrl,
-                        date: item.date,
-                        publisher: item.publisher,
-                        createdAt: new Date(),
-                        updatedAt: new Date(),
-                    });
+                if (created) {
                     console.log('Blockmedia entry created:', blockmedia.toJSON());
                 } else {
-                    console.log(`Blockmedia entry with id ${item.id} already exists. Skipping insertion.`);
+                    console.log('Blockmedia entry updated:', blockmedia.toJSON());
                 }
             } catch (error) {
-                console.error('Error creating Blockmedia entry: ', error);
+                console.error('Error upserting Blockmedia entry: ', error);
             }
+
         });
-        res.send(latestNews);
+        res.json(latestNews);
     } catch (error) {
         console.error(error);
     }
-});
-
+})
 
 module.exports = router;
