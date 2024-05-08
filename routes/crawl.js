@@ -149,7 +149,7 @@ router.get('/articles', async function(req, res, next) {
             const title = item.title;
             const link = item.link;
             // const imageUrl = item.enclosure && item.enclosure.url;
-            let imageUrl = ''
+            let imageUrl = '/defaultImg.png';
             if (item.imageUrl) {
                 imageUrl = item.imageUrl['$'].url;
             }

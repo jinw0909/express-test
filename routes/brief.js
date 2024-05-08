@@ -71,7 +71,7 @@ async function getRecentAndUpdate() {
             limit: 5
         });
 
-        return JSON.stringify(updatedAnalyses.map(a => a.toJSON()));
+        return updatedAnalyses.map(a => a);
 
     } catch (error) {
         console.error("Error fetching and updating recent analysis:", error);

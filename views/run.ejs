@@ -2,53 +2,79 @@
     <html>
     <head>
         <title>Recent Analyses</title>
+        <style>
+            li {
+                display: none;
+            }
+        </style>
     </head>
     <body>
     <h1>Recent Analyses</h1>
-    <ul>
-        <% data.forEach(function(analysis) { %>
-            <li>
+    <ul id="analysisList">
+        <% data.forEach(function(analysis, index) { %>
+            <li id="item<%= index%>">
                 <strong>ID:</strong> <%= analysis.id %><br>
-                <strong>MP3 URL:</strong> <%= analysis.mp3 %><br>
+                <strong>Title: </strong> <%= analysis.title%><br>
+                <strong>Image: </strong> <img src="<%= analysis.imageUrl%>" alt="analysis image"><br>
+                <strong>Content: </strong> <%= analysis.content%><br>
+                <strong>MP3 URL:</strong> <%= analysis.mp3%><audio src="<%= analysis.mp3%>" id="audio<%= index%>"></audio><br>
                 <strong>Created At:</strong> <%= analysis.createdAt.toISOString() %><br>
-                <!-- Add other properties as needed -->
             </li>
         <% }) %>
     </ul>
+    <button id="playButton">Play</button>
+    <button id="pauseButton">Pause</button>
     <script>
-        // document.addEventListener('DOMContentLoaded', function() {
-        //    const playlist = [
-        //        { mp3: 'news1.mp3', img: 'image1.jpg'},
-        //        { mp3: 'news2.mp3', img: 'image2.jpg'},
-        //        { mp3: 'news3.mp3', img: 'image3.jpg'},
-        //        // Add more objects as needed
-        //    ];
-        //
-        //    let currentIndex = 0;
-        //
-        //    const audioPlayer = document.getElementById('newsAudio');
-        //    const imageDisplay = document.getElementById('articleImage');
-        //
-        //    // Function to load and play a given audio file and image
-        //    function loadAndPlay(index) {
-        //        if (index < playlist.length) {
-        //            audioPlayer.src = playlist[index].mp3;
-        //            audioPlayer.play();
-        //            imageDisplay.src = playlist[index].img;
-        //            currentIndex = index;
-        //        }
-        //    }
-        //
-        //    // Set up the audio player to load the next audio file when one ends
-        //    audioPlayer.addEventListener('ended', function() {
-        //       loadAndPlay(currentIndex + 1);
-        //    });
-        //
-        //    loadAndPlay(0);
-        //
-        //
-        // });
+        const listItems = document.querySelectorAll('li');
+        let currentAudioIndex = 0;
+        let currentAudio = document.getElementById(`audio${currentAudioIndex}`);
+        currentAudio.hasStarted = false;
+
+        document.getElementById('playButton').addEventListener('click', function() {
+            if (currentAudio.hasStarted && currentAudio.paused) {
+                currentAudio.play();
+            } else {
+                playAudio(currentAudioIndex);
+            }
+        });
+
+        document.getElementById('pauseButton').addEventListener('click', function() {
+            pauseAudio();
+        })
+
+        function playAudio(index) {
+            console.log("playAudio()");
+            stopAllAudios();
+            console.log("idx: ", index);
+            listItems.forEach(item => item.style.display = 'none');
+            listItems[index].style.display = 'block';
+
+            currentAudio = document.getElementById(`audio${index}`);
+            currentAudio.play();
+            currentAudio.hasStarted = true;
+            currentAudio.onended = function() {
+                currentAudioIndex++;
+                if (currentAudioIndex < listItems.length) {
+                    playAudio(currentAudioIndex);
+                }
+            }
+        }
+
+        function pauseAudio() {
+            if (currentAudio) {
+                currentAudio.pause();
+            }
+        }
+
+        function stopAllAudios() {
+            let audios = document.querySelectorAll('audio');
+            audios.forEach(audio => {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.hasStarted = false;
+            })
+        }
 
     </script>
     </body>
-    </html>
+</html>
