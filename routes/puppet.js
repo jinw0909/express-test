@@ -61,29 +61,50 @@ async function run() {
 
     console.log("mainContent: ", mainContent);
     await browser.close();
-    mainContent.forEach(async (item) => {
+    // mainContent.forEach(async (item) => {
+    //     try {
+    //         // Try to find a Coinness entry with the same id
+    //         const existingCoinness = await Coinness.findOne({ where: { id: item.id } });
+    //
+    //         // If no entry with the same id exists, create a new one
+    //         if (!existingCoinness) {
+    //             const coinness = await Coinness.create({
+    //                 createdAt: new Date(),
+    //                 title: item.title,
+    //                 content: item.content,
+    //                 time: item.time,
+    //                 updatedAt: new Date(),
+    //                 id: item.id
+    //             });
+    //             console.log('Coinness entry created:', coinness.toJSON());
+    //         } else {
+    //             console.log(`Coinness entry with id ${item.id} already exists. Skipping insertion.`);
+    //         }
+    //     } catch (error) {
+    //         console.error('Error creating Coinness entry:', error);
+    //     }
+    // });
+    for (const item of mainContent) {
         try {
-            // Try to find a Coinness entry with the same id
-            const existingCoinness = await Coinness.findOne({ where: { id: item.id } });
+            const [coinness, created] = await Coinness.upsert({
+                id: item.id,
+                title: item.title,
+                content: item.content,
+                time: item.time,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
 
-            // If no entry with the same id exists, create a new one
-            if (!existingCoinness) {
-                const coinness = await Coinness.create({
-                    createdAt: new Date(),
-                    title: item.title,
-                    content: item.content,
-                    time: item.time,
-                    updatedAt: new Date(),
-                    id: item.id
-                });
+            if (created) {
                 console.log('Coinness entry created:', coinness.toJSON());
             } else {
-                console.log(`Coinness entry with id ${item.id} already exists. Skipping insertion.`);
+                console.log('Coinness entry updated:', coinness.toJSON());
             }
         } catch (error) {
-            console.error('Error creating Coinness entry:', error);
+            console.error('Error in upserting Coinness entry:', error);
         }
-    });
+    }
+
 }
 
 async function getArticle() {
@@ -117,6 +138,14 @@ router.get('/', async function(req, res) {
         res.status(500).send('Internal Server Error');
     }
 
+});
+
+router.get('/select', async function(req, res) {
+    try {
+        
+    } catch (error) {
+        console.error(error);
+    }
 });
 
 module.exports = router;

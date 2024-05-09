@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-    <html>
+<html>
     <head>
         <title>Recent Analyses</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             li {
                 display: none; /* Hide elements but keep the space */
@@ -33,8 +34,14 @@
                 border-radius: 8px;
                 padding: 2rem;
             }
-            .select-lang { font-size: 2rem; }
-            button { font-size: 2rem; padding: .5rem 1rem; }
+            img { width: 100%; }
+            .imgDiv {
+                max-width: 90vw;}
+            /*@media (max-width: 768px) {*/
+            /*    .select-lang { font-size: 2rem; }*/
+            /*    button { font-size: 2rem; padding: .5rem 1rem; }*/
+            /*}*/
+
         </style>
     </head>
     <body>
@@ -59,8 +66,9 @@
                 <% } else { %>
                     <%= analysis.title %>
                 <% } %></h2>
-                <!-- <strong>Image: </strong> --><img src="<%= analysis.imageUrl%>" alt="analysis image"><br>
-                <!-- <strong>Summary: </strong> -->
+                <div class="imgDiv">
+                <img src="<%= analysis.imageUrl%>" alt="analysis image"><br>
+                </div>
                 <% if (lang === 'Japanese') { %>
                     <%= analysis.summary_jp %>
                 <% } else if (lang === 'Korean') { %>
