@@ -3,9 +3,26 @@
     <head>
         <title>Recent Analyses</title>
         <style>
-            /*li {*/
-            /*    display: none;*/
-            /*}*/
+            li {
+                display: none; /* Hide elements but keep the space */
+                opacity: 0;
+                transition: opacity 1s linear; /* Delay visibility to match opacity */
+            }
+            .thumbnail {
+                display: inline-block;
+                margin: 10px;
+                cursor: pointer;
+            }
+
+            .thumbnail img {
+                width: 100px; /* Adjust as needed */
+                height: auto;
+            }
+
+            .thumbnail span {
+                display: block;
+                text-align: center;
+            }
         </style>
     </head>
     <body>
@@ -18,8 +35,8 @@
     <ul id="analysisList">
         <% data.forEach(function(analysis, index) { %>
             <li id="item<%= index%>">
-                <strong>ID:</strong> <%= analysis.id %><br>
-                <strong>Title: </strong>
+                <!-- <strong>ID:</strong> <%= analysis.id %><br> -->
+                <!-- <strong>Title: </strong> -->
                 <% if (lang === 'Japanese') { %>
                     <%= analysis.title_jp %>
                 <% } else if (lang === 'Korean') { %>
@@ -27,8 +44,8 @@
                 <% } else { %>
                     <%= analysis.title %>
                 <% } %><br>
-                <strong>Image: </strong> <img src="<%= analysis.imageUrl%>" alt="analysis image"><br>
-                <strong>Content: </strong>
+                <!-- <strong>Image: </strong> --><img src="<%= analysis.imageUrl%>" alt="analysis image"><br>
+                <!-- <strong>Summary: </strong> -->
                 <% if (lang === 'Japanese') { %>
                     <%= analysis.summary_jp %>
                 <% } else if (lang === 'Korean') { %>
@@ -36,14 +53,14 @@
                 <% } else { %>
                     <%= analysis.summary %>
                 <% } %><br>
-                <strong>MP3 URL:</strong>
-                    <% if (lang === 'Japanese') { %>
-                        <%= analysis.mp3_jp %>
-                    <% } else if (lang === 'Korean') { %>
-                        <%= analysis.mp3_kr %>
-                    <% } else { %>
-                        <%= analysis.mp3 %>
-                    <% } %>
+                <!-- <strong>MP3 URL:</strong> -->
+<!--                    <% if (lang === 'Japanese') { %>-->
+<!--                        <%= analysis.mp3_jp %>-->
+<!--                    <% } else if (lang === 'Korean') { %>-->
+<!--                        <%= analysis.mp3_kr %>-->
+<!--                    <% } else { %>-->
+<!--                        <%= analysis.mp3 %>-->
+<!--                    <% } %>-->
                 <audio src="
                     <% if (lang === 'Japanese') { %>
                         <%= analysis.mp3_jp %>
@@ -58,11 +75,28 @@
     </ul>
     <button id="playButton">Play</button>
     <button id="pauseButton">Pause</button>
+    <div id="thumbnails">
+        <% data.forEach(function(analysis, index) { %>
+            <div class="thumbnail" data-index="<%= index %>">
+                <img src="<%= analysis.imageUrl %>" alt="Thumb <%= index %>">
+                <span>Article <%= index + 1 %></span>
+            </div>
+        <% }) %>
+    </div>
     <script>
         const listItems = document.querySelectorAll('li');
         let currentAudioIndex = 0;
         let currentAudio = document.getElementById(`audio${currentAudioIndex}`);
         currentAudio.hasStarted = false;
+        const delayBetweenAudios = 1000;
+        const thumbnails = document.querySelectorAll('.thumbnail');
+
+        thumbnails.forEach(thumb => {
+           thumb.addEventListener('click', function() {
+               currentAudioIndex = parseInt(this.getAttribute('data-index'));
+               prepareAudio(currentAudioIndex);
+           })
+        });
 
         document.getElementById('playButton').addEventListener('click', function() {
             if (currentAudio.hasStarted && currentAudio.paused) {
@@ -74,23 +108,48 @@
 
         document.getElementById('pauseButton').addEventListener('click', function() {
             pauseAudio();
-        })
+        });
+
+        function prepareAudio(index) {
+            stopAllAudios();
+            // Fade out all list items before fading in the selected one
+            listItems.forEach((item, idx) => {
+                if (idx !== index) {
+                    item.style.opacity = 0;
+                    setTimeout(() => {
+                        item.style.display = 'none';
+                    }, 1000); // Match the duration of the fade out effect
+                }
+            });
+            // Delay the fadeIn to allow other items to fade out smoothly
+            setTimeout(() => {
+                fadeIn(listItems[index]); // Fade in the current list item
+            }, 1000);
+            currentAudio = document.getElementById(`audio${index}`);
+        }
 
         function playAudio(index) {
-            console.log("playAudio()");
             stopAllAudios();
-            console.log("idx: ", index);
-            listItems.forEach(item => item.style.display = 'none');
-            listItems[index].style.display = 'block';
+            // console.log("idx: ", index);
+            listItems.forEach(item => {
+                item.style.display = 'none'
+                item.style.opacity = '0';
+            });
+            //listItems[index].style.display = 'block';
+            fadeIn(listItems[index]);
 
             currentAudio = document.getElementById(`audio${index}`);
             currentAudio.play();
             currentAudio.hasStarted = true;
             currentAudio.onended = function() {
-                currentAudioIndex++;
-                if (currentAudioIndex < listItems.length) {
-                    playAudio(currentAudioIndex);
-                }
+                fadeOut(listItems[currentAudioIndex], function() {
+                    currentAudioIndex++;
+                    if (currentAudioIndex < listItems.length) {
+                        setTimeout(function() {
+                            playAudio(currentAudioIndex);
+                        }, delayBetweenAudios);
+                    }
+                });
             }
         }
 
@@ -107,6 +166,21 @@
                 audio.currentTime = 0;
                 audio.hasStarted = false;
             })
+        }
+
+        function fadeIn(element) {
+            element.style.display = 'block';
+            setTimeout(function() {
+                element.style.opacity = 1;
+            }, 10); // Start fade-in after a short delay to ensure display: block takes effect
+        }
+
+        function fadeOut(element, callback) {
+            element.style.opacity = 0;
+            setTimeout(function() {
+                element.style.display = 'none';
+                if (callback) callback();
+            }, 1000); // Duration should match transition duration
         }
 
     </script>
