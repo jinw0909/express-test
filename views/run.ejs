@@ -8,6 +8,10 @@
                 opacity: 0;
                 transition: opacity 1s linear; /* Delay visibility to match opacity */
             }
+            li:first-child {
+                display: block;
+                opacity: 1;
+            }
             .thumbnail {
                 display: inline-block;
                 margin: 10px;
@@ -23,27 +27,38 @@
                 display: block;
                 text-align: center;
             }
+            #analysisList {
+                min-height: 50vh;
+                border: 1px solid #999;
+                border-radius: 8px;
+                padding: 2rem;
+            }
+            .select-lang { font-size: 2rem; }
+            button { font-size: 2rem; padding: .5rem 1rem; }
         </style>
     </head>
     <body>
     <h1>Recent Analyses</h1>
-    <div>
+    <div class="select-lang">
         <a href="/run?lang=English" id="selectEn">English</a>
         <a href="/run?lang=Japanese" id="selectJp">Japanese</a>
         <a href="/run?lang=Korean" id="selectKr">Korean</a>
     </div>
+    <button id="playButton">Play</button>
+    <button id="pauseButton">Pause</button>
     <ul id="analysisList">
         <% data.forEach(function(analysis, index) { %>
             <li id="item<%= index%>">
                 <!-- <strong>ID:</strong> <%= analysis.id %><br> -->
                 <!-- <strong>Title: </strong> -->
+                <h2>
                 <% if (lang === 'Japanese') { %>
                     <%= analysis.title_jp %>
                 <% } else if (lang === 'Korean') { %>
                     <%= analysis.title_kr %>
                 <% } else { %>
                     <%= analysis.title %>
-                <% } %><br>
+                <% } %></h2>
                 <!-- <strong>Image: </strong> --><img src="<%= analysis.imageUrl%>" alt="analysis image"><br>
                 <!-- <strong>Summary: </strong> -->
                 <% if (lang === 'Japanese') { %>
@@ -73,8 +88,6 @@
             </li>
         <% }) %>
     </ul>
-    <button id="playButton">Play</button>
-    <button id="pauseButton">Pause</button>
     <div id="thumbnails">
         <% data.forEach(function(analysis, index) { %>
             <div class="thumbnail" data-index="<%= index %>">
