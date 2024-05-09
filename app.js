@@ -9,6 +9,7 @@ const AWS = require('aws-sdk');
 const db = require('./database');
 const sequelize = require('./sequelize');
 const Coinness = require('./coinness');
+const setupCronJobs = require('./scheduler');
 
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
@@ -78,5 +79,7 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+setupCronJobs();
 
 module.exports = app;

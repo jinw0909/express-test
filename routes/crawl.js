@@ -177,32 +177,7 @@ router.get('/articles', async function(req, res, next) {
             });
 
         }
-        // console.log("latest news: ", latestNews);
-        // logic to save crawled news at the database
-        // latestNews.forEach(async (item) => {
-        //     try {
-        //         // Upsert a Blockmedia entry: update if exists, create if not
-        //         const [blockmedia, created] = await Blockmedia.upsert({
-        //             id: item.id,
-        //             title: item.title,
-        //             content: item.content,
-        //             imageUrl: item.imageUrl,
-        //             date: item.date,
-        //             publisher: item.publisher,
-        //             createdAt: new Date(),
-        //             updatedAt: new Date()
-        //         });
-        //
-        //         if (created) {
-        //             console.log('Blockmedia entry created:', blockmedia.toJSON());
-        //         } else {
-        //             console.log('Blockmedia entry updated:', blockmedia.toJSON());
-        //         }
-        //     } catch (error) {
-        //         console.error('Error upserting Blockmedia entry: ', error);
-        //     }
-        //
-        // });
+
         for (const item of latestNews) {
             try {
                 const [blockmedia, created] = await Blockmedia.upsert({
