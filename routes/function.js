@@ -633,8 +633,7 @@ router.post('/index', async function(req, res) {
       const result = await runCreateConversation(candidates);
       console.log(result);
       console.log("content: ", result[0].message.content);
-      const articles = JSON.parse(result[0].message.content);
-      console.log("articles: ", articles);
+      const articles = JSON.parse((result[0].message.content).replace(/```json|```|\n/g, ''));
 
       for (const article of articles) { // Loop through each article
          try {
