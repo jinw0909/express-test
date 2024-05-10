@@ -349,7 +349,8 @@ async function get24articles() {
             createdAt: {
                [Sequelize.Op.gte]: yesterday
             }
-         }
+         },
+         limit: 10
       })
       if (!articles.length) {
          console.log('No articles published in the last 24 hours');
