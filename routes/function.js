@@ -511,7 +511,8 @@ async function getCandidates(indexList) {
             id : {
                [Sequelize.Op.in]: indexList
             }
-         }
+         },
+         limit: 10
       })
       console.log("query result: ", articles);
       return JSON.stringify(articles, null, 2);
