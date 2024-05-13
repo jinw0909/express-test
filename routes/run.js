@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 const Blockmedia = require('../blockmedia');
 const Analysis = require('../analysis');
+const Viewpoint = require('../viewpoint');
 const { Sequelize } = require("sequelize");
 const { Op } = require('sequelize');
 
@@ -24,26 +25,43 @@ async function getRecent() {
     }
 }
 
+async function getRecentVp() {
+    try {
+        const viewPoint = await Viewpoint.findOne({
+            order: [
+                ['createdAt', 'DESC'] // Orders by 'createdAt' in descending order
+            ]
+        });
+        return viewPoint;
+    } catch (error) {
+        console.error("Error fetching recent analyses:", error);
+    }
+}
+
 router.get('/', async function(req, res, next) {
     try {
         const language = req.query.lang || 'English';
         const recentAnalyses = await getRecent();
+        const recentViewpoint = await getRecentVp();
         console.log("recentAnalyses: ", recentAnalyses);
-        res.render('run', {data: recentAnalyses, lang: language});
+        console.log("recentViewpoint: ", recentViewpoint);
+        res.render('run', {data: recentAnalyses, lang: language, vp: recentViewpoint});
     } catch (error) {
         console.error(error);
     }
 });
 
-router.post('/', async function(req, res) {
-   try {
-       const lang = req.body.lang;
-       const recentAnalyses = await getRecent();
-       console.log("recentAnalyses: ", recentAnalyses);
-       res.render('run', {data: recentAnalyses, lang: lang});
-   } catch (error) {
-       console.error(error);
-   }
-});
+// router.post('/', async function(req, res) {
+//    try {
+//        const lang = req.body.lang;
+//        const recentAnalyses = await getRecent();
+//        const recentViewpoint = await getRecentVp();
+//        console.log("recentAnalyses: ", recentAnalyses);
+//        console.log("recentViewpoint: ", recentViewpoint);
+//        res.render('run', {data: recentAnalyses, lang: lang, vp: recentViewpoint});
+//    } catch (error) {
+//        console.error(error);
+//    }
+// });
 
 module.exports = router;

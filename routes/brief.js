@@ -9,6 +9,7 @@ const openai = new OpenAi({
 const { Sequelize } = require("sequelize");
 const Blockmedia = require('../blockmedia');
 const Analysis = require('../analysis');
+const Viewpoint = require('../viewpoint');
 const { Op } = require('sequelize');
 const multer = require("multer");
 const AWS = require("aws-sdk");
@@ -134,6 +135,167 @@ async function generateTTS(content, lang, id) {
     });
 }
 
+async function runViewpointConversation() {
+    const messages = [
+        {role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. You are also capable of derive the bitcoin market trend by analyzing the bitcoin price movement within a certain period, and capable of deriving the relationship between the trend and real-world events"},
+        {role: "user", content: "From the analysis conducted on the Blockmedia articles, provide your final viewpoint derived from the most recent five analyses regarding the Bitcoin and cryptocurrency markets. Also, relate your viewpoint to the price fluctuations in the Bitcoin market over the past 7 days and within the last 24 hours. Additionally, based on your final viewpoint, if possible, provide a rough estimate of the future changes in the price of Bitcoin. Don't mention 'Blockmedia' in your response. Please return the result in JSON format as {'viewpoint': 'text'}."},
+        // {role: "assistant", content: ""},
+        // {role: "user", content: ""},
+    ]
+    const tools = [
+        {
+            type: "function",
+            function: {
+                name: "get_recent_analyses",
+                description: "returns the list of the 5 most recent analyses created. "
+            }
+        },
+        {
+            type: "function",
+            function: {
+                name: "get_coinprice_week",
+                description: "returns the bitcoin price movement within the last seven days. "
+            }
+        },
+        {
+            type: "function",
+            function: {
+                name: "get_coinprice_day",
+                description: "returns the bitcoin price movement within the last 24 hours. "
+            }
+        }
+    ]
+    const response = await openai.chat.completions.create({
+        model: "gpt-4-turbo",
+        messages: messages,
+        tools: tools,
+        tool_choice : "auto", //auto is default, but we'll be explicit
+        response_format: {type: "json_object"}
+    });
+    const responseMessage = response.choices[0].message;
+    const toolCalls = responseMessage.tool_calls;
+    if (responseMessage.tool_calls) {
+        const availableFunctions = {
+            get_recent_analyses: getRecentAnalyses,
+            get_coinprice_week : getCoinPriceWeek,
+            get_coinprice_day: getCoinPriceDay
+        };
+        messages.push(responseMessage);
+        for (const toolCall of toolCalls) {
+            const functionName = toolCall.function.name;
+            const functionToCall = availableFunctions[functionName];
+            console.log("functionToCall: ", functionToCall);
+            const functionArgs = JSON.parse(toolCall.function.arguments || "{}");
+            const functionResponse = await functionToCall(
+                functionArgs
+            )
+            console.log("functionResponse: ", functionResponse);
+
+            messages.push({
+                tool_call_id: toolCall.id,
+                role: "tool",
+                name: functionName,
+                content: functionResponse,
+            })
+        }
+
+        const secondResponse = await openai.chat.completions.create({
+            model: "gpt-4-turbo",
+            messages: messages,
+            response_format: {type: "json_object"}
+        });
+
+        return secondResponse.choices;
+    }
+}
+
+async function getRecentAnalyses() {
+    try {
+        const recentAnalyses = await Analysis.findAll({
+            order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
+            limit: 5
+        });
+        return JSON.stringify(recentAnalyses, null, 2);
+    } catch(error) {
+        console.error(error);
+    }
+}
+
+async function getCoinPriceDay() {
+    try {
+        const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=24')
+        const data = await response.json();
+        return JSON.stringify(data, null, 2);
+    } catch (err) {
+        console.error("Failed to fetch Bitcoin prices (24hr) : ", err);
+        return { error: err.message }
+    }
+}
+
+async function getCoinPriceWeek() {
+    try {
+        const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
+        const data = await response.json();
+        return JSON.stringify(data, null, 2);
+    } catch(err) {
+        console.error("Error: ", err);
+        throw err;
+    }
+}
+
+async function getViewpointAndUpdate() {
+    try {
+        const viewpoint = await getRecentViewpoint();
+
+        if (viewpoint) {
+
+            const viewpointJp = await translateText(viewpoint.viewpoint, 'Japanese');
+            const viewpointKr = await translateText(viewpoint.viewpoint, 'Korean');
+
+            const mp3En = await generateTTS(viewpoint.viewpoint, 'English', viewpoint.id);
+            const mp3Jp = await generateTTS(viewpointJp, 'Japanese', viewpoint.id);
+            const mp3Kr = await generateTTS(viewpointKr, 'Korean', viewpoint.id);
+
+            // Update the Analysis entry with values from the Blockmedia entry
+            await viewpoint.update({
+                viewpoint_jp: viewpointJp,
+                viewpoint_kr: viewpointKr,
+                updatedAt: new Date(),
+                mp3: mp3En, // Path or URL to the English MP3 file
+                mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
+                mp3_kr: mp3Kr // Path or URL to the Korean MP3 file
+            });
+
+        }
+
+        // Optionally, return the updated analyses
+        const updatedViewpoint = await Viewpoint.findOne({
+            order: [['createdAt', 'DESC']], // Optionally re-fetch to send updated data back
+        });
+
+        return updatedViewpoint;
+
+    } catch (error) {
+        console.error("Error fetching and updating recent analysis:", error);
+        throw error;
+    }
+}
+
+async function getRecentViewpoint() {
+    try {
+        const viewpoint = await Viewpoint.findOne({
+            order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
+        })
+        // const viewpoint = recentAnalyses.map(analysis => {
+        //     return { id: analysis.id, analysis: analysis.analysis, summary: analysis.summary}
+        // });
+        return viewpoint;
+
+    } catch (error) {
+        console.error(error);
+    }
+}
+
 /* GET users listing. */
 router.get('/', function(req, res, next) {
     res.render('brief');
@@ -146,5 +308,51 @@ router.get('/construct', async function(req, res) {
         })
         .catch(console.error)
 });
+router.get('/viewpoint', async function(req, res) {
+    try {
+        const result = await runViewpointConversation();
+        console.log("result: ", result);
+        const content = result[0].message.content;
+        const { viewpoint } = JSON.parse(content);
+        const today = new Date();
+        const idSuffix = today.getHours() >= 12 ? 'PM' : 'AM';
+        const id = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}_${idSuffix}`;
+
+        try {
+            const [instance, created] = await Viewpoint.upsert({
+                id: id,
+                viewpoint: viewpoint,
+                imageUrl: '/defaultImg.png',
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+            if (created) {
+                console.log('New Viewpoint instance created:', instance.toJSON());
+            } else {
+                console.log('Viewpoint updated:', instance.toJSON());
+            }
+        } catch (error) {
+            console.error(error);
+        }
+
+        const viewPoint = await getRecentViewpoint(); // Fetch recent analyses
+        res.json(viewPoint); // Send response with recent analyses
+    } catch (error) {
+        console.error(error);
+        res.send("An error occurred");
+    }
+});
+
+router.get('/constructvp', async function(req, res) {
+    try {
+        await getViewpointAndUpdate()
+            .then(result => {
+                res.json(result);
+            })
+            .catch(console.error)
+    } catch (error) {
+        console.error(error);
+    }
+})
 
 module.exports = router;

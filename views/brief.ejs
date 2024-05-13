@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fortune Telling ChatDoge</title>
+    <title>Automated Briefing</title>
 </head>
 <body>
 <div class="container">
@@ -13,23 +13,35 @@
         <button class="send-btn-index">Send Request</button>
         <div class="result-div-index"></div>
     </div>
-    <div class="send-request-create" style="opacity: 0.5;">
-        <h4>Return Created Analysis</h4>
-        <span id="flag2"></span>
-        <button class="send-btn-create">Send Request</button>
-        <div class="result-div-create"></div>
-    </div>
+<!--    <div class="send-request-create" style="opacity: 0.5;">-->
+<!--        <h4>Return Created Analysis</h4>-->
+<!--        <span id="flag2"></span>-->
+<!--        <button class="send-btn-create">Send Request</button>-->
+<!--        <div class="result-div-create"></div>-->
+<!--    </div>-->
     <div class="send-request-save">
-        <h4>Save Created Analysis in DB (and return results)</h4>
+        <h4>ceate Analysis from indexes and insert to DB</h4>
         <span id="flag3"></span>
         <button class="send-btn-save">Send Request</button>
         <div class="result-div-save"></div>
     </div>
     <div class="send-request-construct">
-        <h4>Construct the Full Analysis for the Recent 5</h4>
+        <h4>Construct the Full Analysis for the Recent 5 analysis</h4>
         <span id="flag4"></span>
         <button class="send-btn-construct">Send Request</button>
         <div class="result-div-construct"></div>
+    </div>
+    <div class="send-request-viewpoint">
+        <h4>Create the Viewpoint for the Constructed Analyses</h4>
+        <span id="flag5"></span>
+        <button class="send-btn-viewpoint">Send Request</button>
+        <div class="result-div-viewpoint"></div>
+    </div>
+    <div class="send-request-constructvp">
+        <h4>Construct the Viewpoint with Translation and Voices</h4>
+        <span id="flag6"></span>
+        <button class="send-btn-constructvp">Send Request</button>
+        <div class="result-div-constructvp"></div>
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -59,30 +71,30 @@
             })
     });
 
-    document.querySelector('.send-btn-create').addEventListener('click', function() {
-
-        axios.get('/function/index/create').then(response => {
-            console.log('success:', response);
-            const container = document.querySelector('.result-div-create');
-            container.innerHTML = '';
-            let articles = JSON.parse(response.data[0].message['content']);
-            console.log("articles: ", articles);
-            articles.forEach(article => {
-                let divElem = document.createElement('div');
-                divElem.className = 'article';
-                let idDiv = document.createElement('div');
-                idDiv.textContent = `ID: ${article.id}`;
-                divElem.appendChild(idDiv);
-                let contentDiv = document.createElement('div');
-                contentDiv.textContent = `Content: ${article.analysis}`;
-                divElem.appendChild(contentDiv);
-
-                container.appendChild(divElem);
-            });
-        }).catch(postError => {
-            console.error('error:', postError);
-        });
-    });
+    // document.querySelector('.send-btn-create').addEventListener('click', function() {
+    //
+    //     axios.get('/function/index/create').then(response => {
+    //         console.log('success:', response);
+    //         const container = document.querySelector('.result-div-create');
+    //         container.innerHTML = '';
+    //         let articles = JSON.parse(response.data[0].message['content']);
+    //         console.log("articles: ", articles);
+    //         articles.forEach(article => {
+    //             let divElem = document.createElement('div');
+    //             divElem.className = 'article';
+    //             let idDiv = document.createElement('div');
+    //             idDiv.textContent = `ID: ${article.id}`;
+    //             divElem.appendChild(idDiv);
+    //             let contentDiv = document.createElement('div');
+    //             contentDiv.textContent = `Content: ${article.analysis}`;
+    //             divElem.appendChild(contentDiv);
+    //
+    //             container.appendChild(divElem);
+    //         });
+    //     }).catch(postError => {
+    //         console.error('error:', postError);
+    //     });
+    // });
 
     document.querySelector('.send-btn-save').addEventListener('click', function() {
         if (candidates) {
@@ -128,6 +140,30 @@
                 console.error("post failure: ", err);
             })
     });
+
+    document.querySelector('.send-btn-viewpoint').addEventListener('click', function() {
+        document.querySelector('#flag5').textContent = "sent";
+        axios.get('/brief/viewpoint')
+            .then((response) => {
+                console.log("post success: ", response);
+            })
+            .catch(err => {
+                console.error("post failure: ", err);
+            })
+    });
+
+    document.querySelector('.send-btn-constructvp').addEventListener('click', function() {
+       document.querySelector('#flag6').textContent = "sent";
+       axios.get('/brief/constructvp')
+           .then((response) => {
+               console.log("success: ", response);
+           })
+           .catch(err => {
+               console.error("failure ", err)
+           })
+    });
+
+
 
 </script>
 </body>

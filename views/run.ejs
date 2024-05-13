@@ -35,12 +35,8 @@
                 padding: 2rem;
             }
             img { width: 100%; }
-            .imgDiv {
-                max-width: 90vw;}
-            /*@media (max-width: 768px) {*/
-            /*    .select-lang { font-size: 2rem; }*/
-            /*    button { font-size: 2rem; padding: .5rem 1rem; }*/
-            /*}*/
+            .imgDiv { max-width: 90vw;}
+            .main-text { margin-top: 1rem; }
 
         </style>
     </head>
@@ -69,21 +65,15 @@
                 <div class="imgDiv">
                 <img src="<%= analysis.imageUrl%>" alt="analysis image"><br>
                 </div>
+                <div class="main-text">
                 <% if (lang === 'Japanese') { %>
                     <%= analysis.summary_jp %>
                 <% } else if (lang === 'Korean') { %>
                     <%= analysis.summary_kr %>
                 <% } else { %>
                     <%= analysis.summary %>
-                <% } %><br>
-                <!-- <strong>MP3 URL:</strong> -->
-<!--                    <% if (lang === 'Japanese') { %>-->
-<!--                        <%= analysis.mp3_jp %>-->
-<!--                    <% } else if (lang === 'Korean') { %>-->
-<!--                        <%= analysis.mp3_kr %>-->
-<!--                    <% } else { %>-->
-<!--                        <%= analysis.mp3 %>-->
-<!--                    <% } %>-->
+                <% } %>
+                </div>
                 <audio src="
                     <% if (lang === 'Japanese') { %>
                         <%= analysis.mp3_jp %>
@@ -92,9 +82,29 @@
                     <% } else { %>
                         <%= analysis.mp3 %>
                     <% } %>" id="audio<%= index%>"></audio><br>
-                <strong>Created At:</strong> <%= analysis.createdAt.toISOString() %><br>
+                <p><%= analysis.createdAt.toISOString().substring(0, 10) %><br></p>
             </li>
         <% }) %>
+        <li id="item<%= data.length%>">
+            <h2>Final Viewpoint</h2>
+            <div>
+                <% if (lang === 'Japanese') { %>
+                    <%= vp.viewpoint_jp %>
+                <% } else if (lang === 'Korean') { %>
+                    <%= vp.viewpoint_kr %>
+                <% } else { %>
+                    <%= vp.viewpoint %>
+                <% } %>
+            </div>
+            <audio src="
+            <% if (lang === 'Japanese') { %>
+                <%= vp.mp3_jp %>
+            <% } else if (lang === 'Korean') { %>
+                <%= vp.mp3_kr %>
+            <% } else { %>
+                <%= vp.mp3 %>
+            <% } %>" id="audio<%= data.length%>"></audio>
+        </li>
     </ul>
     <div id="thumbnails">
         <% data.forEach(function(analysis, index) { %>
@@ -103,6 +113,10 @@
                 <span>Article <%= index + 1 %></span>
             </div>
         <% }) %>
+        <div class="thumbnail" data-index="<%= data.length%>>">
+            <img src="<%= vp.imageUrl%>" alt="Thumb Viewpoint">
+            <span>Viewpoint</span>
+        </div>
     </div>
     <script>
         const listItems = document.querySelectorAll('li');
@@ -197,11 +211,16 @@
         }
 
         function fadeOut(element, callback) {
-            element.style.opacity = 0;
-            setTimeout(function() {
-                element.style.display = 'none';
+            console.log("id: ", element.id);
+            if (element.id !== `item${listItems.length - 1}`) {
+                element.style.opacity = 0;
+                setTimeout(function() {
+                    element.style.display = 'none';
+                    if (callback) callback();
+                }, 1000); // Duration should match transition duration
+            } else {
                 if (callback) callback();
-            }, 1000); // Duration should match transition duration
+            }
         }
 
     </script>
