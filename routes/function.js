@@ -412,8 +412,8 @@ async function runIndexConversation() {
       { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
       { role: "user", content: "From the articles of Blockmedia within the past 24 hours, select five articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, and give me each article's id and the reason for its selection in a json format. Don't improvise the id and search from the provided function call result."},
       // { role: "function", name: "get_blockmedia_articles_24"},
-      { role: "assistant", content: `[{"id": 523806, "reason": "This article discusses BNP Paribas' investment in a Bitcoin spot ETF managed by BlackRock, marking a significant entry by one of Europe's largest banks into the cryptocurrency space. The move reflects growing institutional interest in cryptocurrencies, which can be a bullish indicator for the market."}, {"id": 524335, "reason" : "Coinbase, a major cryptocurrency exchange in the U.S., reported a substantial increase in revenue and profits due to the surge in Bitcoin prices. This reflects heightened trading activity and could signify ongoing interest and investment in the cryptocurrency from both retail and institutional investors."}, {"id": 523502, "reason": "The delay in expected rate cuts by the Federal Reserve could have implications for the cryptocurrency market. Typically, lower interest rates can lead to higher investments in risk assets like cryptocurrencies, so any delays can affect market sentiment and investment flows."}, {"id": 523654, "reason": "Although Fed Chair Jerome Powell indicated that an immediate rate hike isn't forthcoming, the ongoing concerns about inflation and economic overheating can create a volatile environment for cryptocurrencies, as investors might reassess risk assets."}, {"id": 523725, "reason": "This article covers how Bitcoin adoption in El Salvador and other Latin American countries is influencing the regional economy and sparking a widespread interest in cryptocurrencies. The regional adoption can play a crucial role in highlighting the utility and acceptance of cryptocurrencies on a broader scale. These articles provide insights into regulatory movements, economic conditions, and significant market activities that are crucial for understanding the current trends and future movements of the cryptocurrency market."}]`},
-      { role: "user", content: "From the articles of Blockmedia within the past 24 hours, select five articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, and give me each article's id and the reason for its selection in a json format. Don't improvise the id and search from the provided function call result."},
+      { role: "assistant", content: '{"selected_articles" : [{"id": 523806, "reason": "This article discusses BNP Paribas\' investment in a Bitcoin spot ETF managed by BlackRock, marking a significant entry by one of Europe\'s largest banks into the cryptocurrency space. The move reflects growing institutional interest in cryptocurrencies, which can be a bullish indicator for the market."}, {"id": 524335, "reason" : "Coinbase, a major cryptocurrency exchange in the U.S., reported a substantial increase in revenue and profits due to the surge in Bitcoin prices. This reflects heightened trading activity and could signify ongoing interest and investment in the cryptocurrency from both retail and institutional investors."}, {"id": 523502, "reason": "The delay in expected rate cuts by the Federal Reserve could have implications for the cryptocurrency market. Typically, lower interest rates can lead to higher investments in risk assets like cryptocurrencies, so any delays can affect market sentiment and investment flows."}, {"id": 523654, "reason": "Although Fed Chair Jerome Powell indicated that an immediate rate hike isn\'t forthcoming, the ongoing concerns about inflation and economic overheating can create a volatile environment for cryptocurrencies, as investors might reassess risk assets."}, {"id": 523725, "reason": "This article covers how Bitcoin adoption in El Salvador and other Latin American countries is influencing the regional economy and sparking a widespread interest in cryptocurrencies. The regional adoption can play a crucial role in highlighting the utility and acceptance of cryptocurrencies on a broader scale. These articles provide insights into regulatory movements, economic conditions, and significant market activities that are crucial for understanding the current trends and future movements of the cryptocurrency market."}]'},
+      { role: "user", content: "From the articles of Blockmedia within the past 24 hours, select five articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, and give me each article's id and the reason for its selection in a json format with a key of 'selected_articles'. Don't improvise the id and search the article id from the provided function call result."},
    ];
    const tools = [
       {
@@ -459,16 +459,6 @@ async function runIndexConversation() {
             name: functionName,
             content: functionResponse,
          }); //extend the conversation with function response
-         // const paginatedArticles = await functionToCall();
-         //
-         // for (const articlesPage of paginatedArticles) {
-         //    messages.push({
-         //       tool_call_id: toolCall.id,
-         //       role: "tool",
-         //       name: functionName,
-         //       content: JSON.stringify(articlesPage)
-         //    }); // Extend the conversation with function response
-         // }
       }
 
       const secondResponse = await openai.chat.completions.create({
@@ -486,7 +476,7 @@ async function runCreateConversation(candidates) {
    //Step 1 : send the conversation and available functions to the model
    const messages = [
       { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-      { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at eight to ten sentences and the summary has to be at four to five sentences. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summary_and_analysis" so I can save each summary and analysis in a local database with much ease.`}
+      { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at eight to ten sentences and the summary has to be at four to five sentences. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease.`}
    ];
    const tools = [
       {
@@ -633,8 +623,8 @@ router.get('/relevant', function(req, res) {
        .catch(console.error)
 });
 
-router.get('/index', function(req, res) {
-   runIndexConversation()
+router.get('/recent', async function(req, res) {
+  await getRecent()
        .then(result => {
           console.log(result);
           res.json(result);
@@ -642,45 +632,16 @@ router.get('/index', function(req, res) {
        .catch(console.error);
 });
 
-// router.post('/index', async function(req, res) {
-//    const candidates = req.body.data;
-//    console.log('Received candidates: ', candidates);
-//
-//    try {
-//       const result = await runCreateConversation(candidates);
-//       console.log(result);
-//       console.log("content: ", result[0].message.content);
-//       const articles = JSON.parse(result[0].message.content);
-//       console.log("articles: ", articles);
-//       for (const article of articles) { // Use a loop that supports await
-//          try {
-//             const [model, created] = await Analysis.findOrCreate({
-//                where: { id: article.id },
-//                defaults: {
-//                   id: article.id,
-//                   createdAt: new Date(),
-//                   date: 'Default Time',
-//                   analysis: article.analysis,
-//                   summary: article.summary,
-//                   updatedAt: new Date()
-//                }
-//             });
-//             if (created) {
-//                console.log(`Analysis with ID ${article.id} was created`);
-//             } else {
-//                console.log(`Analysis with ID ${article.id} already exists`);
-//             }
-//          } catch (err) {
-//             console.error('Error saving article:', err);
-//          }
-//       }
-//       const recentAnalyses = await getRecent(); // Await here after all articles processed
-//       res.json(recentAnalyses); // Send response only once after all processing
-//    } catch (error) {
-//       console.error(error);
-//       res.send("An error occurred");
-//    }
-// })
+router.get('/index', async function(req, res) {
+   try {
+      const result = await runIndexConversation();
+      console.log("result: ", result);
+      res.json(result[0].message.content);
+   } catch (error) {
+      console.error(error);
+   }
+});
+
 router.post('/index', async function(req, res) {
    const candidates = req.body.data;
    console.log('Received candidates: ', candidates);
@@ -688,11 +649,12 @@ router.post('/index', async function(req, res) {
    try {
       const result = await runCreateConversation(candidates);
       console.log(result);
-      const content = result[0].message.content["summaries_and_analyses"];
-      console.log("content: ", result[0].message.content);
+      const content = result[0].message.content;
+      const articles = JSON.parse(content).summaries_and_analyses;
+      console.log("articles: ", articles);
       // const articles = JSON.parse((result[0].message.content).replace(/```json|```|\n/g, ''));
 
-      for (const article in content) { // Loop through each article
+      for (const article of articles) { // Loop through each article
          try {
             const [instance, created] = await Analysis.upsert({
                id: article.id,
@@ -719,41 +681,50 @@ router.post('/index', async function(req, res) {
       res.send("An error occurred");
    }
 });
-router.get('/index/create', function(req, res) {
-   // const candidates = req.body.data;
-   // console.log('Received candidates: ', candidates);
-   const candidates = [
-      {
-         id: 523806,
-         reason: "This article discusses the investment by BNP Paribas in a Bitcoin spot ETF managed by BlackRock. The involvement of one of Europe's largest banks in cryptocurrency is a significant positive indicator for market maturity and potential institutional confidence."
-      },
-      {
-         id: 523502,
-         reason: "This article is important as it focuses on the Federal Reserve's rate-setting decisions. Since monetary policy, especially the interest rate changes, significantly influences investment in cryptocurrencies as they are often seen as hedge investments against inflation."
-      },
-      {
-         id: 524335,
-         reason: "The article on Coinbase's financial results reflecting significant profit and revenue due to a bullish Bitcoin market is crucial. It highlights the public's continued interest and the financial markets' increased involvement with cryptocurrencies which can indicate persisting positive sentiment."
-      },
-      {
-         id: 523725,
-         reason: 'The adoption of Bitcoin in El Salvador and its potential ripple effects in Latin America provides insight into how geopolitical actions can profoundly influence the cryptocurrency market. This is relevant for understanding regional market movements and future currency adoption.'
-      },
-      {
-         id: 523186,
-         reason: "This article gives a perspective on emerging blockchain technologies like the Nibiru Chain, which is challenging Ethereum. It's essential for predicting the broader impacts on the cryptocurrency market, especially in developer activity and new blockchain adoption."
-      }
-   ]
 
-   runCreateConversation(candidates)
-       .then(result => {
-          console.log(result);
-          res.status(200).json(result);
-       })
-       .catch(error => {
-          console.error(error);
-          res.status(500).send("An error occurred");
-       });
-})
+router.get('/complete', async function(req, res) {
+   try {
+      // First, run runIndexConversation to get the indexes
+      const indexResult = await runIndexConversation();
+      console.log("indexResult: ", indexResult);
+      const candidates = JSON.parse(indexResult[0].message['content'])['selected_articles'];
+      console.log("step 1: candidates: ", candidates);
+
+      // Then, pass these indexes to runCreateConveration
+      const createResult = await runCreateConversation(candidates);
+
+      const articles = JSON.parse(createResult[0].message.content)['summaries_and_analyses'];
+      console.log("step 2: articles: ", articles);
+
+      for (const article of articles) { // Loop through each article
+         try {
+            const [instance, created] = await Analysis.upsert({
+               id: article.id,
+               analysis: article.analysis,
+               summary: article.summary,
+               createdAt: new Date(), // Consider managing this within Sequelize model definition
+               updatedAt: new Date()  // Sequelize can handle updatedAt automatically
+            });
+
+            if (created) {
+               console.log(`Analysis with ID ${article.id} was created.`);
+            } else {
+               console.log(`Analysis with ID ${article.id} was updated.`);
+            }
+         } catch (err) {
+            console.error('Error upserting article:', err);
+         }
+      }
+
+
+
+      res.status(200).send('ok');
+   } catch (error) {
+      console.error("Error during operations: ", error);
+      res.status(500).send("An error occurred");
+   }
+
+
+});
 
 module.exports = router;

@@ -22,6 +22,7 @@ var puppetRouter = require('./routes/puppet');
 var voiceRouter = require('./routes/voice');
 var briefRouter = require('./routes/brief');
 var runRouter = require('./routes/run');
+var createRouter = require('./routes/create');
 
 var app = express();
 
@@ -56,6 +57,7 @@ app.use('/puppet', puppetRouter);
 app.use('/voice', voiceRouter);
 app.use('/brief', briefRouter);
 app.use('/run', runRouter);
+app.use('/create', createRouter);
 app.get('/createdb', (req, res) => {
   let sql = 'CREATE DATABASE testdb';
   db.query(sql, (err, result) => {

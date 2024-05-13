@@ -208,7 +208,6 @@ async function runViewpointConversation() {
         return secondResponse.choices;
     }
 }
-
 async function getRecentAnalyses() {
     try {
         const recentAnalyses = await Analysis.findAll({
@@ -220,29 +219,6 @@ async function getRecentAnalyses() {
         console.error(error);
     }
 }
-
-async function getCoinPriceDay() {
-    try {
-        const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=24')
-        const data = await response.json();
-        return JSON.stringify(data, null, 2);
-    } catch (err) {
-        console.error("Failed to fetch Bitcoin prices (24hr) : ", err);
-        return { error: err.message }
-    }
-}
-
-async function getCoinPriceWeek() {
-    try {
-        const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
-        const data = await response.json();
-        return JSON.stringify(data, null, 2);
-    } catch(err) {
-        console.error("Error: ", err);
-        throw err;
-    }
-}
-
 async function getViewpointAndUpdate() {
     try {
         const viewpoint = await getRecentViewpoint();
@@ -280,7 +256,26 @@ async function getViewpointAndUpdate() {
         throw error;
     }
 }
-
+async function getCoinPriceDay() {
+    try {
+        const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=24')
+        const data = await response.json();
+        return JSON.stringify(data, null, 2);
+    } catch (err) {
+        console.error("Failed to fetch Bitcoin prices (24hr) : ", err);
+        return { error: err.message }
+    }
+}
+async function getCoinPriceWeek() {
+    try {
+        const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
+        const data = await response.json();
+        return JSON.stringify(data, null, 2);
+    } catch(err) {
+        console.error("Error: ", err);
+        throw err;
+    }
+}
 async function getRecentViewpoint() {
     try {
         const viewpoint = await Viewpoint.findOne({

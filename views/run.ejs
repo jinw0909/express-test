@@ -38,6 +38,7 @@
             .imgDiv { max-width: 90vw;}
             .main-text { margin-top: 1rem; }
 
+            .script-text { display: none; }
         </style>
     </head>
     <body>
@@ -83,6 +84,16 @@
                         <%= analysis.mp3 %>
                     <% } %>" id="audio<%= index%>"></audio><br>
                 <p><%= analysis.createdAt.toISOString().substring(0, 10) %><br></p>
+                <button id="open<%= index%>" class="open-script">Open Script</button>
+                <p id="script<%= index%>" class="script-text">
+                    <% if (lang === 'Japanese') { %>
+                        <%= analysis.analysis_jp %>
+                    <% } else if (lang === 'Korean') { %>
+                        <%= analysis.analysis_kr %>
+                    <% } else { %>
+                        <%= analysis.analysis %>
+                    <% } %>
+                </p>
             </li>
         <% }) %>
         <li id="item<%= data.length%>">
@@ -222,6 +233,24 @@
                 if (callback) callback();
             }
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listeners to all buttons for toggling visibility of scripts
+            const buttons = document.querySelectorAll('.open-script'); // Selects all buttons whose id starts with 'open'
+            buttons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = this.id.replace('open', ''); // Extract index from the id of the button
+                    const scriptElement = document.getElementById('script' + index);
+                    if (scriptElement.style.display === 'none' || !scriptElement.style.display) {
+                        scriptElement.style.display = 'block'; // Show the script
+                        this.textContent = 'Close Script';
+                    } else {
+                        scriptElement.style.display = 'none'; // Hide the script
+                        this.textContent = 'Open Script';
+                    }
+                });
+            });
+        });
 
     </script>
     </body>

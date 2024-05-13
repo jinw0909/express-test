@@ -4,11 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Automated Briefing</title>
+    <style>
+        #articles-container div {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #articles-container p {
+            margin: 5px 0;
+        }
+    </style>
 </head>
 <body>
 <div class="container">
     <div class="send-request">
-        <h4>Return Article Indexes</h4>
+        <h4>1. Return Article Indexes</h4>
         <span id="flag"></span>
         <button class="send-btn-index">Send Request</button>
         <div class="result-div-index"></div>
@@ -20,28 +32,40 @@
 <!--        <div class="result-div-create"></div>-->
 <!--    </div>-->
     <div class="send-request-save">
-        <h4>ceate Analysis from indexes and insert to DB</h4>
+        <h4>2. Create Analysis from indexes and insert to DB</h4>
         <span id="flag3"></span>
         <button class="send-btn-save">Send Request</button>
         <div class="result-div-save"></div>
     </div>
+    <div class="send-request-recent">
+        <h4>2-1. Get 5 Recent Analysis</h4>
+        <span id="flag-r"></span>
+        <button class="send-btn-recent">Send Request</button>
+        <div class="result-div-recent" id="articles-container"></div>
+    </div>
     <div class="send-request-construct">
-        <h4>Construct the Full Analysis for the Recent 5 analysis</h4>
+        <h4>3. Construct the Full Analysis for the Recent 5 analysis</h4>
         <span id="flag4"></span>
         <button class="send-btn-construct">Send Request</button>
         <div class="result-div-construct"></div>
     </div>
     <div class="send-request-viewpoint">
-        <h4>Create the Viewpoint for the Constructed Analyses</h4>
+        <h4>4. Create the Viewpoint for the Recent Analyses</h4>
         <span id="flag5"></span>
         <button class="send-btn-viewpoint">Send Request</button>
         <div class="result-div-viewpoint"></div>
     </div>
     <div class="send-request-constructvp">
-        <h4>Construct the Viewpoint with Translation and Voices</h4>
+        <h4>5. Construct the Viewpoint with Translation and Voices</h4>
         <span id="flag6"></span>
         <button class="send-btn-constructvp">Send Request</button>
         <div class="result-div-constructvp"></div>
+    </div>
+    <div class="send-request-complete">
+        <h4>Run Step 1 to 5</h4>
+        <span id="flag7"></span>
+        <button class="send-btn-complete">Send Request</button>
+        <div class="result-div-complete"></div>
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -53,48 +77,23 @@
     document.querySelector('.send-btn-index').addEventListener('click', function() {
         document.querySelector('#flag').textContent = 'sent';
         axios.get('/function/index')
-            .then(result => {
-                console.log(result);
-                let cleanJsonStr = result.data[0].message['content'].trim();
-                document.querySelector('.result-div-index').textContent = cleanJsonStr;
+            .then(res => {
+                console.log(res);
                 // Parse the JSON string into a JavaScript object
                 try {
-                    candidates = JSON.parse(cleanJsonStr);
+                    candidates = JSON.parse(res.data)["selected_articles"];
+                    console.log("candidates: ", candidates);
+                    document.querySelector('.result-div-index').textContent = res.data;
                 } catch (error) {
                     console.error("Parsing error:", error);
                     document.querySelector('.result-div-index').textContent = 'Invalid JSON format';
                 }
-                document.querySelector('.send-request-create').style.opacity = "1";
+                // document.querySelector('.send-request-create').style.opacity = "1";
             })
             .catch(err => {
                 console.error(err);
             })
     });
-
-    // document.querySelector('.send-btn-create').addEventListener('click', function() {
-    //
-    //     axios.get('/function/index/create').then(response => {
-    //         console.log('success:', response);
-    //         const container = document.querySelector('.result-div-create');
-    //         container.innerHTML = '';
-    //         let articles = JSON.parse(response.data[0].message['content']);
-    //         console.log("articles: ", articles);
-    //         articles.forEach(article => {
-    //             let divElem = document.createElement('div');
-    //             divElem.className = 'article';
-    //             let idDiv = document.createElement('div');
-    //             idDiv.textContent = `ID: ${article.id}`;
-    //             divElem.appendChild(idDiv);
-    //             let contentDiv = document.createElement('div');
-    //             contentDiv.textContent = `Content: ${article.analysis}`;
-    //             divElem.appendChild(contentDiv);
-    //
-    //             container.appendChild(divElem);
-    //         });
-    //     }).catch(postError => {
-    //         console.error('error:', postError);
-    //     });
-    // });
 
     document.querySelector('.send-btn-save').addEventListener('click', function() {
         if (candidates) {
@@ -130,6 +129,33 @@
 
     });
 
+    document.querySelector('.send-btn-recent').addEventListener('click', function() {
+       document.querySelector('#flag-r').textContent = "sent";
+       axios.get('/function/recent').then((response) => {
+           console.log("5 recent: ", response);
+           const container = document.querySelector('#articles-container');
+           container.innerHTML = ''; //Clear previous contents
+           response.data.forEach((analysis) => {
+                const articleDiv = document.createElement('div');
+                const idPara = document.createElement('p');
+                idPara.textContent = `ID: ${analysis.id}`;
+               const analysisPara = document.createElement('p'); // Create a p tag for analysis
+               analysisPara.textContent = `Analysis: ${analysis.analysis}`;
+               const summaryPara = document.createElement('p'); // Create a p tag for summary
+               summaryPara.textContent = `Summary: ${analysis.summary}`;
+               articleDiv.appendChild(idPara);
+               articleDiv.appendChild(analysisPara);
+               articleDiv.appendChild(summaryPara);
+
+               // Append the div to the container
+               container.appendChild(articleDiv);
+           })
+       }).catch(error => {
+           console.error(error);
+       })
+
+    });
+
     document.querySelector('.send-btn-construct').addEventListener('click', function() {
         document.querySelector('#flag4').textContent = "sent";
         axios.get('/brief/construct')
@@ -162,6 +188,19 @@
                console.error("failure ", err)
            })
     });
+
+    document.querySelector('.send-btn-complete').addEventListener('click', function() {
+        document.querySelector('#flag7').textContent = "sent";
+        axios.get('/function/complete')
+            .then((response) => {
+                console.log("success: ", response);
+            })
+            .catch(err => {
+                console.error("failure ", err)
+            })
+    })
+
+
 
 
 

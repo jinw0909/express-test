@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automated Briefing</title>
+    <style>
+        #articles-container div {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #articles-container p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="send-request-complete">
+        <h4>Complete Briefing</h4>
+        <span id="flag7"></span>
+        <button class="send-btn-complete">Send Request</button>
+        <div class="result-div-complete"></div>
+    </div>
+    <div class="send-request-completevp">
+        <h4>Complete Viewpoint</h4>
+        <span id="flag8"></span>
+        <button class="send-btn-completevp">Send Request</button>
+        <div class="result-div-completevp"></div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+    // document.querySelector('.send-btn-recent').addEventListener('click', function() {
+    //     document.querySelector('#flag-r').textContent = "sent";
+    //     axios.get('/create/recent').then((response) => {
+    //         console.log("5 recent: ", response);
+    //         const container = document.querySelector('#articles-container');
+    //         container.innerHTML = ''; //Clear previous contents
+    //         response.data.forEach((analysis) => {
+    //             const articleDiv = document.createElement('div');
+    //             const idPara = document.createElement('p');
+    //             idPara.textContent = `ID: ${analysis.id}`;
+    //             const analysisPara = document.createElement('p'); // Create a p tag for analysis
+    //             analysisPara.textContent = `Analysis: ${analysis.analysis}`;
+    //             const summaryPara = document.createElement('p'); // Create a p tag for summary
+    //             summaryPara.textContent = `Summary: ${analysis.summary}`;
+    //             articleDiv.appendChild(idPara);
+    //             articleDiv.appendChild(analysisPara);
+    //             articleDiv.appendChild(summaryPara);
+    //
+    //             // Append the div to the container
+    //             container.appendChild(articleDiv);
+    //         })
+    //     }).catch(error => {
+    //         console.error(error);
+    //     })
+    //
+    // });
+
+    // document.querySelector('.send-btn-viewpoint').addEventListener('click', function() {
+    //     document.querySelector('#flag5').textContent = "sent";
+    //     axios.get('/create/viewpoint')
+    //         .then((response) => {
+    //             console.log("post success: ", response);
+    //         })
+    //         .catch(err => {
+    //             console.error("post failure: ", err);
+    //         })
+    // });
+
+    // document.querySelector('.send-btn-constructvp').addEventListener('click', function() {
+    //     document.querySelector('#flag6').textContent = "sent";
+    //     axios.get('/create/constructvp')
+    //         .then((response) => {
+    //             console.log("success: ", response);
+    //         })
+    //         .catch(err => {
+    //             console.error("failure ", err)
+    //         })
+    // });
+
+    document.querySelector('.send-btn-complete').addEventListener('click', function() {
+        document.querySelector('#flag7').textContent = "sent";
+        axios.get('/create/complete')
+            .then((response) => {
+                console.log("success: ", response);
+            })
+            .catch(err => {
+                console.error("failure ", err)
+            })
+    })
+
+    document.querySelector('.send-btn-completevp').addEventListener('click', function() {
+        document.querySelector('#flag8').textContent = "sent";
+        axios.get('/create/completevp')
+            .then(response => {
+                console.log("success: ", response);
+            })
+            .catch(err => {
+                console.error("failure: ", err);
+            })
+    })
+
+
+
+
+
+</script>
+</body>
+</html>
