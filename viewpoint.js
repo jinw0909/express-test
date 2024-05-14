@@ -1,9 +1,9 @@
-const { DataTypes } = require('sequelize');
+const { Model, DataTypes } = require('sequelize');
 const sequelize = require('./sequelize');
 
 const Viewpoint = sequelize.define('Viewpoint', {
     id : {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING,
         primaryKey: true
     },
     //Define model attributes

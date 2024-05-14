@@ -9,13 +9,14 @@ const openai = new OpenAi({
 });
 
 const Blockmedia = require('../blockmedia');
-const Analysis = require('../analysis');
+
 const { Sequelize } = require("sequelize");
 const { Op } = require('sequelize');
 const multer = require("multer");
 const AWS = require("aws-sdk");
-const Viewpoint = require("../viewpoint");
-
+// const Viewpoint = require("../viewpoint");
+// const Analysis = require('../analysis');
+const { Viewpoint, Analysis } = require('../model');
 async function getCoinPriceWeek() {
     try {
         const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
@@ -105,7 +106,7 @@ async function runIndexConversation() {
     ]
 
     const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
+        model: "gpt-4o",
         messages: messages,
         tools: tools,
         tool_choice : "auto", //auto is default, but we'll be explicit
@@ -142,7 +143,7 @@ async function runIndexConversation() {
 
         const secondResponse = await openai.chat.completions.create({
             //model: "gpt-3.5-turbo-0125",
-            model: "gpt-4-turbo",
+            model: "gpt-4o",
             messages: messages,
             response_format: {type: "json_object"}
         });
@@ -155,7 +156,7 @@ async function runCreateConversation(candidates) {
     //Step 1 : send the conversation and available functions to the model
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-        { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at eight to ten sentences and the summary has to be at four to five sentences. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease.`}
+        { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least eight to ten sentences and the summary has to be at least four to five sentences. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease.`}
     ];
     const tools = [
         {
@@ -181,7 +182,7 @@ async function runCreateConversation(candidates) {
     ]
 
     const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
+        model: "gpt-4o",
         messages: messages,
         tools: tools,
         tool_choice : "auto", //auto is default, but we'll be explicit
@@ -349,34 +350,113 @@ AWS.config.update({
     secretAccessKey: process.env.S3_PASSWORD
 })
 const s3 = new AWS.S3();
+
+const Polly = new AWS.Polly({
+    signatureVersion: '',
+    region: 'us-east-1'
+});
+
+// async function generateTTS(content, lang, id) {
+//
+//     const mp3 = await openai.audio.speech.create({
+//         model: 'tts-1-hd',
+//         voice: 'alloy',
+//         input: content
+//     });
+//
+//     const buffer = Buffer.from(await mp3.arrayBuffer());
+//
+//     const s3Params = {
+//         Bucket: 's3bucketjinwoo',
+//         Key: `${id}_${lang}.mp3`,
+//         Body: buffer,
+//         ContentType: "audio/mpeg",
+//     }
+//
+//     return new Promise((resolve, reject) => {
+//         s3.upload(s3Params, function(err, data) {
+//             if (err) {
+//                 console.error("Error uploading to S3:", err);
+//                 reject(err);
+//             } else {
+//                 console.log("Successfully uploaded data to " + data.Location);
+//                 resolve(data.Location);
+//             }
+//         });
+//     });
+// }
 async function generateTTS(content, lang, id) {
 
-    const mp3 = await openai.audio.speech.create({
-        model: 'tts-1-hd',
-        voice: 'alloy',
-        input: content
-    });
+    let voiceId = 'Danielle';
+    if (lang == 'Japanese') {
+        voiceId = 'Kazuha'
+    } else if (lang == 'Korean') {
+        voiceId = 'Seoyeon'
+    }
 
-    const buffer = Buffer.from(await mp3.arrayBuffer());
-
-    const s3Params = {
-        Bucket: 's3bucketjinwoo',
-        Key: `${id}_${lang}.mp3`,
-        Body: buffer,
-        ContentType: "audio/mpeg",
+    let pollyParams = {
+        'Text': content,
+        'OutputFormat': 'mp3',
+        'VoiceId': voiceId,
+        'Engine': 'neural'
     }
 
     return new Promise((resolve, reject) => {
-        s3.upload(s3Params, function(err, data) {
+        // Synthesize speech using Polly
+        Polly.synthesizeSpeech(pollyParams, (err, data) => {
             if (err) {
-                console.error("Error uploading to S3:", err);
+                console.error("Error synthesizing speech:", err);
                 reject(err);
-            } else {
-                console.log("Successfully uploaded data to " + data.Location);
-                resolve(data.Location);
+                return;
             }
+
+            // S3 upload parameters
+            const s3Params = {
+                Bucket: 's3bucketjinwoo',
+                Key: `${id}_${lang}.mp3`,
+                Body: data.AudioStream,
+                ContentType: "audio/mpeg",
+            };
+
+            // Upload to S3
+            s3.upload(s3Params, (err, data) => {
+                if (err) {
+                    console.error("Error uploading to S3:", err);
+                    reject(err);
+                } else {
+                    console.log("Successfully uploaded data to " + data.Location);
+                    resolve(data.Location);
+                }
+            });
         });
     });
+
+    // const mp3 = await openai.audio.speech.create({
+    //    model: 'tts-1',
+    //    voice: 'alloy',
+    //    input: content
+    // });
+    //
+    // const buffer = Buffer.from(await mp3.arrayBuffer());
+    //
+    // const s3Params = {
+    //     Bucket: 's3bucketjinwoo',
+    //     Key: `${id}_${lang}.mp3`,
+    //     Body: buffer,
+    //     ContentType: "audio/mpeg",
+    // }
+    //
+    // return new Promise((resolve, reject) => {
+    //     s3.upload(s3Params, function(err, data) {
+    //         if (err) {
+    //             console.error("Error uploading to S3:", err);
+    //             reject(err);
+    //         } else {
+    //             console.log("Successfully uploaded data to " + data.Location);
+    //             resolve(data.Location);
+    //         }
+    //     });
+    // });
 }
 async function runViewpointConversation() {
     const messages = [
@@ -534,8 +614,25 @@ async function getRecentViewpoint() {
     }
 }
 
-router.get('/', function(req, res) {
-    res.render('create');
+async function getAllViewpointWithAnalysisIds() {
+    try {
+        return Viewpoint.findAll({
+            include: [{
+                model: Analysis,
+                as: 'Analyses', // Assuming you have defined this alias in your Sequelize associations
+                attributes: ['id'], // Fetch only the id of the Analysis records
+                required: false // This ensures that viewpoints with no matching analyses are also returned
+            }]
+        });
+
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+router.get('/', async function(req, res) {
+    const vpList = await getAllViewpointWithAnalysisIds();
+    res.render('create', {vpList: vpList});
 });
 router.get('/complete', async function(req, res) {
     try {
@@ -586,8 +683,9 @@ router.get('/completevp', async function(req, res) {
     try {
         const result = await runViewpointConversation();
         const content = result[0].message.content;
-        const { viewpoint } = JSON.parse(content);
+        const { viewpoint, refs } = JSON.parse(content);
         console.log("viewpoint: ", viewpoint);
+        console.log("refs: ", refs);
         const today = new Date();
         const idSuffix = today.getHours() >= 12 ? 'PM' : 'AM';
         const id = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}_${idSuffix}`;
@@ -604,6 +702,14 @@ router.get('/completevp', async function(req, res) {
                 console.log('New Viewpoint instance created:', instance.toJSON());
             } else {
                 console.log('Viewpoint updated:', instance.toJSON());
+            }
+            // Update ref column in analysis table
+            if (refs && refs.length > 0) {
+                await Analysis.update({ ref: id }, {
+                    where: {
+                        id: refs  // Assuming `refs` is an array of IDs
+                    }
+                });
             }
         } catch (error) {
             console.error(error);

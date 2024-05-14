@@ -159,7 +159,7 @@ async function runCoinConversation() {
       }
 
       const secondResponse = await openai.chat.completions.create({
-         model: "gpt-4-turbo",
+         model: "gpt-4o",
          messages: messages
       });
 
@@ -280,65 +280,65 @@ async function getLatestArticle() {
    }
 }
 
-async function runRelevantConversation() {
-   //Step 1 : send the conversation and available functions to the model
-   const messages = [
-      { role: "user", content: "From the articles of Blockmedia within the past 24 hours, give me five articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency market trend"},
-   ];
-   const tools = [
-      {
-         type: "function",
-         function: {
-            name: "get_blockmedia_articles_24",
-            description: "returns the list of all the articles published by Blockmedia within 24 hours in a JSON format",
-         }
-      }
-   ]
-
-   const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: messages,
-      tools: tools,
-      tool_choice : "auto", //auto is default, but we'll be explicit
-   });
-   const responseMessage = response.choices[0].message;
-
-   // Step 2: check if the model wanted to call a function
-   const toolCalls = responseMessage.tool_calls;
-   if (responseMessage.tool_calls) {
-      // Step3. call the function
-      // Note: the JSON response may not always be valid; be sure to handle errors
-      const availableFunctions = {
-         get_blockmedia_articles_24 : get24articles
-      }; //only one function in this example, but you can have multiple
-      messages.push(responseMessage); //extend the conversation with assistant's reply
-      for (const toolCall of toolCalls) {
-         const functionName = toolCall.function.name;
-         console.log("functionName: ", functionName);
-         const functionToCall = availableFunctions[functionName];
-         const functionArgs = JSON.parse(toolCall.function.arguments || '{}');
-         const functionResponse = await functionToCall(
-             functionArgs.location,
-             functionArgs.unit
-         );
-         console.log("functionResponse: ", functionResponse);
-         messages.push({
-            tool_call_id: toolCall.id,
-            role: "tool",
-            name: functionName,
-            content: functionResponse,
-         }); //extend the conversation with function response
-      }
-
-      const secondResponse = await openai.chat.completions.create({
-         //model: "gpt-3.5-turbo-0125",
-         model: "gpt-4-turbo",
-         messages: messages
-      });
-      return secondResponse.choices;
-   }
-
-}
+// async function runRelevantConversation() {
+//    //Step 1 : send the conversation and available functions to the model
+//    const messages = [
+//       { role: "user", content: "From the articles of Blockmedia within the past 24 hours, give me five articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency market trend"},
+//    ];
+//    const tools = [
+//       {
+//          type: "function",
+//          function: {
+//             name: "get_blockmedia_articles_24",
+//             description: "returns the list of all the articles published by Blockmedia within 24 hours in a JSON format",
+//          }
+//       }
+//    ]
+//
+//    const response = await openai.chat.completions.create({
+//       model: "gpt-4-turbo",
+//       messages: messages,
+//       tools: tools,
+//       tool_choice : "auto", //auto is default, but we'll be explicit
+//    });
+//    const responseMessage = response.choices[0].message;
+//
+//    // Step 2: check if the model wanted to call a function
+//    const toolCalls = responseMessage.tool_calls;
+//    if (responseMessage.tool_calls) {
+//       // Step3. call the function
+//       // Note: the JSON response may not always be valid; be sure to handle errors
+//       const availableFunctions = {
+//          get_blockmedia_articles_24 : get24articles
+//       }; //only one function in this example, but you can have multiple
+//       messages.push(responseMessage); //extend the conversation with assistant's reply
+//       for (const toolCall of toolCalls) {
+//          const functionName = toolCall.function.name;
+//          console.log("functionName: ", functionName);
+//          const functionToCall = availableFunctions[functionName];
+//          const functionArgs = JSON.parse(toolCall.function.arguments || '{}');
+//          const functionResponse = await functionToCall(
+//              functionArgs.location,
+//              functionArgs.unit
+//          );
+//          console.log("functionResponse: ", functionResponse);
+//          messages.push({
+//             tool_call_id: toolCall.id,
+//             role: "tool",
+//             name: functionName,
+//             content: functionResponse,
+//          }); //extend the conversation with function response
+//       }
+//
+//       const secondResponse = await openai.chat.completions.create({
+//          //model: "gpt-3.5-turbo-0125",
+//          model: "gpt-4-turbo",
+//          messages: messages
+//       });
+//       return secondResponse.choices;
+//    }
+//
+// }
 
 async function get24articles() {
    try {
@@ -426,7 +426,7 @@ async function runIndexConversation() {
    ]
 
    const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
+      model: "gpt-4o",
       messages: messages,
       tools: tools,
       tool_choice : "auto", //auto is default, but we'll be explicit
@@ -463,7 +463,7 @@ async function runIndexConversation() {
 
       const secondResponse = await openai.chat.completions.create({
          //model: "gpt-3.5-turbo-0125",
-         model: "gpt-4-turbo",
+         model: "gpt-4o",
          messages: messages,
          response_format: {type: "json_object"}
       });
@@ -502,7 +502,7 @@ async function runCreateConversation(candidates) {
    ]
 
    const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
+      model: "gpt-4o",
       messages: messages,
       tools: tools,
       tool_choice : "auto", //auto is default, but we'll be explicit
@@ -536,7 +536,7 @@ async function runCreateConversation(candidates) {
       }
 
       const secondResponse = await openai.chat.completions.create({
-         model: "gpt-4-turbo",
+         model: "gpt-4o",
          messages: messages,
          response_format: { type: "json_object" }
       });
@@ -614,14 +614,14 @@ router.get('/article', function(req, res) {
        .catch(console.error);
 });
 
-router.get('/relevant', function(req, res) {
-   runRelevantConversation()
-       .then(result => {
-          console.log(result);
-          res.json(result);
-       })
-       .catch(console.error)
-});
+// router.get('/relevant', function(req, res) {
+//    runRelevantConversation()
+//        .then(result => {
+//           console.log(result);
+//           res.json(result);
+//        })
+//        .catch(console.error)
+// });
 
 router.get('/recent', async function(req, res) {
   await getRecent()

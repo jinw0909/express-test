@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Recent Analyses</title>
+        <title>
+            Recent　Analysis
+        </title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             li {
@@ -42,19 +44,41 @@
         </style>
     </head>
     <body>
-    <h1>Recent Analyses</h1>
+    <h1>
+        <% if (lang === 'Japanese') { %>
+            <%= vp.id%> ブリーフィング
+        <% } else if (lang === 'Korean') { %>
+            <%= vp.id%> 브리핑
+        <% } else { %>
+            <%= vp.id%> Briefing
+        <% } %>
+    </h1>
     <div class="select-lang">
         <a href="/run?lang=English" id="selectEn">English</a>
-        <a href="/run?lang=Japanese" id="selectJp">Japanese</a>
-        <a href="/run?lang=Korean" id="selectKr">Korean</a>
+        <a href="/run?lang=Japanese" id="selectJp">日本語</a>
+        <a href="/run?lang=Korean" id="selectKr">한국어</a>
     </div>
-    <button id="playButton">Play</button>
-    <button id="pauseButton">Pause</button>
+    <button id="playButton">
+        <% if (lang === 'Japanese') { %>
+            プレイ
+        <% } else if (lang === 'Korean') { %>
+            재생
+        <% } else { %>
+            Play
+        <% } %>
+    </button>
+    <button id="pauseButton">
+        <% if (lang === 'Japanese') { %>
+            停止
+        <% } else if (lang === 'Korean') { %>
+            정지
+        <% } else { %>
+            Pause
+        <% } %>
+    </button>
     <ul id="analysisList">
         <% data.forEach(function(analysis, index) { %>
             <li id="item<%= index%>">
-                <!-- <strong>ID:</strong> <%= analysis.id %><br> -->
-                <!-- <strong>Title: </strong> -->
                 <h2>
                 <% if (lang === 'Japanese') { %>
                     <%= analysis.title_jp %>
@@ -97,7 +121,15 @@
             </li>
         <% }) %>
         <li id="item<%= data.length%>">
-            <h2>Final Viewpoint</h2>
+            <h2>
+                <% if (lang === 'Japanese') { %>
+                    まとめViewpoint
+                <% } else if (lang === 'Korean') { %>
+                    최종 Viewpoint
+                <% } else { %>
+                    Final Viewpoint
+                <% } %>
+            </h2>
             <div>
                 <% if (lang === 'Japanese') { %>
                     <%= vp.viewpoint_jp %>
@@ -121,7 +153,15 @@
         <% data.forEach(function(analysis, index) { %>
             <div class="thumbnail" data-index="<%= index %>">
                 <img src="<%= analysis.imageUrl %>" alt="Thumb <%= index %>">
-                <span>Article <%= index + 1 %></span>
+                <span>
+                    <% if (lang === 'Japanese') { %>
+                        記事<%= index + 1 %>
+                    <% } else if (lang === 'Korean') { %>
+                        기사<%= index + 1 %>
+                    <% } else { %>
+                        Article<%= index + 1 %>
+                    <% } %>
+                </span>
             </div>
         <% }) %>
         <div class="thumbnail" data-index="<%= data.length%>>">

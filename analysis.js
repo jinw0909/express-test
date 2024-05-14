@@ -74,6 +74,14 @@ const Analysis = sequelize.define('Analysis', {
     updatedAt: {
         type: DataTypes.DATE,
         allowNull: false
+    },
+    ref: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        references: {
+            model: 'Viewpoints', // This is the table name of Viewpoint
+            key: 'id'
+        }
     }
 })
 

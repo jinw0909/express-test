@@ -20,16 +20,37 @@
 <body>
 <div class="container">
     <div class="send-request-complete">
-        <h4>Complete Briefing</h4>
+        <h4>Create Briefing</h4>
         <span id="flag7"></span>
         <button class="send-btn-complete">Send Request</button>
         <div class="result-div-complete"></div>
     </div>
     <div class="send-request-completevp">
-        <h4>Complete Viewpoint</h4>
+        <h4>Create Viewpoint</h4>
         <span id="flag8"></span>
         <button class="send-btn-completevp">Send Request</button>
         <div class="result-div-completevp"></div>
+    </div>
+    <div class="vp-list">
+        <h4>Briefing List</h4>
+        <div class="result-div-vplist">
+            <ul>
+                <% vpList.forEach(vp => { %>
+                    <li>
+                        <h3><%= vp.title %> (Viewpoint ID: <%= vp.id %>)</h3>
+                        <p>Related Analyses:</p>
+                        <ul>
+                            <% vp.Analyses.forEach(analysis => { %>
+                                <li>Analysis ID: <%= analysis.id %></li>
+                            <% }) %>
+                            <% if (vp.Analyses.length === 0) { %>
+                                <li>No related analyses.</li>
+                            <% } %>
+                        </ul>
+                    </li>
+                <% }) %>
+            </ul>
+        </div>
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>

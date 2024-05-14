@@ -80,14 +80,16 @@ async function getRecentAndUpdate() {
 
 async function translateText(content, lang) {
     let messages = [
-        { role: "system", content: "You are a professional translator capable of translating between English, Japanese, and Korean. You can understand the context of sentences and derive the meanings of words within that context, enabling you to translate accurately and appropriately for English, Japanese, and Korean speakers. Additionally, you possess knowledge about cryptocurrencies, Bitcoin, stocks, and finance in general, allowing you to aptly translate articles and analyses related to these topics into the respective languages."},
-        { role: "user", content: "Please translate the following document into Japanese. I only need the translated output, without any additional comments or indicators. Document: The report on national and corporate Bitcoin accumulations reveals significant crypto asset holdings by entities like MicroStrategy and various governments, including the U.S. and China. This trend underscores a substantial institutional and governmental embrace of Bitcoin, posing implications for market stability and pricing structures. Institutional holding can lead to lower market volatility and potentially higher price floors due to reduced circulatory supply. Understanding these dynamics is critical for evaluating Bitcoin's broader adoption and its perception as a store of value."},
+        { role: "system", content: "You are a professional translator capable of translating between English, Japanese, and Korean. You can understand the context of sentences and derive the meanings of words within that context, enabling you to translate accurately and appropriately for English, Japanese, and Korean speakers. Additionally, you possess knowledge about cryptocurrencies, Bitcoin, stocks, and finance in general, allowing you to aptly translate articles and analyses related to these topics into the respective languages. You can also naturally translate article headlines or titles into other languages."},
+        { role: "user", content: "Please translate the following text into Japanese. I only need the translated output, without any additional comments or indicators. Please ensure to apply honorifics when translating into Korean or Japanese. Text: The report on national and corporate Bitcoin accumulations reveals significant crypto asset holdings by entities like MicroStrategy and various governments, including the U.S. and China. This trend underscores a substantial institutional and governmental embrace of Bitcoin, posing implications for market stability and pricing structures. Institutional holding can lead to lower market volatility and potentially higher price floors due to reduced circulatory supply. Understanding these dynamics is critical for evaluating Bitcoin's broader adoption and its perception as a store of value."},
         { role: "assistant", content: "国と企業のビットコイン蓄積に関するレポートは、MicroStrategyやアメリカ、中国などの政府を含む機関がかなりの暗号資産を保有していることを明らかにしています。この傾向は、ビットコインに対する大規模な機関および政府の受容を強調し、市場の安定性と価格構造に対する影響を示唆しています。機関の保有は、流通供給の減少により市場のボラティリティを低下させ、潜在的にはより高い価格の床を可能にするかもしれません。これらのダイナミクスを理解することは、ビットコインの広範な採用と価値の保存としての認識を評価する上で重要です。"},
-        { role: "user", content: `Please translate the following document into ${lang}. I only need the translated output, without any additional comments or indicators. Document: ${content}`},
+        { role: "user", content: "Please translate the following text into Japanese. I only need the translated output, without any additional comments or indicators.Please ensure to apply honorifics when translating into Korean or Japanese. Text: [마켓뷰] '금리 인하 이르다고?' 美 물가지표 지켜보자"},
+        { role: "assistant", content: "[マーケットビュー]「金利引き下げは早い？」米国の物価指標を注視しよう"},
+        { role: "user", content: `Please translate the following text into ${lang}. I only need the translated output, without any additional comments or indicators. Please ensure to apply honorifics when translating into Korean or Japanese. Text: ${content}`},
     ];
 
     const response  = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
+        model: "gpt-4o",
         messages: messages
     })
 
@@ -105,40 +107,90 @@ AWS.config.update({
 })
 const s3 = new AWS.S3();
 
+const Polly = new AWS.Polly({
+    signatureVersion: '',
+    region: 'us-east-1'
+});
+
+
 async function generateTTS(content, lang, id) {
 
-    const mp3 = await openai.audio.speech.create({
-       model: 'tts-1-hd',
-       voice: 'alloy',
-       input: content
-    });
+    let voiceId = 'Danielle';
+    if (lang == 'Japanese') {
+        voiceId = 'Kazuha'
+    } else if (lang == 'Korean') {
+        voiceId = 'Seoyeon'
+    }
 
-    const buffer = Buffer.from(await mp3.arrayBuffer());
-
-    const s3Params = {
-        Bucket: 's3bucketjinwoo',
-        Key: `${id}_${lang}.mp3`,
-        Body: buffer,
-        ContentType: "audio/mpeg",
+    let pollyParams = {
+        'Text': content,
+        'OutputFormat': 'mp3',
+        'VoiceId': voiceId,
+        'Engine': 'neural'
     }
 
     return new Promise((resolve, reject) => {
-        s3.upload(s3Params, function(err, data) {
+        // Synthesize speech using Polly
+        Polly.synthesizeSpeech(pollyParams, (err, data) => {
             if (err) {
-                console.error("Error uploading to S3:", err);
+                console.error("Error synthesizing speech:", err);
                 reject(err);
-            } else {
-                console.log("Successfully uploaded data to " + data.Location);
-                resolve(data.Location);
+                return;
             }
+
+            // S3 upload parameters
+            const s3Params = {
+                Bucket: 's3bucketjinwoo',
+                Key: `${id}_${lang}.mp3`,
+                Body: data.AudioStream,
+                ContentType: "audio/mpeg",
+            };
+
+            // Upload to S3
+            s3.upload(s3Params, (err, data) => {
+                if (err) {
+                    console.error("Error uploading to S3:", err);
+                    reject(err);
+                } else {
+                    console.log("Successfully uploaded data to " + data.Location);
+                    resolve(data.Location);
+                }
+            });
         });
     });
+
+    // const mp3 = await openai.audio.speech.create({
+    //    model: 'tts-1',
+    //    voice: 'alloy',
+    //    input: content
+    // });
+    //
+    // const buffer = Buffer.from(await mp3.arrayBuffer());
+    //
+    // const s3Params = {
+    //     Bucket: 's3bucketjinwoo',
+    //     Key: `${id}_${lang}.mp3`,
+    //     Body: buffer,
+    //     ContentType: "audio/mpeg",
+    // }
+    //
+    // return new Promise((resolve, reject) => {
+    //     s3.upload(s3Params, function(err, data) {
+    //         if (err) {
+    //             console.error("Error uploading to S3:", err);
+    //             reject(err);
+    //         } else {
+    //             console.log("Successfully uploaded data to " + data.Location);
+    //             resolve(data.Location);
+    //         }
+    //     });
+    // });
 }
 
 async function runViewpointConversation() {
     const messages = [
         {role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. You are also capable of derive the bitcoin market trend by analyzing the bitcoin price movement within a certain period, and capable of deriving the relationship between the trend and real-world events"},
-        {role: "user", content: "From the analysis conducted on the Blockmedia articles, provide your final viewpoint derived from the most recent five analyses regarding the Bitcoin and cryptocurrency markets. Also, relate your viewpoint to the price fluctuations in the Bitcoin market over the past 7 days and within the last 24 hours. Additionally, based on your final viewpoint, if possible, provide a rough estimate of the future changes in the price of Bitcoin. Don't mention 'Blockmedia' in your response. Please return the result in JSON format as {'viewpoint': 'text'}."},
+        {role: "user", content: "From the analysis conducted on the Blockmedia articles, provide your final viewpoint derived from the most recent five analyses regarding the Bitcoin and cryptocurrency markets. Also, relate your viewpoint to the price fluctuations in the Bitcoin market over the past 7 days and within the last 24 hours. Additionally, based on your final viewpoint, if possible, provide a rough estimate of the future changes in the price of Bitcoin. Don't mention 'Blockmedia' in your response. Also return the id's of five analysis you used to create the viewpoint. Please return the result in JSON format as {'viewpoint': 'text', 'refs': [number, number, number, number, number]}."},
         // {role: "assistant", content: ""},
         // {role: "user", content: ""},
     ]
@@ -166,7 +218,7 @@ async function runViewpointConversation() {
         }
     ]
     const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
+        model: "gpt-4o",
         messages: messages,
         tools: tools,
         tool_choice : "auto", //auto is default, but we'll be explicit
@@ -200,7 +252,7 @@ async function runViewpointConversation() {
         }
 
         const secondResponse = await openai.chat.completions.create({
-            model: "gpt-4-turbo",
+            model: "gpt-4o",
             messages: messages,
             response_format: {type: "json_object"}
         });
@@ -308,11 +360,12 @@ router.get('/viewpoint', async function(req, res) {
         const result = await runViewpointConversation();
         console.log("result: ", result);
         const content = result[0].message.content;
-        const { viewpoint } = JSON.parse(content);
+        const { viewpoint, refs } = JSON.parse(content);
+        console.log("refs: ", refs);
         const today = new Date();
         const idSuffix = today.getHours() >= 12 ? 'PM' : 'AM';
         const id = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}_${idSuffix}`;
-
+        console.log("Generated ID: ", id);
         try {
             const [instance, created] = await Viewpoint.upsert({
                 id: id,
@@ -325,6 +378,14 @@ router.get('/viewpoint', async function(req, res) {
                 console.log('New Viewpoint instance created:', instance.toJSON());
             } else {
                 console.log('Viewpoint updated:', instance.toJSON());
+            }
+            // Update ref column in analysis table
+            if (refs && refs.length > 0) {
+                await Analysis.update({ ref: id }, {
+                    where: {
+                        id: refs  // Assuming `refs` is an array of IDs
+                    }
+                });
             }
         } catch (error) {
             console.error(error);

@@ -61,12 +61,12 @@
         <button class="send-btn-constructvp">Send Request</button>
         <div class="result-div-constructvp"></div>
     </div>
-    <div class="send-request-complete">
-        <h4>Run Step 1 to 5</h4>
-        <span id="flag7"></span>
-        <button class="send-btn-complete">Send Request</button>
-        <div class="result-div-complete"></div>
-    </div>
+<!--    <div class="send-request-complete">-->
+<!--        <h4>Run Step 1 to 5</h4>-->
+<!--        <span id="flag7"></span>-->
+<!--        <button class="send-btn-complete">Send Request</button>-->
+<!--        <div class="result-div-complete"></div>-->
+<!--    </div>-->
 </div>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
@@ -189,16 +189,16 @@
            })
     });
 
-    document.querySelector('.send-btn-complete').addEventListener('click', function() {
-        document.querySelector('#flag7').textContent = "sent";
-        axios.get('/function/complete')
-            .then((response) => {
-                console.log("success: ", response);
-            })
-            .catch(err => {
-                console.error("failure ", err)
-            })
-    })
+    // document.querySelector('.send-btn-complete').addEventListener('click', function() {
+    //     document.querySelector('#flag7').textContent = "sent";
+    //     axios.get('/function/complete')
+    //         .then((response) => {
+    //             console.log("success: ", response);
+    //         })
+    //         .catch(err => {
+    //             console.error("failure ", err)
+    //         })
+    // });
 
 
 
