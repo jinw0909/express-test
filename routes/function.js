@@ -13,7 +13,7 @@ const Analysis = require('../analysis');
 const { Sequelize } = require("sequelize");
 const { Op } = require('sequelize');
 
-function getCurrentWeather(location, unit="fhrenheit") {
+function getCurrentWeather(location, unit="fehrenheit") {
    if (location.toLowerCase().includes("tokyo")) {
       return JSON.stringify({location: "Tokyo", temperature: "10", unit: "celsius"});
    } else if (location.toLowerCase().includes("san francisco")) {
@@ -476,7 +476,7 @@ async function runCreateConversation(candidates) {
    //Step 1 : send the conversation and available functions to the model
    const messages = [
       { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-      { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at eight to ten sentences and the summary has to be at four to five sentences. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease.`}
+      { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least ten sentences and the summary has to be at least six sentences. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease. Don't improvise the id of the created Analysis and be sure that the id, analysis, and summary matches the provided article.`}
    ];
    const tools = [
       {

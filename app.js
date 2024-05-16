@@ -23,12 +23,13 @@ var voiceRouter = require('./routes/voice');
 var briefRouter = require('./routes/brief');
 var runRouter = require('./routes/run');
 var createRouter = require('./routes/create');
+var feedRouter = require('./routes/feed');
 
 var app = express();
 
 (async () => {
   try {
-    await sequelize.sync({alter: true});
+    await sequelize.sync();
     console.log('Database synchronized successfully');
   } catch (error) {
     console.error('Error synchronizing database:', error);
@@ -58,6 +59,8 @@ app.use('/voice', voiceRouter);
 app.use('/brief', briefRouter);
 app.use('/run', runRouter);
 app.use('/create', createRouter);
+app.use('/feed', feedRouter);
+
 app.get('/createdb', (req, res) => {
   let sql = 'CREATE DATABASE testdb';
   db.query(sql, (err, result) => {

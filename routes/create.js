@@ -8,7 +8,7 @@ const openai = new OpenAi({
     apiKey : process.env.API_KEY
 });
 
-const Blockmedia = require('../blockmedia');
+const Blockmedia = require('../models/blockmedia');
 
 const { Sequelize } = require("sequelize");
 const { Op } = require('sequelize');
@@ -16,7 +16,7 @@ const multer = require("multer");
 const AWS = require("aws-sdk");
 // const Viewpoint = require("../viewpoint");
 // const Analysis = require('../analysis');
-const { Viewpoint, Analysis } = require('../model');
+const { Viewpoint, Analysis } = require('../models');
 async function getCoinPriceWeek() {
     try {
         const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
@@ -156,7 +156,7 @@ async function runCreateConversation(candidates) {
     //Step 1 : send the conversation and available functions to the model
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-        { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least eight to ten sentences and the summary has to be at least four to five sentences. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease.`}
+        { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least ten sentences and the summary has to be at least six sentences. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease. Don't improvise the id of the created Analysis and be sure that the id, analysis, and summary matches the provided article.`}
     ];
     const tools = [
         {
@@ -430,40 +430,11 @@ async function generateTTS(content, lang, id) {
             });
         });
     });
-
-    // const mp3 = await openai.audio.speech.create({
-    //    model: 'tts-1',
-    //    voice: 'alloy',
-    //    input: content
-    // });
-    //
-    // const buffer = Buffer.from(await mp3.arrayBuffer());
-    //
-    // const s3Params = {
-    //     Bucket: 's3bucketjinwoo',
-    //     Key: `${id}_${lang}.mp3`,
-    //     Body: buffer,
-    //     ContentType: "audio/mpeg",
-    // }
-    //
-    // return new Promise((resolve, reject) => {
-    //     s3.upload(s3Params, function(err, data) {
-    //         if (err) {
-    //             console.error("Error uploading to S3:", err);
-    //             reject(err);
-    //         } else {
-    //             console.log("Successfully uploaded data to " + data.Location);
-    //             resolve(data.Location);
-    //         }
-    //     });
-    // });
 }
 async function runViewpointConversation() {
     const messages = [
-        {role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. You are also capable of derive the bitcoin market trend by analyzing the bitcoin price movement within a certain period, and capable of deriving the relationship between the trend and real-world events"},
-        {role: "user", content: "From the analysis conducted on the Blockmedia articles, provide your final viewpoint derived from the most recent five analyses regarding the Bitcoin and cryptocurrency markets. Also, relate your viewpoint to the price fluctuations in the Bitcoin market over the past 7 days and within the last 24 hours. Additionally, based on your final viewpoint, if possible, provide a rough estimate of the future changes in the price of Bitcoin. Don't mention 'Blockmedia' in your response. Please return the result in JSON format as {'viewpoint': 'text'}."},
-        // {role: "assistant", content: ""},
-        // {role: "user", content: ""},
+        { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. You are also capable of derive the bitcoin market trend by analyzing the bitcoin price movement within a certain period, and capable of deriving the relationship between the trend and real-world events" },
+        { role: "user", content: "From the analysis conducted on the Blockmedia articles, provide your final viewpoint derived from the most recent five analyses regarding the Bitcoin and cryptocurrency markets. Also, relate your viewpoint to the price fluctuations in the Bitcoin market over the past 7 days and within the last 24 hours. Additionally, based on your final viewpoint, if possible, provide a rough estimate of the future changes in the price of Bitcoin. Don't mention 'Blockmedia' in your viewpoint response and don't mention the analysis' id or title too. I Also want you to return the id's of five analysis you used to create the viewpoint as refs. Please return the result in JSON format as {'viewpoint': 'text', 'refs': [number, number, number, number, number]}."},
     ]
     const tools = [
         {
@@ -584,7 +555,6 @@ async function getViewpointAndUpdate() {
                 mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
                 mp3_kr: mp3Kr // Path or URL to the Korean MP3 file
             });
-
         }
 
         // Optionally, return the updated analyses
@@ -622,7 +592,8 @@ async function getAllViewpointWithAnalysisIds() {
                 as: 'Analyses', // Assuming you have defined this alias in your Sequelize associations
                 attributes: ['id'], // Fetch only the id of the Analysis records
                 required: false // This ensures that viewpoints with no matching analyses are also returned
-            }]
+            }],
+            order: [['createdAt', 'DESC']]
         });
 
     } catch (error) {

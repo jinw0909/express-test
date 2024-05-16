@@ -7,9 +7,8 @@ const openai = new OpenAi({
 });
 
 const { Sequelize } = require("sequelize");
-const Blockmedia = require('../blockmedia');
-const Analysis = require('../analysis');
-const Viewpoint = require('../viewpoint');
+const Blockmedia = require('../models/blockmedia');
+const { Analysis, Viewpoint } = require('../models');
 const { Op } = require('sequelize');
 const multer = require("multer");
 const AWS = require("aws-sdk");
@@ -28,7 +27,6 @@ async function getRecentAndUpdate() {
             });
 
             if (blockmediaEntry) {
-
 
                  const title = await translateText(blockmediaEntry.title, 'English');
                  const titleJp = await translateText(blockmediaEntry.title, 'Japanese');
