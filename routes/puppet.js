@@ -3,7 +3,7 @@ var router = express.Router();
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 const axios = require('axios');
-const Coinness = require('../coinness');
+const { Coinness } = require('../models');
 
 async function clickLoadMore(page, selector) {
     try {

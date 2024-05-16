@@ -216,7 +216,7 @@ async function runCreateConversation(candidates) {
         }
 
         const secondResponse = await openai.chat.completions.create({
-            model: "gpt-4-turbo",
+            model: "gpt-4o",
             messages: messages,
             response_format: { type: "json_object" }
         });
@@ -275,37 +275,52 @@ async function getRecentAndUpdate() {
 
             if (blockmediaEntry) {
 
-
                 const title = await translateText(blockmediaEntry.title, 'English');
                 const titleJp = await translateText(blockmediaEntry.title, 'Japanese');
+                const titleVn = await translateText(blockmediaEntry.title, 'Vietnamese');
+                const titleCn = await translateText(blockmediaEntry.title, 'Chinese');
 
                 const analysisJp = await translateText(analysis.analysis, 'Japanese');
                 const analysisKr = await translateText(analysis.analysis, 'Korean');
+                const analysisVn = await translateText(analysis.analysis, 'Vietnamese');
+                const analysisCn = await translateText(analysis.analysis, 'Chinese');
 
                 const summaryJp = await translateText(analysis.summary, 'Japanese');
                 const summaryKr = await translateText(analysis.summary, 'Korean');
+                const summaryVn = await translateText(analysis.summary, 'Vietnamese');
+                const summaryCn = await translateText(analysis.summary, 'Chinese');
 
                 const mp3En = await generateTTS(analysis.analysis, 'English', analysis.id);
                 const mp3Jp = await generateTTS(analysisJp, 'Japanese', analysis.id);
                 const mp3Kr = await generateTTS(analysisKr, 'Korean', analysis.id);
+                const mp3Vn = await generateTTS(analysisVn, 'Vietnamese', analysis.id);
+                const mp3Cn = await generateTTS(analysisCn, 'Chinese', analysis.id);
 
                 // Update the Analysis entry with values from the Blockmedia entry
                 await analysis.update({
                     title: title,
                     title_kr: blockmediaEntry.title,
                     title_jp: titleJp,
+                    title_vn: titleVn,
+                    title_cn: titleCn,
                     content: blockmediaEntry.content,
                     imageUrl: blockmediaEntry.imageUrl,
                     date: blockmediaEntry.date,
                     publisher: blockmediaEntry.publisher,
                     analysis_jp: analysisJp,
                     analysis_kr: analysisKr,
+                    analysis_vn: analysisVn,
+                    analysis_cn: analysisCn,
                     summary_jp: summaryJp,
                     summary_kr: summaryKr,
+                    summary_vn: summaryVn,
+                    summary_cn: summaryCn,
                     updatedAt: new Date(),
                     mp3: mp3En, // Path or URL to the English MP3 file
                     mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
-                    mp3_kr: mp3Kr // Path or URL to the Korean MP3 file
+                    mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
+                    mp3_vn: mp3Vn, // Path or URL to the Vietnamese MP3 file
+                    mp3_cn: mp3Cn // Path or URL to the Chinese MP3 file
                 });
             }
         }
@@ -324,16 +339,35 @@ async function getRecentAndUpdate() {
     }
 }
 
+// async function translateText(content, lang) {
+//     let messages = [
+//         { role: "system", content: "You are a professional translator capable of translating between English, Japanese, and Korean. You can understand the context of sentences and derive the meanings of words within that context, enabling you to translate accurately and appropriately for English, Japanese, and Korean speakers. Additionally, you possess knowledge about cryptocurrencies, Bitcoin, stocks, and finance in general, allowing you to aptly translate articles and analyses related to these topics into the respective languages."},
+//         { role: "user", content: "Please translate the following document into Japanese. I only need the translated output, without any additional comments or indicators. Document: The report on national and corporate Bitcoin accumulations reveals significant crypto asset holdings by entities like MicroStrategy and various governments, including the U.S. and China. This trend underscores a substantial institutional and governmental embrace of Bitcoin, posing implications for market stability and pricing structures. Institutional holding can lead to lower market volatility and potentially higher price floors due to reduced circulatory supply. Understanding these dynamics is critical for evaluating Bitcoin's broader adoption and its perception as a store of value."},
+//         { role: "assistant", content: "国と企業のビットコイン蓄積に関するレポートは、MicroStrategyやアメリカ、中国などの政府を含む機関がかなりの暗号資産を保有していることを明らかにしています。この傾向は、ビットコインに対する大規模な機関および政府の受容を強調し、市場の安定性と価格構造に対する影響を示唆しています。機関の保有は、流通供給の減少により市場のボラティリティを低下させ、潜在的にはより高い価格の床を可能にするかもしれません。これらのダイナミクスを理解することは、ビットコインの広範な採用と価値の保存としての認識を評価する上で重要です。"},
+//         { role: "user", content: `Please translate the following document into ${lang}. I only need the translated output, without any additional comments or indicators. Document: ${content}`},
+//     ];
+//
+//     const response  = await openai.chat.completions.create({
+//         model: "gpt-4-turbo",
+//         messages: messages
+//     })
+//
+//     const responseMessage = response.choices[0].message.content;
+//     console.log("response message: ", responseMessage);
+//     return responseMessage;
+// }
 async function translateText(content, lang) {
     let messages = [
-        { role: "system", content: "You are a professional translator capable of translating between English, Japanese, and Korean. You can understand the context of sentences and derive the meanings of words within that context, enabling you to translate accurately and appropriately for English, Japanese, and Korean speakers. Additionally, you possess knowledge about cryptocurrencies, Bitcoin, stocks, and finance in general, allowing you to aptly translate articles and analyses related to these topics into the respective languages."},
-        { role: "user", content: "Please translate the following document into Japanese. I only need the translated output, without any additional comments or indicators. Document: The report on national and corporate Bitcoin accumulations reveals significant crypto asset holdings by entities like MicroStrategy and various governments, including the U.S. and China. This trend underscores a substantial institutional and governmental embrace of Bitcoin, posing implications for market stability and pricing structures. Institutional holding can lead to lower market volatility and potentially higher price floors due to reduced circulatory supply. Understanding these dynamics is critical for evaluating Bitcoin's broader adoption and its perception as a store of value."},
+        { role: "system", content: "You are a professional translator capable of translating between English, Japanese, Korean, Vietnamese, and Chinese. You can understand the context of sentences and derive the meanings of words within that context, enabling you to translate accurately and appropriately for English, Japanese, Korean, Vietnamese and Chinese speakers. Additionally, you possess knowledge about cryptocurrencies, Bitcoin, stocks, and finance in general, allowing you to aptly translate articles and analyses related to these topics into the respective languages. You can also naturally translate article headlines or titles into other languages."},
+        { role: "user", content: "Please translate the following text into Japanese. I only need the translated output, without any additional comments or indicators. Please ensure to apply honorifics when translating into Korean or Japanese. Text: The report on national and corporate Bitcoin accumulations reveals significant crypto asset holdings by entities like MicroStrategy and various governments, including the U.S. and China. This trend underscores a substantial institutional and governmental embrace of Bitcoin, posing implications for market stability and pricing structures. Institutional holding can lead to lower market volatility and potentially higher price floors due to reduced circulatory supply. Understanding these dynamics is critical for evaluating Bitcoin's broader adoption and its perception as a store of value."},
         { role: "assistant", content: "国と企業のビットコイン蓄積に関するレポートは、MicroStrategyやアメリカ、中国などの政府を含む機関がかなりの暗号資産を保有していることを明らかにしています。この傾向は、ビットコインに対する大規模な機関および政府の受容を強調し、市場の安定性と価格構造に対する影響を示唆しています。機関の保有は、流通供給の減少により市場のボラティリティを低下させ、潜在的にはより高い価格の床を可能にするかもしれません。これらのダイナミクスを理解することは、ビットコインの広範な採用と価値の保存としての認識を評価する上で重要です。"},
-        { role: "user", content: `Please translate the following document into ${lang}. I only need the translated output, without any additional comments or indicators. Document: ${content}`},
+        { role: "user", content: "Please translate the following text into Japanese. I only need the translated output, without any additional comments or indicators.Please ensure to apply honorifics when translating into Korean or Japanese. Text: [마켓뷰] '금리 인하 이르다고?' 美 물가지표 지켜보자"},
+        { role: "assistant", content: "[マーケットビュー]「金利引き下げは早い？」米国の物価指標を注視しよう"},
+        { role: "user", content: `Please translate the following text into ${lang}. I only need the translated output, without any additional comments or indicators. Please ensure to apply honorifics when translating into Korean or Japanese. Text: ${content}`},
     ];
 
     const response  = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
+        model: "gpt-4o",
         messages: messages
     })
 
@@ -358,78 +392,132 @@ const Polly = new AWS.Polly({
 
 // async function generateTTS(content, lang, id) {
 //
-//     const mp3 = await openai.audio.speech.create({
-//         model: 'tts-1-hd',
-//         voice: 'alloy',
-//         input: content
-//     });
+//     let voiceId = 'Danielle';
+//     if (lang == 'Japanese') {
+//         voiceId = 'Kazuha'
+//     } else if (lang == 'Korean') {
+//         voiceId = 'Seoyeon'
+//     }
 //
-//     const buffer = Buffer.from(await mp3.arrayBuffer());
-//
-//     const s3Params = {
-//         Bucket: 's3bucketjinwoo',
-//         Key: `${id}_${lang}.mp3`,
-//         Body: buffer,
-//         ContentType: "audio/mpeg",
+//     let pollyParams = {
+//         'Text': content,
+//         'OutputFormat': 'mp3',
+//         'VoiceId': voiceId,
+//         'Engine': 'neural'
 //     }
 //
 //     return new Promise((resolve, reject) => {
-//         s3.upload(s3Params, function(err, data) {
+//         // Synthesize speech using Polly
+//         Polly.synthesizeSpeech(pollyParams, (err, data) => {
 //             if (err) {
-//                 console.error("Error uploading to S3:", err);
+//                 console.error("Error synthesizing speech:", err);
 //                 reject(err);
-//             } else {
-//                 console.log("Successfully uploaded data to " + data.Location);
-//                 resolve(data.Location);
+//                 return;
 //             }
+//
+//             // S3 upload parameters
+//             const s3Params = {
+//                 Bucket: 's3bucketjinwoo',
+//                 Key: `${id}_${lang}.mp3`,
+//                 Body: data.AudioStream,
+//                 ContentType: "audio/mpeg",
+//             };
+//
+//             // Upload to S3
+//             s3.upload(s3Params, (err, data) => {
+//                 if (err) {
+//                     console.error("Error uploading to S3:", err);
+//                     reject(err);
+//                 } else {
+//                     console.log("Successfully uploaded data to " + data.Location);
+//                     resolve(data.Location);
+//                 }
+//             });
 //         });
 //     });
 // }
 async function generateTTS(content, lang, id) {
+    if (lang === 'Vietnamese') {
+        // Use OpenAI TTS for Vietnamese
+        try {
+            const mp3 = await openai.audio.speech.create({
+                model: 'tts-1',
+                voice: 'alloy',
+                input: content
+            });
 
-    let voiceId = 'Danielle';
-    if (lang == 'Japanese') {
-        voiceId = 'Kazuha'
-    } else if (lang == 'Korean') {
-        voiceId = 'Seoyeon'
-    }
+            const buffer = Buffer.from(await mp3.arrayBuffer());
 
-    let pollyParams = {
-        'Text': content,
-        'OutputFormat': 'mp3',
-        'VoiceId': voiceId,
-        'Engine': 'neural'
-    }
-
-    return new Promise((resolve, reject) => {
-        // Synthesize speech using Polly
-        Polly.synthesizeSpeech(pollyParams, (err, data) => {
-            if (err) {
-                console.error("Error synthesizing speech:", err);
-                reject(err);
-                return;
-            }
-
-            // S3 upload parameters
             const s3Params = {
                 Bucket: 's3bucketjinwoo',
                 Key: `${id}_${lang}.mp3`,
-                Body: data.AudioStream,
+                Body: buffer,
                 ContentType: "audio/mpeg",
             };
 
-            // Upload to S3
-            s3.upload(s3Params, (err, data) => {
+            return new Promise((resolve, reject) => {
+                s3.upload(s3Params, function (err, data) {
+                    if (err) {
+                        console.error("Error uploading to S3:", err);
+                        reject(err);
+                    } else {
+                        console.log("Successfully uploaded data to " + data.Location);
+                        resolve(data.Location);
+                    }
+                });
+            });
+        } catch (error) {
+            console.error("Error generating TTS with OpenAI:", error);
+            throw error;
+        }
+    } else {
+        // Use AWS Polly for other languages
+        let voiceId = 'Danielle';
+        if (lang == 'Japanese') {
+            voiceId = 'Kazuha';
+        } else if (lang == 'Korean') {
+            voiceId = 'Seoyeon';
+        } else if (lang == 'Chinese') {
+            voiceId = 'Zhiyu';
+        }
+
+        let pollyParams = {
+            'Text': content,
+            'OutputFormat': 'mp3',
+            'VoiceId': voiceId,
+            'Engine': 'neural'
+        };
+
+        return new Promise((resolve, reject) => {
+            // Synthesize speech using Polly
+            Polly.synthesizeSpeech(pollyParams, (err, data) => {
                 if (err) {
-                    console.error("Error uploading to S3:", err);
+                    console.error("Error synthesizing speech:", err);
                     reject(err);
-                } else {
-                    console.log("Successfully uploaded data to " + data.Location);
-                    resolve(data.Location);
+                    return;
                 }
+
+                // S3 upload parameters
+                const s3Params = {
+                    Bucket: 's3bucketjinwoo',
+                    Key: `${id}_${lang}.mp3`,
+                    Body: data.AudioStream,
+                    ContentType: "audio/mpeg",
+                };
+
+                // Upload to S3
+                s3.upload(s3Params, (err, data) => {
+                    if (err) {
+                        console.error("Error uploading to S3:", err);
+                        reject(err);
+                    } else {
+                        console.log("Successfully uploaded data to " + data.Location);
+                        resolve(data.Location);
+                    }
+                });
             });
         });
-    });
+    }
 }
 async function runViewpointConversation() {
     const messages = [
@@ -460,7 +548,7 @@ async function runViewpointConversation() {
         }
     ]
     const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
+        model: "gpt-4o",
         messages: messages,
         tools: tools,
         tool_choice : "auto", //auto is default, but we'll be explicit
@@ -494,7 +582,7 @@ async function runViewpointConversation() {
         }
 
         const secondResponse = await openai.chat.completions.create({
-            model: "gpt-4-turbo",
+            model: "gpt-4o",
             messages: messages,
             response_format: {type: "json_object"}
         });
@@ -541,19 +629,27 @@ async function getViewpointAndUpdate() {
 
             const viewpointJp = await translateText(viewpoint.viewpoint, 'Japanese');
             const viewpointKr = await translateText(viewpoint.viewpoint, 'Korean');
+            const viewpointVn = await translateText(viewpoint.viewpoint, 'Vietnamese');
+            const viewpointCn = await translateText(viewpoint.viewpoint, 'Chinese');
 
             const mp3En = await generateTTS(viewpoint.viewpoint, 'English', viewpoint.id);
             const mp3Jp = await generateTTS(viewpointJp, 'Japanese', viewpoint.id);
             const mp3Kr = await generateTTS(viewpointKr, 'Korean', viewpoint.id);
+            const mp3Vn = await generateTTS(viewpointVn, 'Vietnamese', viewpoint.id);
+            const mp3Cn = await generateTTS(viewpointCn, 'Chinese', viewpoint.id);
 
             // Update the Analysis entry with values from the Blockmedia entry
             await viewpoint.update({
                 viewpoint_jp: viewpointJp,
                 viewpoint_kr: viewpointKr,
+                viewpoint_vn: viewpointVn,
+                viewpoint_cn: viewpointCn,
                 updatedAt: new Date(),
                 mp3: mp3En, // Path or URL to the English MP3 file
                 mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
-                mp3_kr: mp3Kr // Path or URL to the Korean MP3 file
+                mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
+                mp3_vn: mp3Vn, // Path or URL to the Vietnamese MP3 file
+                mp3_cn: mp3Cn // Path or URL to the Chinese MP3 file
             });
         }
 

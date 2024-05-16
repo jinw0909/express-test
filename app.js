@@ -8,8 +8,9 @@ const multer = require('multer');
 const AWS = require('aws-sdk');
 const db = require('./database');
 const sequelize = require('./sequelize');
-const Coinness = require('./coinness');
 const setupCronJobs = require('./scheduler');
+
+const { Viewpoint, Analysis } = require('./models');
 
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 

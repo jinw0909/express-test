@@ -1,4 +1,4 @@
-const { Model, DataTypes } = require('sequelize');
+const { DataTypes } = require('sequelize');
 const sequelize = require('../sequelize');
 
 const Viewpoint = sequelize.define('Viewpoint', {
@@ -23,6 +23,14 @@ const Viewpoint = sequelize.define('Viewpoint', {
         type: DataTypes.TEXT,
         allowNull: true
     },
+    viewpoint_vn : {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    viewpoint_cn : {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
     mp3: {
         type: DataTypes.TEXT,
         allowNull: false
@@ -32,6 +40,14 @@ const Viewpoint = sequelize.define('Viewpoint', {
         allowNull: true
     },
     mp3_kr: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    mp3_vn: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    mp3_cn: {
         type: DataTypes.TEXT,
         allowNull: true
     },

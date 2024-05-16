@@ -9,6 +9,8 @@ db.Sequelize = Sequelize;
 
 db.Viewpoint = require('./viewpoint');
 db.Analysis = require('./analysis');
+db.Coinness = require('./coinness');
+db.Blockmedia = require('./blockmedia');
 // Define the relationships
 db.Viewpoint.hasMany(db.Analysis, { foreignKey: 'ref' });
 db.Analysis.belongsTo(db.Viewpoint, { foreignKey: 'ref' });

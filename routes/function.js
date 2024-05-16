@@ -8,8 +8,7 @@ const openai = new OpenAi({
    apiKey : process.env.API_KEY
 });
 
-const Blockmedia = require('../blockmedia');
-const Analysis = require('../analysis');
+const {Blockmedia, Analysis } = require('../models');
 const { Sequelize } = require("sequelize");
 const { Op } = require('sequelize');
 

@@ -1,297 +1,324 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>
-            Recent　Analysis
-        </title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            li {
-                display: none; /* Hide elements but keep the space */
-                opacity: 0;
-                transition: opacity 1s linear; /* Delay visibility to match opacity */
-            }
-            li:first-child {
-                display: block;
-                opacity: 1;
-            }
-            .thumbnail {
-                display: inline-block;
-                margin: 10px;
-                cursor: pointer;
-            }
+<head>
+    <title>Recent Analysis</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        li {
+            display: none; /* Hide elements but keep the space */
+            opacity: 0;
+            transition: opacity 1s linear; /* Delay visibility to match opacity */
+        }
+        li:first-child {
+            display: block;
+            opacity: 1;
+        }
+        .thumbnail {
+            display: inline-block;
+            margin: 10px;
+            cursor: pointer;
+        }
 
-            .thumbnail img {
-                width: 100px; /* Adjust as needed */
-                height: auto;
-            }
+        .thumbnail img {
+            width: 100px; /* Adjust as needed */
+            height: auto;
+        }
 
-            .thumbnail span {
-                display: block;
-                text-align: center;
-            }
-            #analysisList {
-                min-height: 50vh;
-                border: 1px solid #999;
-                border-radius: 8px;
-                padding: 2rem;
-            }
-            img { width: 100%; }
-            .imgDiv { max-width: 90vw;}
-            .main-text { margin-top: 1rem; }
+        .thumbnail span {
+            display: block;
+            text-align: center;
+        }
+        #analysisList {
+            min-height: 50vh;
+            border: 1px solid #999;
+            border-radius: 8px;
+            padding: 2rem;
+        }
+        img { width: 100%; }
+        .imgDiv { max-width: 90vw;}
+        .main-text { margin-top: 1rem; }
 
-            .script-text { display: none; }
-        </style>
-    </head>
-    <body>
-    <h1>
-        <% if (lang === 'Japanese') { %>
-            <%= vp.id%> ブリーフィング
-        <% } else if (lang === 'Korean') { %>
-            <%= vp.id%> 브리핑
-        <% } else { %>
-            <%= vp.id%> Briefing
-        <% } %>
-    </h1>
-    <div class="select-lang">
-        <a href="/run?lang=English" id="selectEn">English</a>
-        <a href="/run?lang=Japanese" id="selectJp">日本語</a>
-        <a href="/run?lang=Korean" id="selectKr">한국어</a>
-    </div>
-    <button id="playButton">
-        <% if (lang === 'Japanese') { %>
-            プレイ
-        <% } else if (lang === 'Korean') { %>
-            재생
-        <% } else { %>
-            Play
-        <% } %>
-    </button>
-    <button id="pauseButton">
-        <% if (lang === 'Japanese') { %>
-            停止
-        <% } else if (lang === 'Korean') { %>
-            정지
-        <% } else { %>
-            Pause
-        <% } %>
-    </button>
-    <ul id="analysisList">
-        <% data.forEach(function(analysis, index) { %>
-            <li id="item<%= index%>">
-                <h2>
+        .script-text { display: none; }
+    </style>
+</head>
+<body>
+<h1>
+    <% if (lang === 'Japanese') { %>
+        <%= vp.id %> ブリーフィング
+    <% } else if (lang === 'Korean') { %>
+        <%= vp.id %> 브리핑
+    <% } else { %>
+        <%= vp.id %> Briefing
+    <% } %>
+</h1>
+<div class="select-lang">
+    <a href="/run?lang=English" id="selectEn">English</a>
+    <a href="/run?lang=Japanese" id="selectJp">日本語</a>
+    <a href="/run?lang=Korean" id="selectKr">한국어</a>
+    <a href="/run?lang=Vietnamese" id="selectVn">tiếng Việt</a>
+    <a href="/run?lang=Chinese" id="selectCn">汉文</a>
+</div>
+<button id="playButton">
+    <% if (lang === 'Japanese') { %>
+        プレイ
+    <% } else if (lang === 'Korean') { %>
+        재생
+    <% } else { %>
+        Play
+    <% } %>
+</button>
+<button id="pauseButton">
+    <% if (lang === 'Japanese') { %>
+        停止
+    <% } else if (lang === 'Korean') { %>
+        정지
+    <% } else { %>
+        Pause
+    <% } %>
+</button>
+<ul id="analysisList">
+    <% data.forEach(function(analysis, index) { %>
+        <li id="item<%= index %>">
+            <h2>
                 <% if (lang === 'Japanese') { %>
                     <%= analysis.title_jp %>
                 <% } else if (lang === 'Korean') { %>
                     <%= analysis.title_kr %>
+                <% } else if (lang === 'Vietnamese') { %>
+                    <%= analysis.title_vn %>
+                <% } else if (lang === 'Chinese') { %>
+                    <%= analysis.title_cn %>
                 <% } else { %>
                     <%= analysis.title %>
-                <% } %></h2>
-                <div class="imgDiv">
-                <img src="<%= analysis.imageUrl%>" alt="analysis image"><br>
-                </div>
-                <div class="main-text">
+                <% } %>
+            </h2>
+            <p><%= analysis.createdAt.toISOString().substring(0, 10) %><br></p>
+            <div class="imgDiv">
+                <img src="<%= analysis.imageUrl %>" alt="analysis image"><br>
+            </div>
+            <div class="main-text">
                 <% if (lang === 'Japanese') { %>
                     <%= analysis.summary_jp %>
                 <% } else if (lang === 'Korean') { %>
                     <%= analysis.summary_kr %>
+                <% } else if (lang === 'Vietnamese') { %>
+                    <%= analysis.summary_vn %>
+                <% } else if (lang === 'Chinese') { %>
+                    <%= analysis.summary_cn %>
                 <% } else { %>
                     <%= analysis.summary %>
                 <% } %>
-                </div>
-                <audio src="
-                    <% if (lang === 'Japanese') { %>
-                        <%= analysis.mp3_jp %>
-                    <% } else if (lang === 'Korean') { %>
-                        <%= analysis.mp3_kr %>
-                    <% } else { %>
-                        <%= analysis.mp3 %>
-                    <% } %>" id="audio<%= index%>"></audio><br>
-                <p><%= analysis.createdAt.toISOString().substring(0, 10) %><br></p>
-                <button id="open<%= index%>" class="open-script">Open Script</button>
-                <p id="script<%= index%>" class="script-text">
-                    <% if (lang === 'Japanese') { %>
-                        <%= analysis.analysis_jp %>
-                    <% } else if (lang === 'Korean') { %>
-                        <%= analysis.analysis_kr %>
-                    <% } else { %>
-                        <%= analysis.analysis %>
-                    <% } %>
-                </p>
-            </li>
-        <% }) %>
-        <li id="item<%= data.length%>">
-            <h2>
-                <% if (lang === 'Japanese') { %>
-                    まとめViewpoint
-                <% } else if (lang === 'Korean') { %>
-                    최종 Viewpoint
-                <% } else { %>
-                    Final Viewpoint
-                <% } %>
-            </h2>
-            <div>
-                <% if (lang === 'Japanese') { %>
-                    <%= vp.viewpoint_jp %>
-                <% } else if (lang === 'Korean') { %>
-                    <%= vp.viewpoint_kr %>
-                <% } else { %>
-                    <%= vp.viewpoint %>
-                <% } %>
             </div>
             <audio src="
+                <% if (lang === 'Japanese') { %>
+                    <%= analysis.mp3_jp %>
+                <% } else if (lang === 'Korean') { %>
+                    <%= analysis.mp3_kr %>
+                <% } else if (lang === 'Vietnamese') { %>
+                    <%= analysis.mp3_vn %>
+                <% } else if (lang === 'Chinese') { %>
+                    <%= analysis.mp3_cn %>
+                <% } else { %>
+                    <%= analysis.mp3 %>
+                <% } %>
+            " id="audio<%= index %>"></audio><br>
+            <button id="open<%= index %>" class="open-script">Open Script</button>
+            <p id="script<%= index %>" class="script-text">
+                <% if (lang === 'Japanese') { %>
+                    <%= analysis.analysis_jp %>
+                <% } else if (lang === 'Korean') { %>
+                    <%= analysis.analysis_kr %>
+                <% } else if (lang === 'Vietnamese') { %>
+                    <%= analysis.analysis_vn %>
+                <% } else if (lang === 'Chinese') { %>
+                    <%= analysis.analysis_cn %>
+                <% } else { %>
+                    <%= analysis.analysis %>
+                <% } %>
+            </p>
+        </li>
+    <% }) %>
+    <li id="item<%= data.length %>">
+        <h2>
+            <% if (lang === 'Japanese') { %>
+                まとめ Viewpoint
+            <% } else if (lang === 'Korean') { %>
+                최종 Viewpoint
+            <% } else { %>
+                Final Viewpoint
+            <% } %>
+        </h2>
+        <div>
+            <% if (lang === 'Japanese') { %>
+                <%= vp.viewpoint_jp %>
+            <% } else if (lang === 'Korean') { %>
+                <%= vp.viewpoint_kr %>
+            <% } else if (lang === 'Vietnamese') { %>
+                <%= vp.viewpoint_vn %>
+            <% } else if (lang === 'Chinese') { %>
+                <%= vp.viewpoint_cn %>
+            <% } else { %>
+                <%= vp.viewpoint %>
+            <% } %>
+        </div>
+        <audio src="
             <% if (lang === 'Japanese') { %>
                 <%= vp.mp3_jp %>
             <% } else if (lang === 'Korean') { %>
                 <%= vp.mp3_kr %>
+            <% } else if (lang === 'Vietnamese') { %>
+                <%= vp.mp3_vn %>
+            <% } else if (lang === 'Chinese') { %>
+                <%= vp.mp3_cn %>
             <% } else { %>
                 <%= vp.mp3 %>
-            <% } %>" id="audio<%= data.length%>"></audio>
-        </li>
-    </ul>
-    <div id="thumbnails">
-        <% data.forEach(function(analysis, index) { %>
-            <div class="thumbnail" data-index="<%= index %>">
-                <img src="<%= analysis.imageUrl %>" alt="Thumb <%= index %>">
-                <span>
-                    <% if (lang === 'Japanese') { %>
-                        記事<%= index + 1 %>
-                    <% } else if (lang === 'Korean') { %>
-                        기사<%= index + 1 %>
-                    <% } else { %>
-                        Article<%= index + 1 %>
-                    <% } %>
-                </span>
-            </div>
-        <% }) %>
-        <div class="thumbnail" data-index="<%= data.length%>>">
-            <img src="<%= vp.imageUrl%>" alt="Thumb Viewpoint">
-            <span>Viewpoint</span>
+            <% } %>
+        " id="audio<%= data.length %>"></audio>
+    </li>
+</ul>
+<div id="thumbnails">
+    <% data.forEach(function(analysis, index) { %>
+        <div class="thumbnail" data-index="<%= index %>">
+            <img src="<%= analysis.imageUrl %>" alt="Thumb <%= index %>">
+            <span>
+                <% if (lang === 'Japanese') { %>
+                    記事<%= index + 1 %>
+                <% } else if (lang === 'Korean') { %>
+                    기사<%= index + 1 %>
+                <% } else { %>
+                    Article <%= index + 1 %>
+                <% } %>
+            </span>
         </div>
+    <% }) %>
+    <div class="thumbnail" data-index="<%= data.length %>">
+        <img src="<%= vp.imageUrl %>" alt="Thumb Viewpoint">
+        <span>Viewpoint</span>
     </div>
-    <script>
-        const listItems = document.querySelectorAll('li');
-        let currentAudioIndex = 0;
-        let currentAudio = document.getElementById(`audio${currentAudioIndex}`);
-        currentAudio.hasStarted = false;
-        const delayBetweenAudios = 1000;
-        const thumbnails = document.querySelectorAll('.thumbnail');
+</div>
+<script>
+    const listItems = document.querySelectorAll('li');
+    let currentAudioIndex = 0;
+    let currentAudio = document.getElementById(`audio${currentAudioIndex}`);
+    currentAudio.hasStarted = false;
+    const delayBetweenAudios = 1000;
+    const thumbnails = document.querySelectorAll('.thumbnail');
 
-        thumbnails.forEach(thumb => {
-           thumb.addEventListener('click', function() {
-               currentAudioIndex = parseInt(this.getAttribute('data-index'));
-               prepareAudio(currentAudioIndex);
-           })
+    thumbnails.forEach(thumb => {
+        thumb.addEventListener('click', function() {
+            currentAudioIndex = parseInt(this.getAttribute('data-index'));
+            prepareAudio(currentAudioIndex);
         });
+    });
 
-        document.getElementById('playButton').addEventListener('click', function() {
-            if (currentAudio.hasStarted && currentAudio.paused) {
-                currentAudio.play();
-            } else {
-                playAudio(currentAudioIndex);
+    document.getElementById('playButton').addEventListener('click', function() {
+        if (currentAudio.hasStarted && currentAudio.paused) {
+            currentAudio.play();
+        } else {
+            playAudio(currentAudioIndex);
+        }
+    });
+
+    document.getElementById('pauseButton').addEventListener('click', function() {
+        pauseAudio();
+    });
+
+    function prepareAudio(index) {
+        stopAllAudios();
+        // Fade out all list items before fading in the selected one
+        listItems.forEach((item, idx) => {
+            if (idx !== index) {
+                item.style.opacity = 0;
+                setTimeout(() => {
+                    item.style.display = 'none';
+                }, 1000); // Match the duration of the fade out effect
             }
         });
+        // Delay the fadeIn to allow other items to fade out smoothly
+        setTimeout(() => {
+            fadeIn(listItems[index]); // Fade in the current list item
+        }, 1000);
+        currentAudio = document.getElementById(`audio${index}`);
+    }
 
-        document.getElementById('pauseButton').addEventListener('click', function() {
-            pauseAudio();
+    function playAudio(index) {
+        stopAllAudios();
+        // console.log("idx: ", index);
+        listItems.forEach(item => {
+            item.style.display = 'none';
+            item.style.opacity = '0';
         });
+        //listItems[index].style.display = 'block';
+        fadeIn(listItems[index]);
 
-        function prepareAudio(index) {
-            stopAllAudios();
-            // Fade out all list items before fading in the selected one
-            listItems.forEach((item, idx) => {
-                if (idx !== index) {
-                    item.style.opacity = 0;
-                    setTimeout(() => {
-                        item.style.display = 'none';
-                    }, 1000); // Match the duration of the fade out effect
+        currentAudio = document.getElementById(`audio${index}`);
+        currentAudio.play();
+        currentAudio.hasStarted = true;
+        currentAudio.onended = function() {
+            fadeOut(listItems[currentAudioIndex], function() {
+                currentAudioIndex++;
+                if (currentAudioIndex < listItems.length) {
+                    setTimeout(function() {
+                        playAudio(currentAudioIndex);
+                    }, delayBetweenAudios);
                 }
             });
-            // Delay the fadeIn to allow other items to fade out smoothly
-            setTimeout(() => {
-                fadeIn(listItems[index]); // Fade in the current list item
-            }, 1000);
-            currentAudio = document.getElementById(`audio${index}`);
+        };
+    }
+
+    function pauseAudio() {
+        if (currentAudio) {
+            currentAudio.pause();
         }
+    }
 
-        function playAudio(index) {
-            stopAllAudios();
-            // console.log("idx: ", index);
-            listItems.forEach(item => {
-                item.style.display = 'none'
-                item.style.opacity = '0';
-            });
-            //listItems[index].style.display = 'block';
-            fadeIn(listItems[index]);
+    function stopAllAudios() {
+        let audios = document.querySelectorAll('audio');
+        audios.forEach(audio => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.hasStarted = false;
+        });
+    }
 
-            currentAudio = document.getElementById(`audio${index}`);
-            currentAudio.play();
-            currentAudio.hasStarted = true;
-            currentAudio.onended = function() {
-                fadeOut(listItems[currentAudioIndex], function() {
-                    currentAudioIndex++;
-                    if (currentAudioIndex < listItems.length) {
-                        setTimeout(function() {
-                            playAudio(currentAudioIndex);
-                        }, delayBetweenAudios);
-                    }
-                });
-            }
-        }
+    function fadeIn(element) {
+        element.style.display = 'block';
+        setTimeout(function() {
+            element.style.opacity = 1;
+        }, 10); // Start fade-in after a short delay to ensure display: block takes effect
+    }
 
-        function pauseAudio() {
-            if (currentAudio) {
-                currentAudio.pause();
-            }
-        }
-
-        function stopAllAudios() {
-            let audios = document.querySelectorAll('audio');
-            audios.forEach(audio => {
-                audio.pause();
-                audio.currentTime = 0;
-                audio.hasStarted = false;
-            })
-        }
-
-        function fadeIn(element) {
-            element.style.display = 'block';
+    function fadeOut(element, callback) {
+        console.log("id: ", element.id);
+        if (element.id !== `item${listItems.length - 1}`) {
+            element.style.opacity = 0;
             setTimeout(function() {
-                element.style.opacity = 1;
-            }, 10); // Start fade-in after a short delay to ensure display: block takes effect
-        }
-
-        function fadeOut(element, callback) {
-            console.log("id: ", element.id);
-            if (element.id !== `item${listItems.length - 1}`) {
-                element.style.opacity = 0;
-                setTimeout(function() {
-                    element.style.display = 'none';
-                    if (callback) callback();
-                }, 1000); // Duration should match transition duration
-            } else {
+                element.style.display = 'none';
                 if (callback) callback();
-            }
+            }, 1000); // Duration should match transition duration
+        } else {
+            if (callback) callback();
         }
+    }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add event listeners to all buttons for toggling visibility of scripts
-            const buttons = document.querySelectorAll('.open-script'); // Selects all buttons whose id starts with 'open'
-            buttons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const index = this.id.replace('open', ''); // Extract index from the id of the button
-                    const scriptElement = document.getElementById('script' + index);
-                    if (scriptElement.style.display === 'none' || !scriptElement.style.display) {
-                        scriptElement.style.display = 'block'; // Show the script
-                        this.textContent = 'Close Script';
-                    } else {
-                        scriptElement.style.display = 'none'; // Hide the script
-                        this.textContent = 'Open Script';
-                    }
-                });
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add event listeners to all buttons for toggling visibility of scripts
+        const buttons = document.querySelectorAll('.open-script'); // Selects all buttons whose id starts with 'open'
+        buttons.forEach(button => {
+            button.addEventListener('click', function() {
+                const index = this.id.replace('open', ''); // Extract index from the id of the button
+                const scriptElement = document.getElementById('script' + index);
+                if (scriptElement.style.display === 'none' || !scriptElement.style.display) {
+                    scriptElement.style.display = 'block'; // Show the script
+                    this.textContent = 'Close Script';
+                } else {
+                    scriptElement.style.display = 'none'; // Hide the script
+                    this.textContent = 'Open Script';
+                }
             });
         });
+    });
 
-    </script>
-    </body>
+</script>
+</body>
 </html>

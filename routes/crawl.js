@@ -3,8 +3,7 @@ var router = express.Router();
 const axios = require('axios');
 const cheerio = require('cheerio');
 const Parser = require('rss-parser');
-const Coinness = require("../coinness");
-const Blockmedia = require("../blockmedia");
+const {Coinness, Blockmedia, Analysis, Viewpoint} = require("../models");
 /* GET home page. */
 
 async function fetchContent(link) {

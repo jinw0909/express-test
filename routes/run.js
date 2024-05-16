@@ -1,8 +1,6 @@
 var express = require('express');
 var router = express.Router();
-const Blockmedia = require('../blockmedia');
-const Analysis = require('../analysis');
-const Viewpoint = require('../viewpoint');
+const {Blockmedia, Analysis, Viewpoint} = require('../models');
 const { Sequelize } = require("sequelize");
 const { Op } = require('sequelize');
 
