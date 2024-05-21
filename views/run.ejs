@@ -35,18 +35,30 @@
             padding: 2rem;
         }
         img { width: 100%; }
-        .imgDiv { max-width: 90vw;}
-        .main-text { margin-top: 1rem; }
+        .imgDiv { width: 100%;}
+        .main-summary { margin-top: 1rem; display: none; }
 
         .script-text { display: none; }
+
+        .main-container { display: flex; justify-content: center; align-items: center; }
+        .main-inner {
+            max-width: 768px;
+        }
+        .buttons { margin-top: 1rem; padding: .5rem 1rem; width: 10rem; }
     </style>
 </head>
 <body>
+<div class="main-container">
+<div class="main-inner">
 <h1>
     <% if (lang === 'Japanese') { %>
         <%= vp.id %> ブリーフィング
     <% } else if (lang === 'Korean') { %>
         <%= vp.id %> 브리핑
+    <% } else if (lang === 'Vietnamese') { %>
+        <%= vp.id %> sự trình bày tóm tắt, sự điểm lại
+    <% } else if (lang === 'Chinese') { %>
+        <%= vp.id %> 简报
     <% } else { %>
         <%= vp.id %> Briefing
     <% } %>
@@ -96,7 +108,8 @@
             <div class="imgDiv">
                 <img src="<%= analysis.imageUrl %>" alt="analysis image"><br>
             </div>
-            <div class="main-text">
+            <button id="openBtn<%= index %>" class="open-summary buttons">Open Summary</button>
+            <p id="summary<%= index%>" class="main-summary">
                 <% if (lang === 'Japanese') { %>
                     <%= analysis.summary_jp %>
                 <% } else if (lang === 'Korean') { %>
@@ -108,7 +121,7 @@
                 <% } else { %>
                     <%= analysis.summary %>
                 <% } %>
-            </div>
+            </p>
             <audio src="
                 <% if (lang === 'Japanese') { %>
                     <%= analysis.mp3_jp %>
@@ -122,7 +135,7 @@
                     <%= analysis.mp3 %>
                 <% } %>
             " id="audio<%= index %>"></audio><br>
-            <button id="open<%= index %>" class="open-script">Open Script</button>
+            <button id="open<%= index %>" class="open-script buttons">Open Script</button>
             <p id="script<%= index %>" class="script-text">
                 <% if (lang === 'Japanese') { %>
                     <%= analysis.analysis_jp %>
@@ -195,6 +208,8 @@
         <img src="<%= vp.imageUrl %>" alt="Thumb Viewpoint">
         <span>Viewpoint</span>
     </div>
+    </div>
+</div>
 </div>
 <script>
     const listItems = document.querySelectorAll('li');
@@ -314,6 +329,21 @@
                 } else {
                     scriptElement.style.display = 'none'; // Hide the script
                     this.textContent = 'Open Script';
+                }
+            });
+        });
+
+        const btns = document.querySelectorAll('.open-summary'); // Selects all buttons whose id starts with 'open'
+        btns.forEach(button => {
+            button.addEventListener('click', function() {
+                const index = this.id.replace('openBtn', ''); // Extract index from the id of the button
+                const summaryElement = document.getElementById('summary' + index);
+                if (summaryElement.style.display === 'none' || !summaryElement.style.display) {
+                    summaryElement.style.display = 'block'; // Show the script
+                    this.textContent = 'Close Summary';
+                } else {
+                    summaryElement.style.display = 'none'; // Hide the script
+                    this.textContent = 'Open Summary';
                 }
             });
         });

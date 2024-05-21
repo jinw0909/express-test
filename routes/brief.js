@@ -125,81 +125,6 @@ const Polly = new AWS.Polly({
     signatureVersion: '',
     region: 'us-east-1'
 });
-// async function generateTTS(content, lang, id) {
-//
-//     let voiceId = 'Danielle';
-//     if (lang == 'Japanese') {
-//         voiceId = 'Kazuha'
-//     } else if (lang == 'Korean') {
-//         voiceId = 'Seoyeon'
-//     } else if (lang == 'Chinese') {
-//         voiceId = 'Zhiyu'
-//     }
-//
-//     let pollyParams = {
-//         'Text': content,
-//         'OutputFormat': 'mp3',
-//         'VoiceId': voiceId,
-//         'Engine': 'neural'
-//     }
-//
-//     return new Promise((resolve, reject) => {
-//         // Synthesize speech using Polly
-//         Polly.synthesizeSpeech(pollyParams, (err, data) => {
-//             if (err) {
-//                 console.error("Error synthesizing speech:", err);
-//                 reject(err);
-//                 return;
-//             }
-//
-//             // S3 upload parameters
-//             const s3Params = {
-//                 Bucket: 's3bucketjinwoo',
-//                 Key: `${id}_${lang}.mp3`,
-//                 Body: data.AudioStream,
-//                 ContentType: "audio/mpeg",
-//             };
-//
-//             // Upload to S3
-//             s3.upload(s3Params, (err, data) => {
-//                 if (err) {
-//                     console.error("Error uploading to S3:", err);
-//                     reject(err);
-//                 } else {
-//                     console.log("Successfully uploaded data to " + data.Location);
-//                     resolve(data.Location);
-//                 }
-//             });
-//         });
-//     });
-//
-//     // const mp3 = await openai.audio.speech.create({
-//     //    model: 'tts-1',
-//     //    voice: 'alloy',
-//     //    input: content
-//     // });
-//     //
-//     // const buffer = Buffer.from(await mp3.arrayBuffer());
-//     //
-//     // const s3Params = {
-//     //     Bucket: 's3bucketjinwoo',
-//     //     Key: `${id}_${lang}.mp3`,
-//     //     Body: buffer,
-//     //     ContentType: "audio/mpeg",
-//     // }
-//     //
-//     // return new Promise((resolve, reject) => {
-//     //     s3.upload(s3Params, function(err, data) {
-//     //         if (err) {
-//     //             console.error("Error uploading to S3:", err);
-//     //             reject(err);
-//     //         } else {
-//     //             console.log("Successfully uploaded data to " + data.Location);
-//     //             resolve(data.Location);
-//     //         }
-//     //     });
-//     // });
-// }
 
 async function generateTTS(content, lang, id) {
     if (lang === 'Vietnamese') {
@@ -284,7 +209,6 @@ async function generateTTS(content, lang, id) {
         });
     }
 }
-
 
 async function runViewpointConversation() {
     const messages = [
@@ -387,7 +311,6 @@ async function getViewpointAndUpdate() {
             const mp3Vn = await generateTTS(viewpointVn, 'Vietnamese', viewpoint.id);
             const mp3Cn = await generateTTS(viewpointCn, 'Chinese', viewpoint.id);
 
-
             // Update the Analysis entry with values from the Blockmedia entry
             await viewpoint.update({
                 viewpoint_jp: viewpointJp,
@@ -448,6 +371,108 @@ async function getRecentViewpoint() {
 
     } catch (error) {
         console.error(error);
+    }
+}
+
+async function runIntroConversation() {
+    try {
+        const messages = [
+            { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You belong to a crypto currency consulting firm called 'Blocksquare' and you will send your analysis presentation everyday twice at AM and PM. Your presentation consists of the anlaysis of five cryptocurreny articles within 24 hours that represents the movement and trend of the cryptocurrency market. Finally you provide the finally viewpoint regarding the bitcoin price movement and prediction. You are capable of analyzing various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to your clients. You are also able to make presentation in English, Japanese, Korean, Vietnamese, and Chinese"},
+            { role: "user", content: "Create an opening ment for the cryptocurrency article analysis. You should mention your company in the opening comment. Also mention the specific date and whether it is AM or PM. Please be sure that you are making an opening ment for your regular presentation. Officially your presentations is called as the morning or afternoon briefing to your clients. Please return your comment in a JSON format for all English, Japanese, Korean, Vietnamese, and Chinese."},
+        ]
+        const tools = [
+            {
+                type: "function",
+                function: {
+                    name: "get_current_time",
+                    description: "returns the list of the current time in json format of date, day, and period. For example {date: '2024-05-17', day: 'Friday', period: 'PM'}"
+                }
+            },
+        ]
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: messages,
+            tools: tools,
+            tool_choice : "auto", //auto is default, but we'll be explicit
+            response_format: {type: "json_object"}
+        });
+        const responseMessage = response.choices[0].message;
+        const toolCalls = responseMessage.tool_calls;
+        if (responseMessage.tool_calls) {
+            const availableFunctions = {
+                get_current_time: getCurrentTime,
+            };
+            messages.push(responseMessage);
+            for (const toolCall of toolCalls) {
+                const functionName = toolCall.function.name;
+                const functionToCall = availableFunctions[functionName];
+                console.log("functionToCall: ", functionToCall);
+                const functionArgs = JSON.parse(toolCall.function.arguments || "{}");
+                const functionResponse = await functionToCall(
+                    functionArgs
+                )
+                console.log("functionResponse: ", functionResponse);
+
+                messages.push({
+                    tool_call_id: toolCall.id,
+                    role: "tool",
+                    name: functionName,
+                    content: functionResponse,
+                })
+            }
+
+            const secondResponse = await openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: messages,
+                response_format: {type: "json_object"}
+            });
+
+            return secondResponse.choices;
+    }
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+}
+
+async function getCurrentTime() {
+    // Get the current date and time in KST
+    const options = { timeZone: 'Asia/Seoul', hour12: false };
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        ...options,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        weekday: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+    });
+
+    const parts = formatter.formatToParts(new Date());
+    const date = `${parts.find(p => p.type === 'year').value}-${parts.find(p => p.type === 'month').value}-${parts.find(p => p.type === 'day').value}`;
+    const day = parts.find(p => p.type === 'weekday').value;
+    const hour = parseInt(parts.find(p => p.type === 'hour').value, 10);
+    const period = hour < 12 ? 'AM' : 'PM';
+
+    return JSON.stringify({
+        date,
+        day,
+        period
+    });
+}
+
+
+async function runOutroConversation() {
+
+}
+
+async function createOutro() {
+    try {
+
+    } catch (error) {
+        console.error(error);
+        throw error;
     }
 }
 
@@ -514,6 +539,25 @@ router.get('/constructvp', async function(req, res) {
                 res.json(result);
             })
             .catch(console.error)
+    } catch (error) {
+        console.error(error);
+    }
+})
+
+router.get('/intro', async function(req, res) {
+    try {
+        const response = await runIntroConversation();
+        console.log("response: ", response);
+        res.json(response);
+    } catch (error) {
+        console.error(error);
+    }
+})
+
+router.get('/current', async function(req, res) {
+    try {
+        const response = await getCurrentTime();
+        res.json(response);
     } catch (error) {
         console.error(error);
     }

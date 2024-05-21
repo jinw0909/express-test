@@ -349,15 +349,23 @@ async function get24articles() {
                [Sequelize.Op.gte]: yesterday
             }
          },
-         limit: 10
+         limit: 20
       })
       if (!articles.length) {
          console.log('No articles published in the last 24 hours');
          return JSON.stringify([]);
       }
+      // Transform the Sequelize instances to plain objects with only the desired properties
+      // const transformedArticles = articles.map(article => ({
+      //    id: article.id,
+      //    title: article.title,
+      //    content: article.content
+      // }));
       // Check if the response was successful
+      // console.log("Transformed Article data: ", transformedArticles);
       console.log("Article data: ", articles);
       // const data = await response.json();
+      // return JSON.stringify(transformedArticles, null, 2);
       return JSON.stringify(articles, null, 2);
    } catch(err) {
       console.error(err);

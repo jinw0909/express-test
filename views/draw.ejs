@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        .result-div {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+<div><%= analysis.time%></div>
+<div class="select-lang">
+    <a href="/chart/draw?lang=en" id="selectEn">English</a>
+    <a href="/chart/draw?lang=jp" id="selectJp">日本語</a>
+    <a href="/chart/draw?lang=kr" id="selectKr">한국어</a>
+    <a href="/chart/draw?lang=vn" id="selectVn">tiếng Việt</a>
+    <a href="/chart/draw?lang=cn" id="selectCn">汉文</a>
+</div>
+<div>
+    <button id="playAudio">Play</button>
+    <button id="pauseAudio">Pause</button>
+    <audio id="analysisAudio" src="<%= analysis.mp3%>"></audio>
+</div>
+<div class="elem" id="elem0">
+    <h3>BTC Price and Goyascore Movement 24 Hours</h3>
+    <canvas id="dayChart" width="400" height="200"></canvas>
+    <div id="day" class="result-div"></div>
+</div>
+<div class="elem" id="elem1">
+    <h3>BTC Price and Goyascore Movement 7 Days</h3>
+    <canvas id="weekChart" width="400" height="200"></canvas>
+    <div id="week" class="result-div"></div>
+</div>
+<div class="elem" id="elem2">
+    <h3>BTC Price and Goyascore Movement 30 Days</h3>
+    <canvas id="monthChart" width="400" height="200"></canvas>
+    <div id="month" class="result-div"></div>
+</div>
+<div id="prediction" class="result-div"></div>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const data = <%- JSON.stringify(data) %>;
+        const scoreDay = data.scoreDay;
+        const scoreWeek = data.scoreWeek;
+        const scoreMonth = data.scoreMonth;
+        const analysis = <%- JSON.stringify(analysis) %>
+
+        // Debugging: Check the data format
+        console.log("data: ", data);
+        console.log("scoreDay: ", scoreDay);
+        console.log("scoreWeek: ", scoreWeek);
+        console.log("scoreMonth: ", scoreMonth);
+        console.log("analysis: ", analysis);
+
+        // Function to create chart
+        function createChart(ctx, labels, scoreData, priceData) {
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Price',
+                        data: priceData,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y',
+                        cubicInterpolationMode: 'monotone',
+                        tension: 0.4
+                    }, {
+                        label: 'Goya Score',
+                        data: scoreData,
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y1',
+                        cubicInterpolationMode: 'monotone',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left'
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Day chart
+        const ctxDay = document.getElementById('dayChart').getContext('2d');
+        createChart(ctxDay, Array.from({ length: 24 }, (_, i) => `Hour ${i + 1}`), scoreDay.score, scoreDay.price);
+
+        // Week chart
+        const ctxWeek = document.getElementById('weekChart').getContext('2d');
+        createChart(ctxWeek, ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], scoreWeek.score, scoreWeek.price);
+
+        // Month chart
+        const ctxMonth = document.getElementById('monthChart').getContext('2d');
+        createChart(ctxMonth, Array.from({ length: 28 }, (_, i) => `Day ${i + 1}`), scoreMonth.score, scoreMonth.price);
+
+        function renderAnalysis() {
+            console.log("renderAnalysis()");
+            const resultsContainer = document.getElementById('analysis');
+            resultsContainer.innerHTML = '';
+            for (const key in analysis) {
+                if (analysis.hasOwnProperty(key)) {
+                    const div = document.createElement('div');
+                    div.className = 'result-div';
+                    div.innerHTML = `<strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${analysis[key]}`;
+                    resultsContainer.appendChild(div);
+                }
+            }
+        }
+        function renderAnalysis() {
+            console.log("renderAnalysis()");
+
+            // Get the elements by their ids
+            const dayContainer = document.getElementById('day');
+            const weekContainer = document.getElementById('week');
+            const monthContainer = document.getElementById('month');
+            const predictionContainer = document.getElementById('prediction');
+
+            // Check if the elements exist
+            if (dayContainer) {
+                dayContainer.innerHTML = `<strong>24H:</strong> ${analysis.day}`;
+            } else {
+                console.error("Element with id 'day' not found.");
+            }
+
+            if (weekContainer) {
+                weekContainer.innerHTML = `<strong>7D:</strong> ${analysis.week}`;
+            } else {
+                console.error("Element with id 'week' not found.");
+            }
+
+            if (monthContainer) {
+                monthContainer.innerHTML = `<strong>30D:</strong> ${analysis.month}`;
+            } else {
+                console.error("Element with id 'month' not found.");
+            }
+
+            if (predictionContainer) {
+                predictionContainer.innerHTML = `<strong>Prediction:</strong> ${analysis.prediction}`;
+            } else {
+                console.error("Element with id 'prediction' not found.");
+            }
+        }
+
+        renderAnalysis();
+
+        // Play and Pause functionality for the audio
+        const playButton = document.getElementById('playAudio');
+        const pauseButton = document.getElementById('pauseAudio');
+        const audioElement = document.getElementById('analysisAudio');
+
+        playButton.addEventListener('click', () => {
+            audioElement.play();
+        });
+
+        pauseButton.addEventListener('click', () => {
+            audioElement.pause();
+        });
+    })
+</script>
+</body>
+</html>

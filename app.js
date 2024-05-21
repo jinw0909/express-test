@@ -25,6 +25,8 @@ var briefRouter = require('./routes/brief');
 var runRouter = require('./routes/run');
 var createRouter = require('./routes/create');
 var feedRouter = require('./routes/feed');
+var screenshotRouter = require('./routes/screenshot');
+var chartRouter = require('./routes/chart');
 
 var app = express();
 
@@ -61,6 +63,8 @@ app.use('/brief', briefRouter);
 app.use('/run', runRouter);
 app.use('/create', createRouter);
 app.use('/feed', feedRouter);
+app.use('/screenshot', screenshotRouter);
+app.use('/chart', chartRouter);
 
 app.get('/createdb', (req, res) => {
   let sql = 'CREATE DATABASE testdb';

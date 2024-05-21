@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart.js Example</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+</head>
+<body>
+<h3>Bitcoin Price Movement 30 Days</h3>
+<canvas id="myChart" width="400" height="200"></canvas>
+<h3>Goyascore Movement 24 Hours</h3>
+<canvas id="dayChart" width="400" height="200"></canvas>
+<h3>Goyascore Movement 7 Days</h3>
+<canvas id="weekChart" width="400" height="200"></canvas>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dates = <%- JSON.stringify(dates) %>;
+        const priceValues = <%- JSON.stringify(priceValues) %>;
+        const scoreValues = <%- JSON.stringify(scoreValues)%>
+
+        // Debugging: Check the data format
+        console.log("dates: ", dates);
+        console.log("priceValues: ", priceValues);
+        console.log("scoreValues: ", scoreValues);
+
+        const dayPrice = scoreValues.dayPrice.map(price => parseFloat(price));
+        const dayScore = scoreValues.dayScore;
+
+        const weekPrice = scoreValues.weekPrice.map(price => parseFloat(price));
+        const weekScore = scoreValues.weekScore;
+
+        const ctx = document.getElementById('myChart').getContext('2d');
+
+        // Ensure the labels (dates) are correctly parsed as Date objects
+        const labels = dates.map(date => new Date(date));
+        const data = priceValues;
+        // const formattedLabels = labels.map(label => new Date(label).toLocaleDateString('en-US'));
+        const formattedLabels = labels.map(label => new Date(label));
+        // Debugging: Check the labels and data
+        console.log("formatted labels: ", formattedLabels);
+        console.log("data: ", data);
+
+        const myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: formattedLabels,
+                datasets: [{
+                    label: 'Data Values',
+                    data: data,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 1,
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            tooltipFormat: 'MMM d, yyyy'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Value'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Create day chart
+        const ctxDay = document.getElementById('dayChart').getContext('2d');
+        const dayChart = new Chart(ctxDay, {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: 24 }, (_, i) => i + 1),
+                datasets: [{
+                    label: 'Day Price',
+                    data: dayPrice,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y',
+                    cubicInterpolationMode: 'monotone',
+                    tension: 0.4
+                }, {
+                    label: 'Day Score',
+                    data: dayScore,
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y1',
+                    cubicInterpolationMode: 'monotone',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        type: 'linear',
+                        position: 'left'
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right'
+                    }
+                }
+            }
+        });
+
+        // Create week chart
+        const ctxWeek = document.getElementById('weekChart').getContext('2d');
+        const weekChart = new Chart(ctxWeek, {
+            type: 'line',
+            data: {
+                labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                datasets: [{
+                    label: 'Week Price',
+                    data: weekPrice,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y',
+                    cubicInterpolationMode: 'monotone',
+                    tension: 0.4
+                }, {
+                    label: 'Week Score',
+                    data: weekScore,
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y1',
+                    cubicInterpolationMode: 'monotone',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        type: 'linear',
+                        position: 'left'
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right'
+                    }
+                }
+            }
+        });
+
+    })
+</script>
+</body>
+</html>
