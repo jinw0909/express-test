@@ -428,7 +428,7 @@ async function runIntroConversation() {
             });
 
             return secondResponse.choices;
-    }
+        }
     } catch (error) {
         console.error(error);
         throw error;
@@ -462,6 +462,9 @@ async function getCurrentTime() {
     });
 }
 
+async function selectCandidates() {
+
+}
 
 async function runOutroConversation() {
 
@@ -558,6 +561,14 @@ router.get('/current', async function(req, res) {
     try {
         const response = await getCurrentTime();
         res.json(response);
+    } catch (error) {
+        console.error(error);
+    }
+})
+
+router.get('/index24', async function(req, res) {
+    try {
+
     } catch (error) {
         console.error(error);
     }

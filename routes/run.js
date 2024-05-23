@@ -15,7 +15,7 @@ async function getRecent() {
             order: [
                 ['createdAt', 'DESC'] // Orders by 'createdAt' in descending order
             ],
-            limit: 5
+            limit: 4
         });
         return recentAnalyses;
     } catch (error) {
@@ -38,12 +38,30 @@ async function getRecentVp() {
 
 router.get('/', async function(req, res, next) {
     try {
-        const language = req.query.lang || 'English';
+        const language = req.query.lang || 'en';
         const recentAnalyses = await getRecent();
         const recentViewpoint = await getRecentVp();
-        console.log("recentAnalyses: ", recentAnalyses);
-        console.log("recentViewpoint: ", recentViewpoint);
-        res.render('run', {data: recentAnalyses, lang: language, vp: recentViewpoint});
+
+        const langSuffix = language == 'en' ? '' : `_${language}`;
+        const analyses = recentAnalyses.map(element => ({
+            title: element[`title${langSuffix}`],
+            summary: element[`title${langSuffix}`],
+            analysis: element[`analysis${langSuffix}`],
+            mp3 : element[`analysis${langSuffix}`],
+            imageUrl: element.imageUrl,
+            createdAt: element.createdAt
+        }));
+
+        const viewpoint = {
+            id: recentViewpoint.id,
+            viewpoint: recentViewpoint[`viewpoint${langSuffix}`],
+            mp3: recentViewpoint[`mp3${langSuffix}`],
+            imageUrl: recentViewpoint.imageUrl
+        }
+
+        console.log("analyses: ", analyses);
+        console.log("viewpoint: ", viewpoint);
+        res.render('run', { analyses: analyses, lang: language, viewpoint: viewpoint });
     } catch (error) {
         console.error(error);
     }

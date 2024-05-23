@@ -8,7 +8,7 @@ const openai = new OpenAi({
    apiKey : process.env.API_KEY
 });
 
-const {Blockmedia, Analysis } = require('../models');
+const { Blockmedia, Analysis, Candidate } = require('../models');
 const { Sequelize } = require("sequelize");
 const { Op } = require('sequelize');
 
@@ -94,6 +94,101 @@ async function runConversation() {
 
 }
 
+async function runCandidateConversation(articles) {
+   const messages = [
+      { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
+      { role: "user", content: "From the given articles, select four articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, return the selected articles in a json format as following. {'candidates' : [{'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}]. . Also Don't improvise the 'id' and search from the given article list's id. 'summary' should be the brief summary of the article content. 'reason' should be the reason why the article was selected as a candidate. Article List : " + JSON.stringify(articles)},
+   ];
+   const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: messages,
+      // tools: tools,
+      // tool_choice : "auto", //auto is default, but we'll be explicit
+      response_format: { type: "json_object" }
+   });
+
+   const responseMessage = response.choices[0].message;
+   const parsed = JSON.parse(responseMessage.content);
+   console.log("parsed: ", parsed);
+   return parsed['candidates'];
+}
+
+async function runFinalConversation(candidates) {
+   const messages = [
+      { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
+      { role: "user", content: "From the given article candidates, select four candidates that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement. The 'reason' is about why the article was selected as a candidate. Return the four candidates in a json format as following. {'finals' : [{'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}] Just return the list without a key. Also Don't improvise the 'id', 'summary', 'reason' and search from the given candidate list. Candidate List : " + JSON.stringify(candidates)},
+   ];
+   const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: messages,
+      // tools: tools,
+      // tool_choice : "auto", //auto is default, but we'll be explicit
+      response_format: { type: "json_object" }
+   });
+
+   const responseMessage = response.choices[0].message;
+   console.log("responseMessage: ", responseMessage);
+   const finals = JSON.parse(responseMessage.content)['finals'];
+   return finals;
+}
+
+async function getArticlesDay() {
+   try {
+      //Calculate the datetime 24 hours ago
+      const yesterday = new Date(new Date() - 24 * 60 * 60 * 1000);
+      const articles = await Blockmedia.findAll({
+         where: {
+            createdAt: {
+               [Sequelize.Op.gte]: yesterday
+            }
+         },
+      })
+      if (!articles.length) {
+         console.log('No articles published in the last 24 hours');
+         return null;
+      }
+
+      console.log("Article data: ", articles);
+      // const data = await response.json();
+      // return JSON.stringify(transformedArticles, null, 2);
+      return articles;
+   } catch(err) {
+      console.error(err);
+      return { error: err.message }
+   }
+}
+
+async function createCandidates() {
+
+   const articles = await getArticlesDay();
+   const candidates = [];
+
+   for (let i = 0; i < articles.length; i += 12) {
+      const batch = articles.slice(i, i + 12);
+      const result = await runCandidateConversation(batch);
+      candidates.push(...result);
+   }
+
+   return candidates;
+}
+
+async function recurseFinals(candidates) {
+   const finalists = [];
+
+   // Process summaries in batches of 12
+   for (let i = 0; i < candidates.length; i += 12) {
+      const batch = candidates.slice(i, i + 12);
+      const finals = await runFinalConversation(batch);
+      finalists.push(...finals);
+   }
+
+   // If we have more than 4 finalists, process them recursively
+   if (finalists.length > 4) {
+      return recurseFinals(finalists);
+   } else {
+      return finalists.slice(0, 4);
+   }
+}
 
 
 async function runCoinConversation() {
@@ -483,14 +578,14 @@ async function runCreateConversation(candidates) {
    //Step 1 : send the conversation and available functions to the model
    const messages = [
       { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-      { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least ten sentences and the summary has to be at least six sentences. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease. Don't improvise the id of the created Analysis and be sure that the id, analysis, and summary matches the provided article.`}
+      { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, a brief summary, and the reason for its selection, Give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least ten sentences and the summary has to be at least six sentences. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease. Don't improvise the id of the created Analysis and be sure that the id, analysis, and summary matches the provided article.`}
    ];
    const tools = [
       {
          type: "function",
          function: {
             name: "get_candidate_articles",
-            description: "Get selected candidate articles based on their IDs from articles published within 24 hours in Blockmedia",
+            description: "Get selected candidate articles based on their IDs, from all of the articles published within 24 hours",
             parameters: {
                "type": "object",
                "properties": {
@@ -513,7 +608,7 @@ async function runCreateConversation(candidates) {
       messages: messages,
       tools: tools,
       tool_choice : "auto", //auto is default, but we'll be explicit
-      response_format: {type: "json_object"}
+      response_format: { type: "json_object" }
    });
    const responseMessage = response.choices[0].message;
 
@@ -692,10 +787,23 @@ router.post('/index', async function(req, res) {
 router.get('/complete', async function(req, res) {
    try {
       // First, run runIndexConversation to get the indexes
-      const indexResult = await runIndexConversation();
-      console.log("indexResult: ", indexResult);
-      const candidates = JSON.parse(indexResult[0].message['content'])['selected_articles'];
-      console.log("step 1: candidates: ", candidates);
+      // const indexResult = await runIndexConversation();
+      // console.log("indexResult: ", indexResult);
+      // const candidates = JSON.parse(indexResult[0].message['content'])['selected_articles'];
+      // console.log("step 1: candidates: ", candidates);
+
+      // First select five most recent candidates
+
+      const recentCandidates = await Candidate.findAll({
+         order: [['createdAt', 'DESC']],
+         limit: 4
+      });
+
+      const candidates = recentCandidates.map(candidate => ({
+         id: candidate.articleId,
+         summary: candidate.summary,
+         reason: candidate.reason
+      }))
 
       // Then, pass these indexes to runCreateConveration
       const createResult = await runCreateConversation(candidates);
@@ -723,15 +831,34 @@ router.get('/complete', async function(req, res) {
          }
       }
 
-
-
       res.status(200).send('ok');
    } catch (error) {
       console.error("Error during operations: ", error);
       res.status(500).send("An error occurred");
    }
 
-
 });
+
+router.get('/candidates', async function(req,res) {
+   const result = await createCandidates();
+   console.log("result: ", result);
+   res.send('ok');
+});
+
+router.get('/finals', async function(req, res) {
+   const result = await createCandidates();
+   const finals = await recurseFinals(result);
+   console.log("finals: ", finals);
+
+   for (const candidate of finals) {
+      await Candidate.create({
+         articleId: candidate.id,
+         summary: candidate.summary,
+         reason: candidate.reason,
+         createdAt: new Date()
+      });
+   }
+   res.send('ok');
+})
 
 module.exports = router;

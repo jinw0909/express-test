@@ -13,6 +13,7 @@ db.Coinness = require('./coinness');
 db.Blockmedia = require('./blockmedia');
 db.BitcoinAnalysis = require('./bitcoinAnalysis');
 db.BitcoinPrice = require('./bitcoinPrice');
+db.Candidate = require('./candidate');
 // Define the relationships
 db.Viewpoint.hasMany(db.Analysis, { foreignKey: 'ref' });
 db.Analysis.belongsTo(db.Viewpoint, { foreignKey: 'ref' });

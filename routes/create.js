@@ -16,7 +16,7 @@ const multer = require("multer");
 const AWS = require("aws-sdk");
 // const Viewpoint = require("../viewpoint");
 // const Analysis = require('../analysis');
-const { Viewpoint, Analysis } = require('../models');
+const { Viewpoint, Analysis, Candidate} = require('../models');
 async function getCoinPriceWeek() {
     try {
         const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
@@ -69,8 +69,7 @@ async function get24articles() {
                 createdAt: {
                     [Sequelize.Op.gte]: yesterday
                 }
-            },
-            limit: 20
+            }
         })
         if (!articles.length) {
             console.log('No articles published in the last 24 hours');
@@ -242,7 +241,7 @@ async function getCandidates(indexList) {
                     [Sequelize.Op.in]: indexList
                 }
             },
-            limit: 5
+            limit: 4
         })
         console.log("query result: ", articles);
         return JSON.stringify(articles, null, 2);
@@ -255,7 +254,7 @@ async function getRecent() {
     try {
         const recentAnalyses = await Analysis.findAll({
             order: [['createdAt', 'DESC']], //Order by 'createdAt' in descending order
-            limit: 5
+            limit: 4
         });
         const analyses = recentAnalyses.map(analysis => {
             return { id: analysis.id, analysis: analysis.analysis, summary: analysis.summary}
@@ -271,7 +270,7 @@ async function getRecentAndUpdate() {
     try {
         const recentAnalyses = await Analysis.findAll({
             order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
-            limit: 5
+            limit: 4
         });
 
         for (const analysis of recentAnalyses) {
@@ -335,7 +334,7 @@ async function getRecentAndUpdate() {
         // Optionally, return the updated analyses
         const updatedAnalyses = await Analysis.findAll({
             order: [['createdAt', 'DESC']], // Optionally re-fetch to send updated data back
-            limit: 5
+            limit: 4
         });
 
         return updatedAnalyses.map(a => a);
@@ -601,7 +600,7 @@ async function getRecentAnalyses() {
     try {
         const recentAnalyses = await Analysis.findAll({
             order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
-            limit: 5
+            limit: 4
         });
         return JSON.stringify(recentAnalyses, null, 2);
     } catch(error) {
@@ -686,6 +685,126 @@ async function getRecentViewpoint() {
         console.error(error);
     }
 }
+async function getArticlesDay() {
+    try {
+        //Calculate the datetime 24 hours ago
+        const yesterday = new Date(new Date() - 24 * 60 * 60 * 1000);
+        const articles = await Blockmedia.findAll({
+            where: {
+                createdAt: {
+                    [Sequelize.Op.gte]: yesterday
+                }
+            },
+        })
+        if (!articles.length) {
+            console.log('No articles published in the last 24 hours');
+            return null;
+        }
+
+        console.log("Article data: ", articles);
+        // const data = await response.json();
+        // return JSON.stringify(transformedArticles, null, 2);
+        return articles;
+    } catch(err) {
+        console.error(err);
+        return { error: err.message }
+    }
+}
+async function runCandidateConversation(articles) {
+    const messages = [
+        { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
+        { role: "user", content: "From the given articles, select four articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, return the selected articles in a json format as following. {'candidates' : [{'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}]. . Also Don't improvise the 'id' and search from the given article list's id. 'summary' should be the brief summary of the article content. 'reason' should be the reason why the article was selected as a candidate. Article List : " + JSON.stringify(articles)},
+    ];
+    const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: messages,
+        // tools: tools,
+        // tool_choice : "auto", //auto is default, but we'll be explicit
+        response_format: { type: "json_object" }
+    });
+
+    const responseMessage = response.choices[0].message;
+    const parsed = JSON.parse(responseMessage.content);
+    console.log("parsed: ", parsed);
+    return parsed['candidates'];
+}
+async function createCandidates() {
+
+    const articles = await getArticlesDay();
+    const candidates = [];
+
+    for (let i = 0; i < articles.length; i += 12) {
+        const batch = articles.slice(i, i + 12);
+        const result = await runCandidateConversation(batch);
+        candidates.push(...result);
+    }
+
+    return candidates;
+}
+
+async function runFinalConversation(candidates) {
+    const messages = [
+        { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
+        { role: "user", content: "From the given article candidates, select four candidates that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement. The 'reason' is about why the article was selected as a candidate. Return the four candidates in a json format as following. {'finals' : [{'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}] Just return the list without a key. Also Don't improvise the 'id', 'summary', 'reason' and search from the given candidate list. Candidate List : " + JSON.stringify(candidates)},
+    ];
+    const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: messages,
+        // tools: tools,
+        // tool_choice : "auto", //auto is default, but we'll be explicit
+        response_format: { type: "json_object" }
+    });
+
+    const responseMessage = response.choices[0].message;
+    console.log("responseMessage: ", responseMessage);
+    const finals = JSON.parse(responseMessage.content)['finals'];
+    return finals;
+}
+
+async function recurseFinals(candidates) {
+    const finalists = [];
+
+    // Process summaries in batches of 12
+    for (let i = 0; i < candidates.length; i += 12) {
+        const batch = candidates.slice(i, i + 12);
+        const finals = await runFinalConversation(batch);
+        finalists.push(...finals);
+    }
+
+    // If we have more than 4 finalists, process them recursively
+    if (finalists.length > 4) {
+        return recurseFinals(finalists);
+    } else {
+        return finalists.slice(0, 4);
+    }
+}
+
+async function makeCandidates() {
+    const candidates = await createCandidates();
+    const finals = await recurseFinals(candidates);
+
+    for (const candidate of finals) {
+        await Candidate.create({
+            articleId: candidate.id,
+            summary: candidate.summary,
+            reason: candidate.reason,
+            createdAt: new Date()
+        });
+    }
+
+    const recent = await Candidate.findAll({
+        order: [['createdAt', 'DESC']],
+        limit: 4
+    });
+
+    const result = recent.map(candidate => ({
+        id: candidate.articleId,
+        summary: candidate.summary,
+        reason: candidate.reason
+    }));
+
+    return result;
+}
 
 async function getAllViewpointWithAnalysisIds() {
     try {
@@ -711,11 +830,12 @@ router.get('/', async function(req, res) {
 router.get('/complete', async function(req, res) {
     try {
         // First, run runIndexConversation to get the indexes
-        const indexResult = await runIndexConversation();
-        console.log("indexResult: ", indexResult);
-        const candidates = JSON.parse(indexResult[0].message['content'])['selected_articles'];
-        console.log("step 1: candidates: ", candidates);
-
+        // const indexResult = await runIndexConversation();
+        // console.log("indexResult: ", indexResult);
+        // const candidates = JSON.parse(indexResult[0].message['content'])['selected_articles'];
+        // console.log("step 1: candidates: ", candidates);
+        const candidates = await makeCandidates();
+        console.log("candidates: ", candidates);
         // Then, pass these indexes to runCreateConveration
         const createResult = await runCreateConversation(candidates);
 
@@ -745,8 +865,45 @@ router.get('/complete', async function(req, res) {
         const updated = await getRecentAndUpdate();
         console.log("updated: ", updated);
 
+        const result = await runViewpointConversation();
+        const content = result[0].message.content;
+        const { viewpoint, refs } = JSON.parse(content);
+        console.log("viewpoint: ", viewpoint);
+        console.log("refs: ", refs);
+        const today = new Date();
+        const idSuffix = today.getHours() >= 12 ? 'PM' : 'AM';
+        const id = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}_${idSuffix}`;
 
-        res.status(200).send('ok');
+        try {
+            const [instance, created] = await Viewpoint.upsert({
+                id: id,
+                viewpoint: viewpoint,
+                imageUrl: '/defaultImg.png',
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+            if (created) {
+                console.log('New Viewpoint instance created:', instance.toJSON());
+            } else {
+                console.log('Viewpoint updated:', instance.toJSON());
+            }
+            // Update ref column in analysis table
+            if (refs && refs.length > 0) {
+                await Analysis.update({ ref: id }, {
+                    where: {
+                        id: refs  // Assuming `refs` is an array of IDs
+                    }
+                });
+            }
+        } catch (error) {
+            console.error(error);
+        }
+
+        const updatedVp = await getViewpointAndUpdate();
+        console.log("updatedVp: ", updatedVp);
+
+        // res.status(200).send('ok');
+        res.redirect('/run');
     } catch (error) {
         console.error("Error during operations: ", error);
         res.status(500).send("An error occurred");

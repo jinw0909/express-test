@@ -707,7 +707,7 @@ router.get('/price-analysis', async function(req, res) {
 
         await getAnalysisAndUpdate();
 
-        res.send('ok');
+        res.redirect('/chart/draw');
     } catch (error) {
         console.error(error);
         throw error;
