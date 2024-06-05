@@ -10,6 +10,8 @@ const db = require('./database');
 const sequelize = require('./sequelize');
 var debug = require('debug')('express-app:app');
 var http = require('http');
+const axios = require('axios');
+const cron = require('node-cron');
 
 const { Viewpoint, Analysis } = require('./models');
 
@@ -32,7 +34,7 @@ var dominanceRouter = require('./routes/dominance');
 
 var app = express();
 
-console.log('port: ', process.env.PORT);
+console.log('env port: ', process.env.PORT);
 
 (async () => {
   try {
@@ -71,9 +73,17 @@ app.use('/screenshot', screenshotRouter);
 app.use('/chart', chartRouter);
 app.use('/dominance', dominanceRouter);
 
-app.get('/schedule', (req, res) => {
-  console.log("run schedule");
-})
+cron.schedule('0 */4 * * *', async () => {
+  console.log('Running a task every four hours');
+
+  // Make an API call
+  try {
+    const response = await axios.get(`${process.env.API_BASE_URL}/crawl/articles`);
+    console.log('API call successful. Data:', response.data);
+  } catch (error) {
+    console.error('Error making API call:', error);
+  }
+});
 
 app.get('/createdb', (req, res) => {
   let sql = 'CREATE DATABASE testdb';
@@ -151,7 +161,10 @@ var port = normalizePort(process.env.PORT || 3000);
 app.set('port', port);
 let server = http.createServer(app);
 
-server.listen(port);
+server.listen(port, () => {
+  console.log(`server is running on port ${port}`);
+  console.log('Cron job scheduled. The process will keep running to execute the scheduled task.')
+});
 server.on('error', onError);
 server.on('listening', onListening);
 
