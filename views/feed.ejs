@@ -16,6 +16,7 @@
     </div>
     <button id="sendBtn">send</button>
     <h3>Result</h3>
+    <div class="result-div"></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
@@ -30,6 +31,10 @@
             }
         }).then(response => {
             console.log('POST success: ', response);
+            const analysis = JSON.parse(response.data.content);
+            console.log("analysis: ", analysis);
+            document.querySelector('.result-div').textContent = analysis.analysis.bitcoin;
+
         }).catch(error => {
             console.error('POST error: ', error);
         });

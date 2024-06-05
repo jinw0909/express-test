@@ -13,9 +13,14 @@
             padding: 10px;
             margin: 10px 0;
         }
+        .main-container {
+            max-width: 768px;
+            margin: auto;
+        }
     </style>
 </head>
 <body>
+<div class="main-container">
 <div><%= analysis.time%></div>
 <div class="select-lang">
     <a href="/chart/draw?lang=en" id="selectEn">English</a>
@@ -45,6 +50,7 @@
     <div id="month" class="result-div"></div>
 </div>
 <div id="prediction" class="result-div"></div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <script>

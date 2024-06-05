@@ -1,12 +1,12 @@
 var express = require('express');
 var router = express.Router();
-const {Blockmedia, Analysis, Viewpoint} = require('../models');
+const {Blockmedia, Analysis, Viewpoint, Translation} = require('../models');
 const { Sequelize } = require("sequelize");
 const { Op } = require('sequelize');
 
 async function getRecent() {
     try {
-        const recentAnalyses = await Analysis.findAll({
+        const recentAnalyses = await Translation.findAll({
             where: {
                 mp3: {
                     [Sequelize.Op.not]: null
@@ -45,9 +45,10 @@ router.get('/', async function(req, res, next) {
         const langSuffix = language == 'en' ? '' : `_${language}`;
         const analyses = recentAnalyses.map(element => ({
             title: element[`title${langSuffix}`],
-            summary: element[`title${langSuffix}`],
+            summary: element[`summary${langSuffix}`],
             analysis: element[`analysis${langSuffix}`],
-            mp3 : element[`analysis${langSuffix}`],
+            content: element[`content${langSuffix}`],
+            mp3 : element[`mp3${langSuffix}`],
             imageUrl: element.imageUrl,
             createdAt: element.createdAt
         }));
@@ -66,18 +67,5 @@ router.get('/', async function(req, res, next) {
         console.error(error);
     }
 });
-
-// router.post('/', async function(req, res) {
-//    try {
-//        const lang = req.body.lang;
-//        const recentAnalyses = await getRecent();
-//        const recentViewpoint = await getRecentVp();
-//        console.log("recentAnalyses: ", recentAnalyses);
-//        console.log("recentViewpoint: ", recentViewpoint);
-//        res.render('run', {data: recentAnalyses, lang: lang, vp: recentViewpoint});
-//    } catch (error) {
-//        console.error(error);
-//    }
-// });
 
 module.exports = router;

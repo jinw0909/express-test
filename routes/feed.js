@@ -93,7 +93,8 @@ router.post('/', async function(req, res) {
         console.log('Received data: ', data.data);
         const analysis = await runAnalyzeConversation(data.data);
         console.log("analysis: ", analysis);
-        res.send('ok');
+        const jsonStr = JSON.stringify(analysis);
+        res.send(jsonStr);
     } catch (error) {
         console.error(error);
         res.status(500).send('An error occurred');

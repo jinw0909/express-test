@@ -14,6 +14,8 @@ db.Blockmedia = require('./blockmedia');
 db.BitcoinAnalysis = require('./bitcoinAnalysis');
 db.BitcoinPrice = require('./bitcoinPrice');
 db.Candidate = require('./candidate');
+db.Translation = require('./translation');
+db.Dominance = require('./dominance');
 // Define the relationships
 db.Viewpoint.hasMany(db.Analysis, { foreignKey: 'ref' });
 db.Analysis.belongsTo(db.Viewpoint, { foreignKey: 'ref' });

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cryptocurrency Data</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { background-color: #f2f2f2; }
+        h2 { margin-top: 20px; }
+        p { margin: 10px 0; }
+    </style>
+</head>
+<body>
+<h1>Cryptocurrency Data</h1>
+
+<% if (data.interpretation.total_market_cap) { %>
+    <h2>Total Market Cap</h2>
+    <table>
+        <tr>
+            <th>Cryptocurrency</th>
+            <th>Market Cap (USD)</th>
+        </tr>
+        <% for (let [key, value] of Object.entries(data.interpretation.total_market_cap)) { %>
+            <tr>
+                <td><%= key.toUpperCase() %></td>
+                <td><%= value.toLocaleString() %></td>
+            </tr>
+        <% } %>
+    </table>
+<% } %>
+
+<% if (data.interpretation.dominance) { %>
+    <h2>Dominance</h2>
+    <table>
+        <tr>
+            <th>Cryptocurrency</th>
+            <th>Dominance (%)</th>
+        </tr>
+        <% for (let [key, value] of Object.entries(data.interpretation.dominance)) { %>
+            <% if (key !== 'additional_data') { %>
+                <tr>
+                    <td><%= key.toUpperCase() %></td>
+                    <td><%= value.toFixed(2) %></td>
+                </tr>
+            <% } %>
+        <% } %>
+    </table>
+
+    <% if (data.interpretation.dominance.additional_data) { %>
+        <h2>Additional Dominance Data</h2>
+        <table>
+            <tr>
+                <th>Cryptocurrency</th>
+                <th>Dominance (%)</th>
+            </tr>
+            <% for (let [key, value] of Object.entries(data.interpretation.dominance.additional_data)) { %>
+                <tr>
+                    <td><%= key.toUpperCase() %></td>
+                    <td><%= value.toFixed(2) %></td>
+                </tr>
+            <% } %>
+        </table>
+    <% } %>
+<% } %>
+
+<% if (data.interpretation.market_updates) { %>
+    <h2>Market Updates</h2>
+    <table>
+        <tr>
+            <th>Recent Cap Change (%)</th>
+            <td><%= data.interpretation.market_updates.recent_cap_change_percentage.toFixed(2) %></td>
+        </tr>
+        <tr>
+            <th>Updated At</th>
+            <td><%= new Date(data.interpretation.market_updates.updated_at * 1000).toLocaleString() %></td>
+        </tr>
+    </table>
+<% } %>
+
+<% if (data.interpretation.cryptocurrency_activity) { %>
+    <h2>Cryptocurrency Activity</h2>
+    <table>
+        <tr>
+            <th>Active Cryptocurrencies</th>
+            <td><%= data.interpretation.cryptocurrency_activity.active_cryptocurrencies %></td>
+        </tr>
+        <tr>
+            <th>Ongoing ICOs</th>
+            <td><%= data.interpretation.cryptocurrency_activity.ongoing_icos %></td>
+        </tr>
+        <tr>
+            <th>Ended ICOs</th>
+            <td><%= data.interpretation.cryptocurrency_activity.ended_icos %></td>
+        </tr>
+        <tr>
+            <th>Markets</th>
+            <td><%= data.interpretation.cryptocurrency_activity.markets %></td>
+        </tr>
+    </table>
+<% } %>
+
+<% if (data.interpretation.total_volume) { %>
+    <h2>Total Volume (USD)</h2>
+    <table>
+        <tr>
+            <th>Cryptocurrency</th>
+            <th>Volume</th>
+        </tr>
+        <% for (let [key, value] of Object.entries(data.interpretation.total_volume)) { %>
+            <tr>
+                <td><%= key.toUpperCase() %></td>
+                <td><%= value.toLocaleString() %></td>
+            </tr>
+        <% } %>
+    </table>
+<% } %>
+
+<% if (data.analysis) { %>
+    <h2>Analysis</h2>
+    <% for (let [key, value] of Object.entries(data.analysis)) { %>
+        <h3><%= key %></h3>
+        <p><%= value %></p>
+    <% } %>
+<% } %>
+
+</body>
+</html>

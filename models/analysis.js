@@ -11,45 +11,9 @@ const Analysis = sequelize.define('Analysis', {
         type: DataTypes.DATE,
         allowNull: false
     },
-    title : {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    title_jp : {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    title_kr : {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    title_vn: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    title_cn: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
     summary: {
         type: DataTypes.TEXT,
         allowNull: false
-    },
-    summary_jp : {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    summary_kr: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    summary_vn : {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    summary_cn : {
-        type: DataTypes.TEXT,
-        allowNull: true
     },
     date: {
         type: DataTypes.STRING,
@@ -66,42 +30,6 @@ const Analysis = sequelize.define('Analysis', {
     analysis: {
         type: DataTypes.TEXT,
         allowNull: false
-    },
-    analysis_jp : {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    analysis_kr : {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    analysis_vn : {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    analysis_cn : {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    mp3 : {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    mp3_jp : {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    mp3_kr : {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    mp3_vn : {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    mp3_cn : {
-        type: DataTypes.STRING,
-        allowNull: true
     },
     updatedAt: {
         type: DataTypes.DATE,

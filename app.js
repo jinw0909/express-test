@@ -8,7 +8,8 @@ const multer = require('multer');
 const AWS = require('aws-sdk');
 const db = require('./database');
 const sequelize = require('./sequelize');
-const setupCronJobs = require('./scheduler');
+var debug = require('debug')('express-app:app');
+var http = require('http');
 
 const { Viewpoint, Analysis } = require('./models');
 
@@ -19,7 +20,7 @@ var usersRouter = require('./routes/users');
 var fortuneTellRouter = require('./routes/fortuneTell');
 var crawlRouter = require('./routes/crawl');
 var functionRouter = require('./routes/function');
-var puppetRouter = require('./routes/puppet');
+// var puppetRouter = require('./routes/puppet');
 var voiceRouter = require('./routes/voice');
 var briefRouter = require('./routes/brief');
 var runRouter = require('./routes/run');
@@ -27,8 +28,11 @@ var createRouter = require('./routes/create');
 var feedRouter = require('./routes/feed');
 var screenshotRouter = require('./routes/screenshot');
 var chartRouter = require('./routes/chart');
+var dominanceRouter = require('./routes/dominance');
 
 var app = express();
+
+console.log('port: ', process.env.PORT);
 
 (async () => {
   try {
@@ -57,7 +61,7 @@ app.use('/users', usersRouter);
 app.use('/fortuneTell', fortuneTellRouter);
 app.use('/crawl', crawlRouter);
 app.use('/function', functionRouter);
-app.use('/puppet', puppetRouter);
+// app.use('/puppet', puppetRouter);
 app.use('/voice', voiceRouter);
 app.use('/brief', briefRouter);
 app.use('/run', runRouter);
@@ -65,6 +69,11 @@ app.use('/create', createRouter);
 app.use('/feed', feedRouter);
 app.use('/screenshot', screenshotRouter);
 app.use('/chart', chartRouter);
+app.use('/dominance', dominanceRouter);
+
+app.get('/schedule', (req, res) => {
+  console.log("run schedule");
+})
 
 app.get('/createdb', (req, res) => {
   let sql = 'CREATE DATABASE testdb';
@@ -90,6 +99,59 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-setupCronJobs();
+function normalizePort(val) {
+  var port = parseInt(val, 10);
 
-module.exports = app;
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+      ? 'Pipe ' + port
+      : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+      ? 'pipe ' + addr
+      : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
+var port = normalizePort(process.env.PORT || 3000);
+app.set('port', port);
+let server = http.createServer(app);
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+

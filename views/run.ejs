@@ -13,55 +13,173 @@
             display: block;
             opacity: 1;
         }
+        #thumbnails {
+            display: flex;
+            align-items: stretch;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
         .thumbnail {
-            display: inline-block;
+            display: flex;
+            flex-direction: column;
             margin: 10px;
             cursor: pointer;
+            border: 1px solid black;
         }
-
+        .imgBox {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
         .thumbnail img {
             width: 100px; /* Adjust as needed */
             height: auto;
         }
 
-        .thumbnail span {
+        .article-index {
             display: block;
             text-align: center;
+            padding: 4px 0;
+            background-color: #ddd;
         }
         #analysisList {
             min-height: 50vh;
             border: 1px solid #999;
             border-radius: 8px;
             padding: 2rem;
+            max-width: 80vw;
+        }
+        .viewpoint-index {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         img { width: 100%; }
         .imgDiv { width: 100%; overflow-y: scroll; max-height: 400px;}
         .main-summary { margin-top: 1rem; display: none; }
-
         .script-text { display: none; }
-
-        .main-container { display: flex; justify-content: center; align-items: center; }
+        .article-text { display: none; }
         .main-inner {
             max-width: 768px;
+            margin: auto;
         }
         .buttons { margin-top: 1rem; padding: .5rem 1rem; width: 10rem; }
     </style>
 </head>
 <body>
+
+<% const texts = {
+    en: {
+        openScript: 'Open Script',
+        closeScript: 'Close Script',
+        openSummary: 'Open Summary',
+        closeSummary: 'Close Summary',
+        openArticle: 'Open Article',
+        closeArticle: 'Close Article'
+    },
+    kr: {
+        openScript: '스크립트 열기',
+        closeScript: '스크립트 닫기',
+        openSummary: '요약 열기',
+        closeSummary: '요약 닫기',
+        openArticle: '기사 열기',
+        closeArticle: '기사 닫기'
+    },
+    jp: {
+        openScript: 'スクリプトを開く',
+        closeScript: 'スクリプトを閉じる',
+        openSummary: 'サマリーを開く',
+        closeSummary: 'サマリーを閉じる',
+        openArticle: '記事を開く',
+        closeArticle: '記事を閉じる'
+    },
+    vn: {
+        openScript: 'Mở kịch bản',
+        closeScript: 'Đóng kịch bản',
+        openSummary: 'Mở tóm tắt',
+        closeSummary: 'Đóng tóm tắt',
+        openArticle: 'Mở bài viết',
+        closeArticle: 'Đóng bài viết'
+    },
+    cn: {
+        openScript: '打开脚本',
+        closeScript: '关闭脚本',
+        openSummary: '打开摘要',
+        closeSummary: '关闭摘要',
+        openArticle: '打开文章',
+        closeArticle: '关闭文章'
+    }
+}[lang]; %>
+
+<script>
+    // Embed the language-specific texts into JavaScript variables
+    const openScriptText = '<%= texts.openScript %>';
+    const closeScriptText = '<%= texts.closeScript %>';
+    const openSummaryText = '<%= texts.openSummary %>';
+    const closeSummaryText = '<%= texts.closeSummary %>';
+    const openArticleText = '<%= texts.openArticle %>';
+    const closeArticleText = '<%= texts.closeArticle %>';
+    console.log("openScriptText: ", openScriptText);
+    console.log("closeScriptText: ", closeScriptText);
+    console.log("openSummaryText: ", openSummaryText);
+    console.log("closeSummaryText: ", closeSummaryText);
+    console.log("openArticleText: ", openArticleText);
+    console.log("closeArticleText: ", closeArticleText);
+</script>
+
 <div class="main-container">
 <div class="main-inner">
+<%
+    // Extract the month, date, and period from viewpoint.id
+    const idParts = viewpoint.id.split('_');
+    const datePart = idParts[0];
+    const periodPart = idParts[1];
+    const year = datePart.substring(0, 4);
+    const month = datePart.substring(4, 6);
+    const day = datePart.substring(6, 8);
+
+    // Format the period based on the language
+    let periodFormatted = '';
+    if (lang === 'jp') {
+        periodFormatted = periodPart === 'AM' ? '朝' : '午後';
+    } else if (lang === 'kr') {
+        periodFormatted = periodPart === 'AM' ? '아침' : '오후';
+    } else if (lang === 'vn') {
+        periodFormatted = periodPart === 'AM' ? 'buổi sáng' : 'buổi chiều';
+    } else if (lang === 'cn') {
+        periodFormatted = periodPart === 'AM' ? '早上' : '下午';
+    } else {
+        periodFormatted = periodPart === 'AM' ? 'Morning' : 'Afternoon';
+    }
+
+    // Format the date based on the language
+    let dateFormatted = '';
+    if (lang === 'jp') {
+        dateFormatted = `${month}月 ${day}日 ${periodFormatted}`;
+    } else if (lang === 'kr') {
+        dateFormatted = `${parseInt(month)}월 ${parseInt(day)}일 ${periodFormatted}`;
+    } else if (lang === 'vn') {
+        dateFormatted = `ngày ${parseInt(day)} tháng ${parseInt(month)}, ${periodFormatted}`;
+    } else if (lang === 'cn') {
+        dateFormatted = `${month}月 ${day}日 ${periodFormatted}`;
+    } else {
+        dateFormatted = `${month}/${day} ${periodFormatted}`;
+    }
+%>
 <h1>
-    <%= viewpoint.id%>
+    <%= dateFormatted %>
     <% if (lang === 'jp') { %>
         ブリーフィング
     <% } else if (lang === 'kr') { %>
-       브리핑
+        브리핑
     <% } else if (lang === 'vn') { %>
         sự trình bày tóm tắt, sự điểm lại
     <% } else if (lang === 'cn') { %>
         简报
     <% } else { %>
-         Briefing
+        Briefing
     <% } %>
 </h1>
 <div class="select-lang">
@@ -93,66 +211,26 @@
     <% analyses.forEach(function(analysis, index) { %>
         <li id="item<%= index %>">
             <h2>
-<!--                <% if (lang === 'Japanese') { %>-->
-<!--                    <%= analysis.title_jp %>-->
-<!--                <% } else if (lang === 'Korean') { %>-->
-<!--                    <%= analysis.title_kr %>-->
-<!--                <% } else if (lang === 'Vietnamese') { %>-->
-<!--                    <%= analysis.title_vn %>-->
-<!--                <% } else if (lang === 'Chinese') { %>-->
-<!--                    <%= analysis.title_cn %>-->
-<!--                <% } else { %>-->
-<!--                    <%= analysis.title %>-->
-<!--                <% } %>-->
                 <%= analysis.title%>
             </h2>
             <p><%= analysis.createdAt.toISOString().substring(0, 10) %><br></p>
             <div class="imgDiv">
                 <img src="<%= analysis.imageUrl %>" alt="analysis image"><br>
             </div>
-            <button id="openBtn<%= index %>" class="open-summary buttons">Open Summary</button>
+            <div><button id="openBtn<%= index %>" class="open-summary buttons"><%= texts.openSummary%></button></div>
             <p id="summary<%= index%>" class="main-summary">
-<!--                <% if (lang === 'Japanese') { %>-->
-<!--                    <%= analysis.summary_jp %>-->
-<!--                <% } else if (lang === 'Korean') { %>-->
-<!--                    <%= analysis.summary_kr %>-->
-<!--                <% } else if (lang === 'Vietnamese') { %>-->
-<!--                    <%= analysis.summary_vn %>-->
-<!--                <% } else if (lang === 'Chinese') { %>-->
-<!--                    <%= analysis.summary_cn %>-->
-<!--                <% } else { %>-->
-<!--                    <%= analysis.summary %>-->
-<!--                <% } %>-->
                 <%= analysis.summary%>
             </p>
             <audio src="
-<!--                <% if (lang === 'Japanese') { %>-->
-<!--                    <%= analysis.mp3_jp %>-->
-<!--                <% } else if (lang === 'Korean') { %>-->
-<!--                    <%= analysis.mp3_kr %>-->
-<!--                <% } else if (lang === 'Vietnamese') { %>-->
-<!--                    <%= analysis.mp3_vn %>-->
-<!--                <% } else if (lang === 'Chinese') { %>-->
-<!--                    <%= analysis.mp3_cn %>-->
-<!--                <% } else { %>-->
-<!--                    <%= analysis.mp3 %>-->
-<!--                <% } %>-->
                     <%= analysis.mp3%>
-            " id="audio<%= index %>"></audio><br>
-            <button id="open<%= index %>" class="open-script buttons">Open Script</button>
+            " id="audio<%= index %>"></audio>
+            <div><button id="open<%= index %>" class="open-script buttons"><%= texts.openScript%></button></div>
             <p id="script<%= index %>" class="script-text">
-<!--                <% if (lang === 'Japanese') { %>-->
-<!--                    <%= analysis.analysis_jp %>-->
-<!--                <% } else if (lang === 'Korean') { %>-->
-<!--                    <%= analysis.analysis_kr %>-->
-<!--                <% } else if (lang === 'Vietnamese') { %>-->
-<!--                    <%= analysis.analysis_vn %>-->
-<!--                <% } else if (lang === 'Chinese') { %>-->
-<!--                    <%= analysis.analysis_cn %>-->
-<!--                <% } else { %>-->
-<!--                    <%= analysis.analysis %>-->
-<!--                <% } %>-->
                 <%= analysis.analysis%>
+            </p>
+            <div><button id="openArticle<%= index %>" class="open-article buttons"><%= texts.openArticle%></button></div>
+            <p id="article<%= index%>" class="article-text">
+                <%= analysis.content%>
             </p>
         </li>
     <% }) %>
@@ -177,8 +255,7 @@
 <div id="thumbnails">
     <% analyses.forEach(function(analysis, index) { %>
         <div class="thumbnail" data-index="<%= index %>">
-            <img src="<%= analysis.imageUrl %>" alt="Thumb <%= index %>">
-            <span>
+            <span class="article-index">
                 <% if (lang === 'jp') { %>
                     記事<%= index + 1 %>
                 <% } else if (lang === 'kr') { %>
@@ -187,15 +264,20 @@
                     Article <%= index + 1 %>
                 <% } %>
             </span>
+            <div class="imgBox">
+                <img src="<%= analysis.imageUrl %>" alt="Thumb <%= index %>">
+            </div>
         </div>
     <% }) %>
     <div class="thumbnail" data-index="<%= analyses.length %>">
         <img src="<%= viewpoint.imageUrl %>" alt="Thumb Viewpoint">
-        <span>Viewpoint</span>
+        <span class="viewpoint-index">Viewpoint</span>
     </div>
     </div>
 </div>
 </div>
+
+
 <script>
     const listItems = document.querySelectorAll('li');
     let currentAudioIndex = 0;
@@ -310,10 +392,10 @@
                 const scriptElement = document.getElementById('script' + index);
                 if (scriptElement.style.display === 'none' || !scriptElement.style.display) {
                     scriptElement.style.display = 'block'; // Show the script
-                    this.textContent = 'Close Script';
+                    this.textContent = closeScriptText;
                 } else {
                     scriptElement.style.display = 'none'; // Hide the script
-                    this.textContent = 'Open Script';
+                    this.textContent = openScriptText;
                 }
             });
         });
@@ -325,10 +407,25 @@
                 const summaryElement = document.getElementById('summary' + index);
                 if (summaryElement.style.display === 'none' || !summaryElement.style.display) {
                     summaryElement.style.display = 'block'; // Show the script
-                    this.textContent = 'Close Summary';
+                    this.textContent = closeSummaryText;
                 } else {
                     summaryElement.style.display = 'none'; // Hide the script
-                    this.textContent = 'Open Summary';
+                    this.textContent = openSummaryText;
+                }
+            });
+        });
+
+        const btnArr = document.querySelectorAll('.open-article'); // Selects all buttons whose id starts with 'open'
+        btnArr.forEach(button => {
+            button.addEventListener('click', function() {
+                const index = this.id.replace('openArticle', ''); // Extract index from the id of the button
+                const articleElement = document.getElementById('article' + index);
+                if (articleElement.style.display === 'none' || !articleElement.style.display) {
+                    articleElement.style.display = 'block'; // Show the script
+                    this.textContent = closeArticleText;
+                } else {
+                    articleElement.style.display = 'none'; // Hide the script
+                    this.textContent = openArticleText;
                 }
             });
         });

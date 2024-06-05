@@ -7,6 +7,7 @@ const openai = new OpenAi({
     apiKey : process.env.API_KEY
 });
 
+
 const {BitcoinAnalysis, BitcoinPrice} = require('../models');
 const AWS = require("aws-sdk");
 
@@ -203,7 +204,7 @@ async function runAnalysisConversation() {
         },
         {
             role: "user",
-            content: "Analyze the Goya score and the Bitcoin price movement within 24 hours, 7 days, and 30 days. Also tell me what the bitcoin price would be like after one day, one week, and one month based on the Goya score data and your analysis. The response should be in a JSON format {'day': 'text', 'week' : 'text', 'month' : 'text', 'prediction' : 'text'}."
+            content: "Analyze the Goya score and the Bitcoin price movement within 24 hours, 7 days, and 30 days. Also tell me what the bitcoin price would be like after one day, one week, and one month based on the Goya score data and your analysis. When you reference a time, the calculations should be made on the current Korean Standard Time as a criteria. the The response should be in a JSON format {'day': 'text', 'week' : 'text', 'month' : 'text', 'prediction' : 'text'} but the items marked as 'text' should be in a plain word for presentation."
         },
     ]
     const tools = [
@@ -228,6 +229,13 @@ async function runAnalysisConversation() {
                 description: "returns the list of the Goya score and Bitcoin price within last 30 days. Each score in the array represents the average score and price of each day."
             }
         },
+        {
+            type: "function",
+            function: {
+                name: "get_month_day_hour",
+                description: "returns the current Korean Standard Time in a month, day, and hour format"
+            }
+        }
     ]
     const response = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -243,6 +251,7 @@ async function runAnalysisConversation() {
             get_goyascore_day: getGoyaScoreDay,
             get_goyascore_week: getGoyaScoreWeek,
             get_goyascore_month: getGoyaScoreMonth,
+            get_month_day_hour: getMDH
         };
         messages.push(responseMessage);
         for (const toolCall of toolCalls) {
@@ -356,6 +365,37 @@ async function runChartConversation() {
         return secondResponse.choices;
     }
 }
+
+async function getMDH() {
+    const now = new Date();// Korean Standard Time (KST) is UTC+9
+    const options = {
+        timeZone: 'Asia/Seoul',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        hour12: false
+    };
+    // Format the date to KST
+    const formatter = new Intl.DateTimeFormat('en-US', options);
+    const parts = formatter.formatToParts(now);
+
+    // Extract the parts
+    let month, day, hour;
+    parts.forEach(({ type, value }) => {
+        if (type === 'month') month = value;
+        if (type === 'day') day = value;
+        if (type === 'hour') hour = value;
+    });
+
+    // Return the formatted date and time
+    let format =  {
+        month,
+        day: parseInt(day, 10),
+        hour: parseInt(hour, 10)
+    };
+    return JSON.stringify(format);
+}
+
 async function getCoinPriceMonth() {
     try {
         const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=30');
@@ -607,11 +647,11 @@ router.get('/goya', async function(req, res) {
     }
 })
 
-router.get('/time', async function(req, res) {
-    const time = await getCurrentKST();
-    console.log("kstTime: ", time);
-    res.send(time);
-});
+// router.get('/time', async function(req, res) {
+//     const time = await getCurrentKST();
+//     console.log("kstTime: ", time);
+//     res.send(time);
+// });
 
 router.get('/price', async function(req,res) {
     const scoreDay = await getGoyaScoreDay();
@@ -770,5 +810,11 @@ router.get('/construct', async function(req, res) {
     }
 
 });
+
+router.get('/time', async function(req,res) {
+    const time = await getMDH();
+    console.log("time: ", time);
+    res.send('ok');
+})
 
 module.exports = router;

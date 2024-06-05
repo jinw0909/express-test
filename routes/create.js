@@ -8,15 +8,13 @@ const openai = new OpenAi({
     apiKey : process.env.API_KEY
 });
 
-const Blockmedia = require('../models/blockmedia');
-
 const { Sequelize } = require("sequelize");
 const { Op } = require('sequelize');
 const multer = require("multer");
 const AWS = require("aws-sdk");
 // const Viewpoint = require("../viewpoint");
 // const Analysis = require('../analysis');
-const { Viewpoint, Analysis, Candidate} = require('../models');
+const { Blockmedia, Viewpoint, Analysis, Candidate, Translation } = require('../models');
 async function getCoinPriceWeek() {
     try {
         const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
@@ -64,25 +62,19 @@ async function get24articles() {
     try {
         //Calculate the datetime 24 hours ago
         const yesterday = new Date(new Date() - 24 * 60 * 60 * 1000);
+        const twelveHoursAgo = new Date(new Date() - 12 * 60 * 60 * 1000);
+
         const articles = await Blockmedia.findAll({
             where: {
                 createdAt: {
-                    [Sequelize.Op.gte]: yesterday
+                    [Sequelize.Op.gte]: twelveHoursAgo
                 }
             }
         })
         if (!articles.length) {
-            console.log('No articles published in the last 24 hours');
+            console.log('No articles published in the last 12 hours');
             return JSON.stringify([]);
         }
-
-        // const transformedArticles = articles.map(article => ({
-        //     id: article.id,
-        //     title: article.title,
-        //     content: article.content
-        // }));
-        // Check if the response was successful
-        // console.log("Transformed Article data: ", transformedArticles);
         console.log("Article data: ", articles);
         // const data = await response.json();
         return JSON.stringify(articles, null, 2);
@@ -162,7 +154,7 @@ async function runCreateConversation(candidates) {
     //Step 1 : send the conversation and available functions to the model
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-        { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least ten sentences and the summary has to be at least six sentences. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease. Don't improvise the id of the created Analysis and be sure that the id, analysis, and summary matches the provided article.`}
+        { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least ten sentences in english and the summary has to be at least six sentences in english. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease. Don't improvise the id of the created Analysis and be sure that the id, analysis, and summary matches the provided article.`}
     ];
     const tools = [
         {
@@ -296,6 +288,11 @@ async function getRecentAndUpdate() {
                 const summaryVn = await translateText(analysis.summary, 'Vietnamese');
                 const summaryCn = await translateText(analysis.summary, 'Chinese');
 
+                const content = await translateText(blockmediaEntry.content, 'English');
+                const contentJp = await translateText(blockmediaEntry.content, 'Japanese');
+                const contentVn = await translateText(blockmediaEntry.content, 'Vietnamese');
+                const contentCn = await translateText(blockmediaEntry.content, 'Chinese');
+
                 const mp3En = await generateTTS(analysis.analysis, 'English', analysis.id);
                 const mp3Jp = await generateTTS(analysisJp, 'Japanese', analysis.id);
                 const mp3Kr = await generateTTS(analysisKr, 'Korean', analysis.id);
@@ -303,20 +300,57 @@ async function getRecentAndUpdate() {
                 const mp3Cn = await generateTTS(analysisCn, 'Chinese', analysis.id);
 
                 // Update the Analysis entry with values from the Blockmedia entry
-                await analysis.update({
+                // await analysis.update({
+                //     title: title,
+                //     title_kr: blockmediaEntry.title,
+                //     title_jp: titleJp,
+                //     title_vn: titleVn,
+                //     title_cn: titleCn,
+                //     content: blockmediaEntry.content,
+                //     imageUrl: blockmediaEntry.imageUrl,
+                //     date: blockmediaEntry.date,
+                //     publisher: blockmediaEntry.publisher,
+                //     analysis_jp: analysisJp,
+                //     analysis_kr: analysisKr,
+                //     analysis_vn: analysisVn,
+                //     analysis_cn: analysisCn,
+                //     summary_jp: summaryJp,
+                //     summary_kr: summaryKr,
+                //     summary_vn: summaryVn,
+                //     summary_cn: summaryCn,
+                //     content: content,
+                //     content_jp: contentJp,
+                //     content_kr: contentKr,
+                //     content_vn: contentVn,
+                //     content_cn: contentCn,
+                //     updatedAt: new Date(),
+                //     mp3: mp3En, // Path or URL to the English MP3 file
+                //     mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
+                //     mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
+                //     mp3_vn: mp3Vn, // Path or URL to the Vietnamese MP3 file
+                //     mp3_cn: mp3Cn // Path or URL to the Chinese MP3 file
+                // });
+                await Translation.upsert({
+                    id: analysis.id,
                     title: title,
-                    title_kr: blockmediaEntry.title,
                     title_jp: titleJp,
+                    title_kr: blockmediaEntry.title,
                     title_vn: titleVn,
                     title_cn: titleCn,
-                    content: blockmediaEntry.content,
+                    content: content,
+                    content_jp: contentJp,
+                    content_kr: blockmediaEntry.content,
+                    content_vn: contentVn,
+                    content_cn : contentCn,
                     imageUrl: blockmediaEntry.imageUrl,
                     date: blockmediaEntry.date,
                     publisher: blockmediaEntry.publisher,
+                    analysis: analysis.analysis,
                     analysis_jp: analysisJp,
                     analysis_kr: analysisKr,
                     analysis_vn: analysisVn,
                     analysis_cn: analysisCn,
+                    summary: analysis.summary,
                     summary_jp: summaryJp,
                     summary_kr: summaryKr,
                     summary_vn: summaryVn,
@@ -332,12 +366,12 @@ async function getRecentAndUpdate() {
         }
 
         // Optionally, return the updated analyses
-        const updatedAnalyses = await Analysis.findAll({
+        const recentTranslation = await Translation.findAll({
             order: [['createdAt', 'DESC']], // Optionally re-fetch to send updated data back
             limit: 4
         });
 
-        return updatedAnalyses.map(a => a);
+        return recentTranslation.map(a => a);
 
     } catch (error) {
         console.error("Error fetching and updating recent analysis:", error);
@@ -345,6 +379,126 @@ async function getRecentAndUpdate() {
     }
 }
 
+async function getRecentAndUpdateTest() {
+    try {
+        const recentAnalyses = await Analysis.findAll({
+            order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
+            limit: 1
+        });
+
+        for (const analysis of recentAnalyses) {
+            // Retrieve the matching entry from the Blockmedia table
+            const blockmediaEntry = await Blockmedia.findOne({
+                where: { id: analysis.id }
+            });
+
+            if (blockmediaEntry) {
+
+                const title = await translateText(blockmediaEntry.title, 'English');
+                const titleJp = await translateText(blockmediaEntry.title, 'Japanese');
+                const titleVn = await translateText(blockmediaEntry.title, 'Vietnamese');
+                const titleCn = await translateText(blockmediaEntry.title, 'Chinese');
+
+                const analysisJp = await translateText(analysis.analysis, 'Japanese');
+                const analysisKr = await translateText(analysis.analysis, 'Korean');
+                const analysisVn = await translateText(analysis.analysis, 'Vietnamese');
+                const analysisCn = await translateText(analysis.analysis, 'Chinese');
+
+                const summaryJp = await translateText(analysis.summary, 'Japanese');
+                const summaryKr = await translateText(analysis.summary, 'Korean');
+                const summaryVn = await translateText(analysis.summary, 'Vietnamese');
+                const summaryCn = await translateText(analysis.summary, 'Chinese');
+
+                const content = await translateText(blockmediaEntry.content, 'English');
+                const contentJp = await translateText(blockmediaEntry.content, 'Japanese');
+                const contentVn = await translateText(blockmediaEntry.content, 'Vietnamese');
+                const contentCn = await translateText(blockmediaEntry.content, 'Chinese');
+
+                const mp3En = await generateTTS(analysis.analysis, 'English', analysis.id);
+                const mp3Jp = await generateTTS(analysisJp, 'Japanese', analysis.id);
+                const mp3Kr = await generateTTS(analysisKr, 'Korean', analysis.id);
+                const mp3Vn = await generateTTS(analysisVn, 'Vietnamese', analysis.id);
+                const mp3Cn = await generateTTS(analysisCn, 'Chinese', analysis.id);
+
+                // Update the Analysis entry with values from the Blockmedia entry
+                // await analysis.update({
+                //     title: title,
+                //     title_kr: blockmediaEntry.title,
+                //     title_jp: titleJp,
+                //     title_vn: titleVn,
+                //     title_cn: titleCn,
+                //     content: blockmediaEntry.content,
+                //     imageUrl: blockmediaEntry.imageUrl,
+                //     date: blockmediaEntry.date,
+                //     publisher: blockmediaEntry.publisher,
+                //     analysis_jp: analysisJp,
+                //     analysis_kr: analysisKr,
+                //     analysis_vn: analysisVn,
+                //     analysis_cn: analysisCn,
+                //     summary_jp: summaryJp,
+                //     summary_kr: summaryKr,
+                //     summary_vn: summaryVn,
+                //     summary_cn: summaryCn,
+                //     content: content,
+                //     content_jp: contentJp,
+                //     content_kr: contentKr,
+                //     content_vn: contentVn,
+                //     content_cn: contentCn,
+                //     updatedAt: new Date(),
+                //     mp3: mp3En, // Path or URL to the English MP3 file
+                //     mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
+                //     mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
+                //     mp3_vn: mp3Vn, // Path or URL to the Vietnamese MP3 file
+                //     mp3_cn: mp3Cn // Path or URL to the Chinese MP3 file
+                // });
+                await Translation.upsert({
+                    id: analysis.id,
+                    title: title,
+                    title_kr: blockmediaEntry.title,
+                    title_jp: titleJp,
+                    title_vn: titleVn,
+                    title_cn: titleCn,
+                    content: content,
+                    content_kr: blockmediaEntry.content,
+                    content_jp: contentJp,
+                    content_vn: contentVn,
+                    content_cn : contentCn,
+                    imageUrl: blockmediaEntry.imageUrl,
+                    date: blockmediaEntry.date,
+                    publisher: blockmediaEntry.publisher,
+                    analysis: analysis.analysis,
+                    analysis_jp: analysisJp,
+                    analysis_kr: analysisKr,
+                    analysis_vn: analysisVn,
+                    analysis_cn: analysisCn,
+                    summary: analysis.summary,
+                    summary_jp: summaryJp,
+                    summary_kr: summaryKr,
+                    summary_vn: summaryVn,
+                    summary_cn: summaryCn,
+                    updatedAt: new Date(),
+                    mp3: mp3En, // Path or URL to the English MP3 file
+                    mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
+                    mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
+                    mp3_vn: mp3Vn, // Path or URL to the Vietnamese MP3 file
+                    mp3_cn: mp3Cn // Path or URL to the Chinese MP3 file
+                });
+            }
+        }
+
+        // Optionally, return the updated analyses
+        // const updatedAnalyses = await Analysis.findAll({
+        //     order: [['createdAt', 'DESC']], // Optionally re-fetch to send updated data back
+        //     limit: 4
+        // });
+        //
+        // return updatedAnalyses.map(a => a);
+
+    } catch (error) {
+        console.error("Error fetching and updating recent analysis:", error);
+        throw error;
+    }
+}
 // async function translateText(content, lang) {
 //     let messages = [
 //         { role: "system", content: "You are a professional translator capable of translating between English, Japanese, and Korean. You can understand the context of sentences and derive the meanings of words within that context, enabling you to translate accurately and appropriately for English, Japanese, and Korean speakers. Additionally, you possess knowledge about cryptocurrencies, Bitcoin, stocks, and finance in general, allowing you to aptly translate articles and analyses related to these topics into the respective languages."},
@@ -395,53 +549,6 @@ const Polly = new AWS.Polly({
     signatureVersion: '',
     region: 'us-east-1'
 });
-
-// async function generateTTS(content, lang, id) {
-//
-//     let voiceId = 'Danielle';
-//     if (lang == 'Japanese') {
-//         voiceId = 'Kazuha'
-//     } else if (lang == 'Korean') {
-//         voiceId = 'Seoyeon'
-//     }
-//
-//     let pollyParams = {
-//         'Text': content,
-//         'OutputFormat': 'mp3',
-//         'VoiceId': voiceId,
-//         'Engine': 'neural'
-//     }
-//
-//     return new Promise((resolve, reject) => {
-//         // Synthesize speech using Polly
-//         Polly.synthesizeSpeech(pollyParams, (err, data) => {
-//             if (err) {
-//                 console.error("Error synthesizing speech:", err);
-//                 reject(err);
-//                 return;
-//             }
-//
-//             // S3 upload parameters
-//             const s3Params = {
-//                 Bucket: 's3bucketjinwoo',
-//                 Key: `${id}_${lang}.mp3`,
-//                 Body: data.AudioStream,
-//                 ContentType: "audio/mpeg",
-//             };
-//
-//             // Upload to S3
-//             s3.upload(s3Params, (err, data) => {
-//                 if (err) {
-//                     console.error("Error uploading to S3:", err);
-//                     reject(err);
-//                 } else {
-//                     console.log("Successfully uploaded data to " + data.Location);
-//                     resolve(data.Location);
-//                 }
-//             });
-//         });
-//     });
-// }
 async function generateTTS(content, lang, id) {
     if (lang === 'Vietnamese') {
         // Use OpenAI TTS for Vietnamese
@@ -688,7 +795,7 @@ async function getRecentViewpoint() {
 async function getArticlesDay() {
     try {
         //Calculate the datetime 24 hours ago
-        const yesterday = new Date(new Date() - 24 * 60 * 60 * 1000);
+        const yesterday = new Date(new Date() - 12 * 60 * 60 * 1000);
         const articles = await Blockmedia.findAll({
             where: {
                 createdAt: {
@@ -697,7 +804,7 @@ async function getArticlesDay() {
             },
         })
         if (!articles.length) {
-            console.log('No articles published in the last 24 hours');
+            console.log('No articles published in the last 12 hours');
             return null;
         }
 
@@ -713,7 +820,7 @@ async function getArticlesDay() {
 async function runCandidateConversation(articles) {
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-        { role: "user", content: "From the given articles, select four articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, return the selected articles in a json format as following. {'candidates' : [{'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}]. . Also Don't improvise the 'id' and search from the given article list's id. 'summary' should be the brief summary of the article content. 'reason' should be the reason why the article was selected as a candidate. Article List : " + JSON.stringify(articles)},
+        { role: "user", content: "From the given articles, select four articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, return the selected articles in a json format as following. {'candidates' : [{'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}]. Also Don't improvise the 'id' and search from the given article list's id. 'summary' should be the brief summary of the article content. 'reason' should be the reason why the article was selected as a candidate. 'summary' and 'reason' should be in English. Article list : " + JSON.stringify(articles)},
     ];
     const response = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -744,8 +851,8 @@ async function createCandidates() {
 
 async function runFinalConversation(candidates) {
     const messages = [
-        { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-        { role: "user", content: "From the given article candidates, select four candidates that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement. The 'reason' is about why the article was selected as a candidate. Return the four candidates in a json format as following. {'finals' : [{'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}] Just return the list without a key. Also Don't improvise the 'id', 'summary', 'reason' and search from the given candidate list. Candidate List : " + JSON.stringify(candidates)},
+        { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context." },
+        { role: "user", content: "From the given article candidates, select four candidates that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement. The 'reason' is about why the article was selected as a candidate. Return the four candidates in a json format as following. {'finals' : [{'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}] Just return the list without a key. Also Don't improvise the 'id', 'summary', 'reason' and search from the given candidate list. Candidate List : " + JSON.stringify(candidates) },
     ];
     const response = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -829,10 +936,6 @@ router.get('/', async function(req, res) {
 });
 router.get('/complete', async function(req, res) {
     try {
-        // First, run runIndexConversation to get the indexes
-        // const indexResult = await runIndexConversation();
-        // console.log("indexResult: ", indexResult);
-        // const candidates = JSON.parse(indexResult[0].message['content'])['selected_articles'];
         // console.log("step 1: candidates: ", candidates);
         const candidates = await makeCandidates();
         console.log("candidates: ", candidates);
@@ -870,9 +973,27 @@ router.get('/complete', async function(req, res) {
         const { viewpoint, refs } = JSON.parse(content);
         console.log("viewpoint: ", viewpoint);
         console.log("refs: ", refs);
+
         const today = new Date();
-        const idSuffix = today.getHours() >= 12 ? 'PM' : 'AM';
-        const id = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}_${idSuffix}`;
+        console.log("today: ", today); // Logs current date and time in UTC
+
+        // Convert to KST using toLocaleString
+        const kstDate = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+        console.log("kstDate: ", kstDate); // Logs the adjusted date and time for KST
+
+        // Get the KST hours using local time
+        const kstHours = kstDate.getHours();
+        console.log("kstHours: ", kstHours); // Logs the KST hours correctly
+
+        // Determine AM/PM suffix
+        const period = kstHours >= 12 ? 'PM' : 'AM';
+
+        // Construct the ID using the KST date and period
+        const year = kstDate.getFullYear();
+        const month = String(kstDate.getMonth() + 1).padStart(2, '0');
+        const day = String(kstDate.getDate()).padStart(2, '0');
+        const id = `${year}${month}${day}_${period}`;
+        console.log("id: ", id); // Logs the constructed ID based on KST date and period
 
         try {
             const [instance, created] = await Viewpoint.upsert({
@@ -917,9 +1038,28 @@ router.get('/completevp', async function(req, res) {
         const { viewpoint, refs } = JSON.parse(content);
         console.log("viewpoint: ", viewpoint);
         console.log("refs: ", refs);
+
         const today = new Date();
-        const idSuffix = today.getHours() >= 12 ? 'PM' : 'AM';
-        const id = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}_${idSuffix}`;
+        console.log("today: ", today); // Logs current date and time in UTC
+
+        // Convert to KST using toLocaleString
+        const kstDate = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+        console.log("kstDate: ", kstDate); // Logs the adjusted date and time for KST
+
+        // Get the KST hours using local time
+        const kstHours = kstDate.getHours();
+        console.log("kstHours: ", kstHours); // Logs the KST hours correctly
+
+        // Determine AM/PM suffix
+        const period = kstHours >= 12 ? 'PM' : 'AM';
+
+        // Construct the ID using the KST date and period
+        const year = kstDate.getFullYear();
+        const month = String(kstDate.getMonth() + 1).padStart(2, '0');
+        const day = String(kstDate.getDate()).padStart(2, '0');
+        const id = `${year}${month}${day}_${period}`;
+        console.log("id: ", id); // Logs the constructed ID based on KST date and period
+
 
         try {
             const [instance, created] = await Viewpoint.upsert({
@@ -954,6 +1094,48 @@ router.get('/completevp', async function(req, res) {
         res.send("An error occurred");
     }
 })
+router.get('/recent', async function(req, res) {
+    try {
+        const result = await getRecentAndUpdateTest();
+        console.log("result: ", result);
+    } catch (error) {
+        console.error(error);
+    }
+})
+router.get('/createanalysis', async function(req, res) {
+    try {
+        // console.log("step 1: candidates: ", candidates);
+        const candidates = await makeCandidates();
+        console.log("candidates: ", candidates);
+        // Then, pass these indexes to runCreateConveration
+        const createResult = await runCreateConversation(candidates);
 
+        const articles = JSON.parse(createResult[0].message.content)['summaries_and_analyses'];
+        console.log("step 2: articles: ", articles);
+
+        for (const article of articles) { // Loop through each article
+            try {
+                const [instance, created] = await Analysis.upsert({
+                    id: article.id,
+                    analysis: article.analysis,
+                    summary: article.summary,
+                    createdAt: new Date(), // Consider managing this within Sequelize model definition
+                    updatedAt: new Date()  // Sequelize can handle updatedAt automatically
+                });
+
+                if (created) {
+                    console.log(`Analysis with ID ${article.id} was created.`);
+                } else {
+                    console.log(`Analysis with ID ${article.id} was updated.`);
+                }
+            } catch (err) {
+                console.error('Error upserting article:', err);
+            }
+        }
+        res.send('ok');
+    } catch (error) {
+        console.error(error);
+    }
+})
 
 module.exports = router;
