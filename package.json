@@ -25,8 +25,8 @@
     "mysql2": "^3.9.7",
     "node-cron": "^3.0.3",
     "openai": "^4.46.1",
-    "playwright": "^1.44.1",
     "pug": "2.0.0-beta11",
+    "puppeteer": "^22.10.1",
     "rss-parser": "^3.13.0",
     "sequelize": "^6.37.3",
     "uuid": "^10.0.0"

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { chromium } = require('playwright');
+const puppeteer = require('puppeteer');
 const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
 const { BitcoinAnalysis } = require('../models');  // Ensure this path is correct for your project
@@ -16,9 +16,9 @@ router.get('/', async function(req, res, next) {
     let browser;
     try {
         // Launch browser and navigate to the page
-        browser = await chromium.launch();
+        browser = await puppeteer.launch();
         const page = await browser.newPage();
-        await page.goto('https://blocksquare-automation.com/chart/draw');
+        await page.goto('https://blocksquare-automation.com/chart/draw', { waitUntil: 'networkidle0' });
 
         // Increase timeout and wait for the canvas elements
         console.log('Waiting for #dayChart...');
