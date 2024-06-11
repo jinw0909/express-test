@@ -16,7 +16,9 @@ router.get('/', async function(req, res, next) {
     let browser;
     try {
         // Launch browser and navigate to the page
-        browser = await puppeteer.launch();
+        browser = await puppeteer.launch({
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
         const page = await browser.newPage();
         await page.goto('https://blocksquare-automation.com/chart/draw', { waitUntil: 'networkidle0' });
 
