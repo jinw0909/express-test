@@ -1,6 +1,8 @@
 var express = require('express');
 var router = express.Router();
 const axios = require('axios');
+const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
+const { v4: uuidv4 } = require('uuid');
 
 const OpenAi = require('openai');
 const openai = new OpenAi({
@@ -159,6 +161,8 @@ async function getAnalysisAndUpdate() {
         const mp3Vn = await generateTTS(combinedTextVn, 'Vietnamese', recentAnalysis.id);
         const mp3Cn = await generateTTS(combinedTextCn, 'Chinese', recentAnalysis.id);
 
+        const images = await captureChart();
+
         await recentAnalysis.update({
             day_jp: dayJp,
             day_kr: dayKr,
@@ -180,7 +184,9 @@ async function getAnalysisAndUpdate() {
             mp3_jp: mp3Jp,
             mp3_kr: mp3Kr,
             mp3_vn: mp3Vn,
-            mp3_cn: mp3Cn
+            mp3_cn: mp3Cn,
+            daychart_imgUrl: images[0],
+            monthchart_imgUrl: images[1]
         });
     } catch (error) {
         console.error(error);
@@ -462,7 +468,8 @@ function extractScorePriceWeek(data) {
     // Function to calculate average of an array
     function calculateAverage(arr) {
         const sum = arr.reduce((acc, val) => acc + val, 0);
-        return sum / arr.length;
+        const average = sum / arr.length;
+        return parseFloat(average.toFixed(2));
     }
 
     let avgScores = [];
@@ -634,6 +641,135 @@ async function updatePriceWithAnalysisId(analysisId, day, week, month) {
     }
 }
 
+const parseData = (data) => data.map(value => parseFloat(value));
+
+// Function to get the scale limits
+// Function to get the scale limits for each dataset
+const getScaleLimits = (data) => {
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    return { min, max };
+};
+
+// Chart configuration function
+const createChartConfiguration = (labels, scores, prices, label) => {
+    const scoreLimits = getScaleLimits(scores);
+    const priceLimits = getScaleLimits(prices);
+
+    return {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: `${label} Scores`,
+                    data: parseData(scores),
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y-axis-1',
+                    fill: false,
+                    tension: 0.4 // Add tension for curvy lines
+                },
+                {
+                    label: `${label} Prices`,
+                    data: parseData(prices),
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y-axis-2',
+                    fill: false,
+                    tension: 0.4 // Add tension for curvy lines
+                }
+            ]
+        },
+        options: {
+            scales: {
+                'y-axis-1': {
+                    type: 'linear',
+                    position: 'left',
+                    beginAtZero: false,
+                    min: scoreLimits.min,
+                    max: scoreLimits.max,
+                    title: {
+                        display: true,
+                        text: 'Scores'
+                    }
+                },
+                'y-axis-2': {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: false,
+                    min: priceLimits.min,
+                    max: priceLimits.max,
+                    title: {
+                        display: true,
+                        text: 'Prices'
+                    },
+                    grid: {
+                        drawOnChartArea: false, // Only want the grid lines for one axis to show up
+                    }
+                }
+            }
+        }
+    };
+};
+const saveToS3 = async (buffer, label) => {
+    const s3Params = {
+        Bucket: 's3bucketjinwoo',
+        Key: `charts/${label}-${uuidv4()}.png`,
+        Body: buffer,
+        ContentType: 'image/png'
+    };
+
+    const s3Response = await s3.upload(s3Params).promise();
+    console.log("s3Response: ", s3Response.Location);
+    return s3Response.Location;
+};
+
+const captureChart = async () => {
+    try {
+        const [day, week, month] = await Promise.all([
+            BitcoinPrice.findOne({ where: { period: 'day' }, order: [['requestTime', 'DESC']] }),
+            BitcoinPrice.findOne({ where: { period: 'week' }, order: [['requestTime', 'DESC']] }),
+            BitcoinPrice.findOne({ where: { period: 'month' }, order: [['requestTime', 'DESC']] })
+        ]);
+        let data = {
+            scoreDay: { score: day.score, price: day.price },
+            scoreWeek: { score: week.score, price: week.price },
+            scoreMonth: { score: month.score, price: month.price }
+        }
+        console.log("data: ", data);
+
+        const width = 800;
+        const height = 600;
+        const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height});
+
+        const dailyData = {
+            labels: Array.from({ length: 24}, (_, i) => i + 1),
+            scores: data.scoreDay.score,
+            prices: data.scoreDay.price
+        }
+
+        const monthlyData = {
+            labels: Array.from({ length: 28}, (_, i) => i + 1),
+            scores: data.scoreMonth.score,
+            prices: data.scoreMonth.price
+        }
+
+        const configuration = createChartConfiguration(dailyData.labels, dailyData.scores, dailyData.prices, 'Daily');
+        const configurationMonth = createChartConfiguration(monthlyData.labels, monthlyData.scores, monthlyData.prices,'Monthly');
+        const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+        const imageBufferMonth = await chartJSNodeCanvas.renderToBuffer(configurationMonth);
+
+        const s3Url = await saveToS3(imageBuffer, 'Daily');
+        const s3UrlMonth = await saveToS3(imageBufferMonth, 'Monthly');
+        let urls = [s3Url, s3UrlMonth];
+        return urls;
+
+    } catch (error) {
+        console.error(error);
+    }
+}
+
 router.get('/goya', async function(req, res) {
     try {
         const response = await runChartConversation();
@@ -646,6 +782,7 @@ router.get('/goya', async function(req, res) {
         throw error;
     }
 })
+
 
 // router.get('/time', async function(req, res) {
 //     const time = await getCurrentKST();
@@ -700,7 +837,7 @@ router.get('/analysis-save', async function(req, res) {
     }
 })
 
-router.get('/save', async function(req, res) {
+router.post('/save', async function(req, res) {
     try {
         const requestTime = new Date();
         const [dayResponse, weekResponse, monthResponse] = await Promise.all([
@@ -724,7 +861,7 @@ router.get('/save', async function(req, res) {
     }
 })
 
-router.get('/price-analysis', async function(req, res) {
+router.post('/price-analysis', async function(req, res) {
     try {
         const requestTime = new Date();
         const [dayResponse, weekResponse, monthResponse] = await Promise.all([
@@ -800,6 +937,62 @@ router.get('/draw', async function(req, res) {
        console.error(error);
    }
 });
+
+router.get('/capture', async function(req, res) {
+    try {
+    //     const [day, week, month] = await Promise.all([
+    //         BitcoinPrice.findOne({ where: { period: 'day' }, order: [['requestTime', 'DESC']] }),
+    //         BitcoinPrice.findOne({ where: { period: 'week' }, order: [['requestTime', 'DESC']] }),
+    //         BitcoinPrice.findOne({ where: { period: 'month' }, order: [['requestTime', 'DESC']] })
+    //     ]);
+    //     let data = {
+    //         scoreDay: { score: day.score, price: day.price },
+    //         scoreWeek: { score: week.score, price: week.price },
+    //         scoreMonth: { score: month.score, price: month.price }
+    //     }
+    //     console.log("data: ", data);
+    //
+    //     const width = 800;
+    //     const height = 600;
+    //     const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height});
+    //
+    //     // Configure AWS S3
+    //     const s3 = new AWS.S3({
+    //         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    //         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    //         region: process.env.AWS_REGION
+    //     });
+    //
+    //     const dailyData = {
+    //         labels: Array.from({ length: 24}, (_, i) => i + 1),
+    //         scores: data.scoreDay.score,
+    //         prices: data.scoreDay.price
+    //     }
+    //
+    //     try {
+    //         const configuration = createChartConfiguration(dailyData.labels,     dailyData.scores, dailyData.prices, 'Daily');
+    //         const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+    //
+    //         const s3Params = {
+    //             Bucket: 's3bucketjinwoo',
+    //             Key: `charts/daily-${uuidv4()}.png`,
+    //             Body: imageBuffer,
+    //             ContentType: 'image/png'
+    //         };
+    //
+    //         const s3Url = await saveToS3(imageBuffer, 'Daily');
+    //         res.send(`Daily chart saved to S3: ${s3Url}`);
+    //     } catch (error) {
+    //         console.error(error);
+    //         res.status(500).send('An error occurred');
+    //     }
+
+        let urls = await captureChart();
+        res.send(`Chart images saved to S3', ${urls}`);
+    } catch (error) {
+        console.error(error);
+    }
+})
 
 router.get('/construct', async function(req, res) {
     try {

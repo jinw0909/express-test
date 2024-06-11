@@ -31,6 +31,9 @@ var feedRouter = require('./routes/feed');
 var screenshotRouter = require('./routes/screenshot');
 var chartRouter = require('./routes/chart');
 var dominanceRouter = require('./routes/dominance');
+var handleimgRouter = require('./routes/handleimg');
+var healthcheckRouter = require('./routes/healthcheck');
+var captureRouter = require('./routes/capture');
 
 var app = express();
 
@@ -72,18 +75,21 @@ app.use('/feed', feedRouter);
 app.use('/screenshot', screenshotRouter);
 app.use('/chart', chartRouter);
 app.use('/dominance', dominanceRouter);
+app.use('/handleimg', handleimgRouter);
+app.use('/healthcheck', healthcheckRouter);
+app.use('/capture', captureRouter);
 
-cron.schedule('0 */4 * * *', async () => {
-  console.log('Running a task every four hours');
-
-  // Make an API call
-  try {
-    const response = await axios.get(`${process.env.API_BASE_URL}/crawl/articles`);
-    console.log('API call successful. Data:', response.data);
-  } catch (error) {
-    console.error('Error making API call:', error);
-  }
-});
+// cron.schedule('0 */4 * * *', async () => {
+//   console.log('Running a task every four hours');
+//
+//   // Make an API call
+//   try {
+//     const response = await axios.get(`${process.env.API_BASE_URL}/crawl/articles`);
+//     console.log('API call successful. Data:', response.data);
+//   } catch (error) {
+//     console.error('Error making API call:', error);
+//   }
+// });
 
 app.get('/createdb', (req, res) => {
   let sql = 'CREATE DATABASE testdb';
@@ -163,7 +169,7 @@ let server = http.createServer(app);
 
 server.listen(port, () => {
   console.log(`server is running on port ${port}`);
-  console.log('Cron job scheduled. The process will keep running to execute the scheduled task.')
+  //console.log('Cron job scheduled. The process will keep running to execute the scheduled task.')
 });
 server.on('error', onError);
 server.on('listening', onListening);

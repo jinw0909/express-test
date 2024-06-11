@@ -934,7 +934,7 @@ router.get('/', async function(req, res) {
     const vpList = await getAllViewpointWithAnalysisIds();
     res.render('create', {vpList: vpList});
 });
-router.get('/complete', async function(req, res) {
+router.post('/complete', async function(req, res) {
     try {
         // console.log("step 1: candidates: ", candidates);
         const candidates = await makeCandidates();
@@ -1024,14 +1024,14 @@ router.get('/complete', async function(req, res) {
         console.log("updatedVp: ", updatedVp);
 
         // res.status(200).send('ok');
-        res.redirect('/run');
+        res.send('ok');
     } catch (error) {
         console.error("Error during operations: ", error);
         res.status(500).send("An error occurred");
     }
 });
 
-router.get('/completevp', async function(req, res) {
+router.post('/completevp', async function(req, res) {
     try {
         const result = await runViewpointConversation();
         const content = result[0].message.content;
@@ -1094,7 +1094,7 @@ router.get('/completevp', async function(req, res) {
         res.send("An error occurred");
     }
 })
-router.get('/recent', async function(req, res) {
+router.post('/recent', async function(req, res) {
     try {
         const result = await getRecentAndUpdateTest();
         console.log("result: ", result);
@@ -1102,7 +1102,7 @@ router.get('/recent', async function(req, res) {
         console.error(error);
     }
 })
-router.get('/createanalysis', async function(req, res) {
+router.post('/createanalysis', async function(req, res) {
     try {
         // console.log("step 1: candidates: ", candidates);
         const candidates = await makeCandidates();

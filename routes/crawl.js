@@ -138,7 +138,7 @@ router.get('/coinness', async function(req, res) {
     // }
 });
 
-router.get('/articles', async function(req, res, next) {
+router.post('/articles', async function(req, res, next) {
     try {
         const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
         const latestNews = [];

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        .result-div {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .main-container {
+            max-width: 768px;
+            margin: auto;
+        }
+    </style>
+</head>
+<body>
+<div class="main-container">
+    <canvas id="dayChart" width="400" height="200"></canvas>
+    <canvas id="weekChart" width="400" height="200"></canvas>
+    <canvas id="monthChart" width="400" height="200"></canvas>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const data = <%- JSON.stringify(data) %>;
+        const scoreDay = data.scoreDay;
+        const scoreWeek = data.scoreWeek;
+        const scoreMonth = data.scoreMonth;
+
+        // Debugging: Check the data format
+        console.log("data: ", data);
+        console.log("scoreDay: ", scoreDay);
+        console.log("scoreWeek: ", scoreWeek);
+        console.log("scoreMonth: ", scoreMonth);
+
+
+        // Function to create chart
+        function createChart(ctx, labels, scoreData, priceData) {
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Price',
+                        data: priceData,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y',
+                        cubicInterpolationMode: 'monotone',
+                        tension: 0.4
+                    }, {
+                        label: 'Goya Score',
+                        data: scoreData,
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y1',
+                        cubicInterpolationMode: 'monotone',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left'
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Day chart
+        const ctxDay = document.getElementById('dayChart').getContext('2d');
+        createChart(ctxDay, Array.from({ length: 24 }, (_, i) => `Hour ${i + 1}`), scoreDay.score, scoreDay.price);
+
+        // Week chart
+        const ctxWeek = document.getElementById('weekChart').getContext('2d');
+        createChart(ctxWeek, ['day1', 'day2', 'day3', 'da4', 'day5', 'yesterday', 'today'], scoreWeek.score, scoreWeek.price);
+
+        // Month chart
+        const ctxMonth = document.getElementById('monthChart').getContext('2d');
+        createChart(ctxMonth, Array.from({ length: 28 }, (_, i) => `Day ${i + 1}`), scoreMonth.score, scoreMonth.price);
+    })
+</script>
+<script>
+    $( window ).on( "load", function() {
+        // score_capture dominance_capture
+        setTimeout(() => {
+            let baseImages = [];
+            let captureList = ['dayChart','weekChart','monthChart'];
+            let captureName = ['dayImg','weekImg','monthImg'];
+            captureList.forEach((captureEl,index) => {
+                const element = document.querySelector(`#${captureEl}`);
+                if (element) {
+                    const originalWidth = element.scrollWidth;
+                    const originalHeight = element.scrollHeight;
+                    console.log('element.scrollWidth',element.scrollWidth);
+                    html2canvas(element, {
+                        width: originalWidth,
+                        height: originalHeight,
+                        windowWidth: originalWidth,
+                        windowHeight: originalHeight,
+                        scale: window.devicePixelRatio,
+                        backgroundColor: "#1D1D2B"
+                    }).then(function (canvas) {
+                        var imgSrc = canvas.toDataURL();
+                        console.log('canvas capture', imgSrc);
+                        var base64Data = imgSrc.replace(/^data:image\/[^;]+;base64,/, '');
+                        $.ajax({
+                            url: "https://api.imgbb.com/1/upload?key=505d57676748e0531dbc51459c4d2f48",
+                            type: "POST",
+                            data: {
+                                image: base64Data
+                            },
+                            success: function (res) {
+                                console.log('res', res.data.image.url);
+                                let imageUrl = res.data.image.url;
+                                let jsonData = JSON.stringify({name : captureName[index], url : imageUrl});
+                                baseImages.push({ "name": captureName[index], "url": imageUrl });
+                                console.log('baseImages', baseImages);
+                                // Post baseImages to localhost:3000/handleimg
+                                // Post baseImages to localhost:3000/handleimg using $.ajax
+                                $.ajax({
+                                    url: 'http://localhost:8080/handleimg',
+                                    type: 'POST',
+                                    contentType: 'application/json',
+                                    data: jsonData,
+                                    success: function(response) {
+                                        console.log('Image data sent to server:', response);
+                                    },
+                                    error: function(error) {
+                                        console.error('Error sending image data to server:', error);
+                                    }
+                                });
+                            }
+                        });
+                    })
+                } else {
+                    console.error(`Element with ID #${captureEl} not found.`);
+                }
+            });
+            console.log('baseImages (initial log, may be empty):', baseImages);
+        }, 2000);
+
+    })
+</script>
+</body>
+</html>

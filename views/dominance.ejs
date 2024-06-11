@@ -3,128 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cryptocurrency Data</title>
+    <title>Dominance Charts</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 8px; }
-        th { background-color: #f2f2f2; }
-        h2 { margin-top: 20px; }
-        p { margin: 10px 0; }
+        .chart-container {
+            width: 50%;
+            margin: auto;
+        }
     </style>
 </head>
 <body>
-<h1>Cryptocurrency Data</h1>
+<div class="chart-container">
+    <canvas id="lineChart"></canvas>
+</div>
+<div class="chart-container">
+    <canvas id="doughnutChart"></canvas>
+</div>
 
-<% if (data.interpretation.total_market_cap) { %>
-    <h2>Total Market Cap</h2>
-    <table>
-        <tr>
-            <th>Cryptocurrency</th>
-            <th>Market Cap (USD)</th>
-        </tr>
-        <% for (let [key, value] of Object.entries(data.interpretation.total_market_cap)) { %>
-            <tr>
-                <td><%= key.toUpperCase() %></td>
-                <td><%= value.toLocaleString() %></td>
-            </tr>
-        <% } %>
-    </table>
-<% } %>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get the data from the server
+        const goyaArr = <%- JSON.stringify(goyDominance) %>;
+        const finalDominance = <%- JSON.stringify(dominance) %>;
 
-<% if (data.interpretation.dominance) { %>
-    <h2>Dominance</h2>
-    <table>
-        <tr>
-            <th>Cryptocurrency</th>
-            <th>Dominance (%)</th>
-        </tr>
-        <% for (let [key, value] of Object.entries(data.interpretation.dominance)) { %>
-            <% if (key !== 'additional_data') { %>
-                <tr>
-                    <td><%= key.toUpperCase() %></td>
-                    <td><%= value.toFixed(2) %></td>
-                </tr>
-            <% } %>
-        <% } %>
-    </table>
+        // Create the line chart for goyaArr
+        const ctxLine = document.getElementById('lineChart').getContext('2d');
+        const lineChart = new Chart(ctxLine, {
+            type: 'line',
+            data: {
+                labels: goyaArr.map((_, index) => `Hour ${index + 1}`),
+                datasets: [{
+                    label: 'Goya Dominance',
+                    data: goyaArr,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Hours'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Dominance'
+                        }
+                    }
+                }
+            }
+        });
 
-    <% if (data.interpretation.dominance.additional_data) { %>
-        <h2>Additional Dominance Data</h2>
-        <table>
-            <tr>
-                <th>Cryptocurrency</th>
-                <th>Dominance (%)</th>
-            </tr>
-            <% for (let [key, value] of Object.entries(data.interpretation.dominance.additional_data)) { %>
-                <tr>
-                    <td><%= key.toUpperCase() %></td>
-                    <td><%= value.toFixed(2) %></td>
-                </tr>
-            <% } %>
-        </table>
-    <% } %>
-<% } %>
-
-<% if (data.interpretation.market_updates) { %>
-    <h2>Market Updates</h2>
-    <table>
-        <tr>
-            <th>Recent Cap Change (%)</th>
-            <td><%= data.interpretation.market_updates.recent_cap_change_percentage.toFixed(2) %></td>
-        </tr>
-        <tr>
-            <th>Updated At</th>
-            <td><%= new Date(data.interpretation.market_updates.updated_at * 1000).toLocaleString() %></td>
-        </tr>
-    </table>
-<% } %>
-
-<% if (data.interpretation.cryptocurrency_activity) { %>
-    <h2>Cryptocurrency Activity</h2>
-    <table>
-        <tr>
-            <th>Active Cryptocurrencies</th>
-            <td><%= data.interpretation.cryptocurrency_activity.active_cryptocurrencies %></td>
-        </tr>
-        <tr>
-            <th>Ongoing ICOs</th>
-            <td><%= data.interpretation.cryptocurrency_activity.ongoing_icos %></td>
-        </tr>
-        <tr>
-            <th>Ended ICOs</th>
-            <td><%= data.interpretation.cryptocurrency_activity.ended_icos %></td>
-        </tr>
-        <tr>
-            <th>Markets</th>
-            <td><%= data.interpretation.cryptocurrency_activity.markets %></td>
-        </tr>
-    </table>
-<% } %>
-
-<% if (data.interpretation.total_volume) { %>
-    <h2>Total Volume (USD)</h2>
-    <table>
-        <tr>
-            <th>Cryptocurrency</th>
-            <th>Volume</th>
-        </tr>
-        <% for (let [key, value] of Object.entries(data.interpretation.total_volume)) { %>
-            <tr>
-                <td><%= key.toUpperCase() %></td>
-                <td><%= value.toLocaleString() %></td>
-            </tr>
-        <% } %>
-    </table>
-<% } %>
-
-<% if (data.analysis) { %>
-    <h2>Analysis</h2>
-    <% for (let [key, value] of Object.entries(data.analysis)) { %>
-        <h3><%= key %></h3>
-        <p><%= value %></p>
-    <% } %>
-<% } %>
-
+        // Create the doughnut chart for finalDominance
+        const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+        const doughnutChart = new Chart(ctxDoughnut, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(finalDominance),
+                datasets: [{
+                    data: Object.values(finalDominance),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)',
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        });
+    });
+</script>
 </body>
 </html>

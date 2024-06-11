@@ -15,6 +15,18 @@
         #articles-container p {
             margin: 5px 0;
         }
+        .sent {
+            color: blue;
+        }
+        .system {
+            display: inline-block;
+            cursor: pointer;
+            margin-right: .5rem;
+            margin-top: .5rem;
+            border: 1px solid red;
+            border-radius: 4px;
+            padding: .5rem;
+        }
     </style>
 </head>
 <body>
@@ -32,6 +44,18 @@
         <button class="send-btn-completevp">Send Request</button>
         <div class="result-div-completevp"></div>
         <a href="/chart/draw">Go To Page</a>
+    </div>
+    <div class="send-request-completedm">
+        <h4>Create Dominance Briefing</h4>
+        <span id="flag9"></span>
+        <button class="send-btn-completedm">Send Request</button>
+        <div class="result-div-completedm"></div>
+        <a href="/dominance">Go To Page</a>
+    </div>
+    <div>
+        <span id="fetchBlockmedia" class="system">fetch blockmedia</span>
+        <span id="fetchPriceScore" class="system">fetch price/score</span>
+        <span id="fetchDominance" class="system">fetch dominance</span>
     </div>
     <div class="vp-list">
         <h4>Briefing List</h4>
@@ -61,7 +85,7 @@
 
     document.querySelector('.send-btn-complete').addEventListener('click', function() {
         document.querySelector('#flag7').textContent = "sent";
-        axios.get('/create/complete')
+        axios.post('/create/complete')
             .then((response) => {
                 console.log("success: ", response);
             })
@@ -72,7 +96,7 @@
 
     document.querySelector('.send-btn-completevp').addEventListener('click', function() {
         document.querySelector('#flag8').textContent = "sent";
-        axios.get('/chart/price-analysis')
+        axios.post('/chart/price-analysis')
             .then(response => {
                 console.log("success: ", response);
             })
@@ -80,6 +104,50 @@
                 console.error("failure: ", err);
             })
     });
+
+    document.querySelector('.send-btn-completedm').addEventListener('click', function() {
+        document.querySelector('#flag9').textContent = "sent";
+        axios.post('/dominance/create')
+            .then(response => {
+                console.log("success: ", response);
+            })
+            .catch(err => {
+                console.error("failure: ", err);
+            })
+    });
+
+    document.querySelector('#fetchBlockmedia').addEventListener('click', function() {
+        document.querySelector('#fetchBlockmedia').classList.add('sent');
+        axios.post('/crawl/articles')
+            .then(response => {
+                console.log("success: ", response);
+            })
+            .catch(err => {
+                console.error("failure: ", err);
+            })
+    })
+
+    document.querySelector('#fetchPriceScore').addEventListener('click', function() {
+        document.querySelector('#fetchPriceScore').classList.add('sent');
+        axios.post('/chart/save')
+            .then(response => {
+                console.log("success: ", response);
+            })
+            .catch(err => {
+                console.error("failure: ", err);
+            })
+    })
+
+    document.querySelector('#fetchDominance').addEventListener('click', function() {
+        document.querySelector('#fetchDominance').classList.add('sent');
+        axios.post('/dominance/collect')
+            .then(response => {
+                console.log("success: ", response);
+            })
+            .catch(err => {
+                console.error("failure: ", err);
+            })
+    })
 
 
 </script>

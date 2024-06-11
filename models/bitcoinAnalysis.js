@@ -106,6 +106,18 @@ const BitcoinAnalysis = sequelize.define('BitcoinAnalysis', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    daychart_imgUrl : {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    weekchart_imgUrl : {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    monthchart_imgUrl : {
+        type: DataTypes.STRING,
+        allowNull: true
+    }
 }, {
     tableName: 'Bitcoin_Analysis',
     timestamps: false
