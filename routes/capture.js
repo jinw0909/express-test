@@ -8,12 +8,12 @@ const plainDb = require('../plainConnection'); // Import the plain DB connection
 
 // Configure AWS S3
 const s3 = new AWS.S3({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: process.env.AWS_REGION
+    accessKeyId: process.env.S3_KEY,
+    secretAccessKey: process.env.S3_PASSWORD,
+    region: process.env.S3_REGION
 });
 
-router.get('/', async function(req, res, next) {
+const capture = async function(req, res) {
     let browser;
     try {
         // Launch browser and navigate to the page
@@ -83,190 +83,18 @@ router.get('/', async function(req, res, next) {
             monthchart_imgUrl: monthImageUrl
         });
 
-        res.send(`Day chart screenshot saved to S3: ${dayImageUrl}, Month chart screenshot saved to S3: ${monthImageUrl}`);
+        if (res) res.send(`Day chart screenshot saved to S3: ${dayImageUrl}, Month chart screenshot saved to S3: ${monthImageUrl}`);
     } catch (error) {
         console.error('Error:', error);
-        res.status(500).send('Error processing request');
+        if (res) res.status(500).send('Error processing request');
     } finally {
         if (browser) {
             await browser.close();
         }
     }
-});
+};
 
-// router.get('/premium', async function(req, res) {
-//     // Implement logic for the /premium route
-//     let browser;
-//     try {
-//         // Launch browser and navigate to the page
-//         browser = await puppeteer.launch({
-//             args: ['--no-sandbox', '--disable-setuid-sandbox']
-//         });
-//         const page = await browser.newPage();
-//         await page.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
-//
-//         // Increase timeout and wait for the canvas elements
-//         console.log('Waiting for #chart to load...');
-//         await page.waitForSelector('canvas', { timeout: 60000 }); // Increase timeout to 60 seconds
-//
-//         // Select the canvas elements and take screenshots
-//         const chartElement = await page.$('.tv-lightweight-charts');
-//
-//         if (!chartElement) {
-//             throw new Error('One or more elements not found on the page');
-//         }
-//
-//         const chartBuffer = await chartElement.screenshot();
-//
-//         await browser.close();
-//
-//         // Prepare S3 upload parameters
-//         const chartS3Params = {
-//             Bucket: 's3bucketjinwoo',
-//             Key: `premiumchart-${uuidv4()}.png`,
-//             Body: chartBuffer,
-//             ContentType: 'image/png'
-//         };
-//
-//         // Upload both screenshots to S3
-//         const chartS3Response = await s3.upload(chartS3Params);
-//
-//
-//         // Get the URLs from the S3 responses
-//         const chartImageUrl = chartS3Response.Location;
-//
-//         res.send(`premium chart screenshot saved to S3: ${chartImageUrl}`);
-//     } catch (error) {
-//         console.error('Error:', error);
-//         res.status(500).send('Error processing request');
-//     } finally {
-//         if (browser) {
-//             await browser.close();
-//         }
-//     }
-// });
-// router.get('/premium', async function(req, res) {
-//     let browser;
-//     try {
-//         // Launch browser and navigate to the page
-//         browser = await puppeteer.launch({
-//             args: ['--no-sandbox', '--disable-setuid-sandbox']
-//         });
-//         const page = await browser.newPage();
-//         await page.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
-//
-//         // Increase timeout and wait for the canvas elements
-//         console.log('Waiting for #chart to load...');
-//         await page.waitForSelector('canvas', { timeout: 60000 }); // Increase timeout to 60 seconds
-//
-//         // Select the canvas elements and take screenshots
-//         const chartElement = await page.$('.tv-lightweight-charts');
-//
-//         if (!chartElement) {
-//             throw new Error('Chart element not found on the page');
-//         }
-//
-//         const chartBuffer = await chartElement.screenshot();
-//
-//         // Prepare S3 upload parameters
-//         const chartS3Params = {
-//             Bucket: 's3bucketjinwoo',
-//             Key: `premiumchart-${uuidv4()}.png`,
-//             Body: chartBuffer,
-//             ContentType: 'image/png'
-//         };
-//
-//         // Upload the screenshot to S3
-//         const chartS3Response = await s3.upload(chartS3Params).promise();
-//
-//         // Get the URL from the S3 response
-//         const chartImageUrl = chartS3Response.Location;
-//
-//         res.send(`Premium chart screenshot saved to S3: ${chartImageUrl}`);
-//     } catch (error) {
-//         console.error('Error:', error);
-//         res.status(500).send('Error processing request');
-//     } finally {
-//         if (browser) {
-//             await browser.close();
-//         }
-//     }
-// });
-router.get('/premium', async function(req, res) {
-    let browser;
-    try {
-        // Query the database for the ten most recent rows
-        const recentRows = await plainDb.query('SELECT id, symbol FROM beuliping ORDER BY datetime DESC LIMIT 5');
-
-        if (recentRows.length === 0) {
-            return res.status(404).send('No recent rows found');
-        }
-
-        // Launch the browser
-        browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-
-        // Process each row
-        for (const row of recentRows) {
-            const { id, symbol } = row;
-
-            // Construct the URL
-            const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
-
-            // Open a new page and navigate to the URL
-            const page = await browser.newPage();
-            await page.goto(url, { waitUntil: 'networkidle0' });
-
-            // Wait for the chart to load
-            console.log(`Waiting for #chart to load for symbol ${symbol}...`);
-            await page.waitForSelector('canvas', { timeout: 60000 });
-
-            // Select the canvas element and take a screenshot
-            const chartElement = await page.$('.tv-lightweight-charts');
-
-            if (!chartElement) {
-                console.error(`Chart element not found for symbol ${symbol}`);
-                await page.close();
-                continue;
-            }
-
-            const chartBuffer = await chartElement.screenshot();
-
-            // Prepare S3 upload parameters
-            const chartS3Params = {
-                Bucket: 's3bucketjinwoo',
-                Key: `premiumchart-${uuidv4()}.png`,
-                Body: chartBuffer,
-                ContentType: 'image/png'
-            };
-
-            // Upload the screenshot to S3
-            const chartS3Response = await s3.upload(chartS3Params).promise();
-
-            // Get the URL from the S3 response
-            const chartImageUrl = chartS3Response.Location;
-
-            // Update the database with the image URL
-            await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
-
-            console.log(`Updated row ${id} with image URL ${chartImageUrl}`);
-
-            // Close the page
-            await page.close();
-        }
-
-        res.send('Screenshots captured and updated successfully.');
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).send('Error processing request');
-    } finally {
-        if (browser) {
-            await browser.close();
-        }
-    }
-});
-router.get('/dominance', async function(req, res) {
+const captureDominance = async function(req, res) {
     let browser;
     try {
         // Launch browser and navigate to the page
@@ -336,15 +164,100 @@ router.get('/dominance', async function(req, res) {
             dominance_imgUrl: doughnutImageUrl
         });
 
-        res.send(`Line chart screenshot saved to S3: ${lineImageUrl}, Doughnut chart screenshot saved to S3: ${doughnutImageUrl}`);
+        if (res) res.send(`Line chart screenshot saved to S3: ${lineImageUrl}, Doughnut chart screenshot saved to S3: ${doughnutImageUrl}`);
     } catch (error) {
         console.error('Error:', error);
-        res.status(500).send('Error processing request');
+        if (res) res.status(500).send('Error processing request');
     } finally {
         if (browser) {
             await browser.close();
         }
     }
-});
+};
 
-module.exports = router;
+const capturePremium = async function(req, res) {
+    let browser;
+    try {
+        // Query the database for the ten most recent rows
+        const recentRows = await plainDb.query('SELECT id, symbol FROM beuliping ORDER BY datetime DESC LIMIT 5');
+
+        if (recentRows.length === 0) {
+            if (res) return res.status(404).send('No recent rows found');
+            return;
+        }
+
+        // Launch the browser
+        browser = await puppeteer.launch({
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        // Process each row
+        for (const row of recentRows) {
+            const { id, symbol } = row;
+
+            // Construct the URL
+            const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
+
+            // Open a new page and navigate to the URL
+            const page = await browser.newPage();
+            await page.goto(url, { waitUntil: 'networkidle0' });
+
+            // Wait for the chart to load
+            console.log(`Waiting for #chart to load for symbol ${symbol}...`);
+            await page.waitForSelector('canvas', { timeout: 60000 });
+
+            // Select the canvas element and take a screenshot
+            const chartElement = await page.$('.tv-lightweight-charts');
+
+            if (!chartElement) {
+                console.error(`Chart element not found for symbol ${symbol}`);
+                await page.close();
+                continue;
+            }
+
+            const chartBuffer = await chartElement.screenshot();
+
+            // Prepare S3 upload parameters
+            const chartS3Params = {
+                Bucket: 's3bucketjinwoo',
+                Key: `premiumchart-${uuidv4()}.png`,
+                Body: chartBuffer,
+                ContentType: 'image/png'
+            };
+
+            // Upload the screenshot to S3
+            const chartS3Response = await s3.upload(chartS3Params).promise();
+
+            // Get the URL from the S3 response
+            const chartImageUrl = chartS3Response.Location;
+
+            // Update the database with the image URL
+            await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
+
+            console.log(`Updated row ${id} with image URL ${chartImageUrl}`);
+
+            // Close the page
+            await page.close();
+        }
+
+        if (res) res.send('Screenshots captured and updated successfully.');
+    } catch (error) {
+        console.error('Error:', error);
+        if (res) res.status(500).send('Error processing request');
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+};
+
+router.get('/', capture);
+router.get('/dominance', captureDominance);
+router.get('/premium', capturePremium);
+
+module.exports = {
+    router,
+    capture,
+    captureDominance,
+    capturePremium
+};

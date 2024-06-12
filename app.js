@@ -34,7 +34,7 @@ var chartRouter = require('./routes/chart');
 var dominanceRouter = require('./routes/dominance');
 var handleimgRouter = require('./routes/handleimg');
 var healthcheckRouter = require('./routes/healthcheck');
-var captureRouter = require('./routes/capture');
+var captureRouter = require('./routes/capture').router;
 var plainRouter = require('./routes/plain');
 
 var app = express();

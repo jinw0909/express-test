@@ -23,7 +23,7 @@ async function translateText(content, lang) {
         { role: "user", content: `Please translate the following text into ${lang}. I only need the translated output, without any additional comments or indicators. Please ensure to apply honorifics when translating into Korean or Japanese. Text: ${content}`},
     ];
 
-    const response  = await openai.chat.completions.create({
+    const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: messages
     })
@@ -316,14 +316,14 @@ async function runChartConversation() {
             type: "function",
             function: {
                 name: "get_coinprice_week",
-                description: "returns the bitcoin price movement within the last seven days. "
+                description: "returns the bitcoin price movement within the last seven days. The unit is dollars."
             }
         },
         {
             type: "function",
             function: {
                 name: "get_coinprice_day",
-                description: "returns the bitcoin price movement within the last 24 hours. "
+                description: "returns the bitcoin price movement within the last 24 hours. The unit is dollars."
             }
         }
     ]

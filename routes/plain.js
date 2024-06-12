@@ -16,36 +16,34 @@ router.get('/', async (req, res) => {
 
 router.get('/test', async (req, res) => {
     try {
-        // Query the last row ordered by datetime
-        const [lastRow] = await plainDb.query(`
-            SELECT id, symbol, datetime
-            FROM beuliping
-            ORDER BY datetime DESC
-            LIMIT 1
-        `);
+        const [latestRow] = await plainDb.query('SELECT datetime FROM beuliping ORDER BY id DESC LIMIT 1');
 
-        if (!lastRow) {
-            return res.status(404).send('No rows found');
+        if (latestRow.length === 0) {
+            if (res) return res.status(404).send('No rows found');
+            return;
         }
 
-        // Extract the hour from the last row's datetime
-        const lastDatetime = new Date(lastRow.datetime);
-        const lastHour = lastDatetime.getHours();
-        const lastDate = lastDatetime.toISOString().split('T')[0]; // Extract the date part
+        console.log(latestRow);
 
-        // Query to retrieve all rows that match the hour of the last row's datetime
-        const results = await plainDb.query(`
-            SELECT id, symbol, datetime
-            FROM beuliping
-            WHERE DATE(datetime) = ? AND HOUR(datetime) = ?
+        const latestDatetime = latestRow.datetime;
+
+        // Retrieve all rows that were created within 5 minutes before the latest datetime
+        const recentRows = await plainDb.query(`
+            SELECT id, symbol 
+            FROM beuliping 
+            WHERE datetime BETWEEN DATE_SUB(?, INTERVAL 5 MINUTE) AND ?
             ORDER BY datetime DESC
-        `, [lastDate, lastHour]);
+        `, [latestDatetime, latestDatetime]);
 
-        if (results.length === 0) {
-            return res.status(404).send('No recent rows found');
+        // Log the recent rows for debugging
+        console.log('Recent Rows:', recentRows);
+
+        if (recentRows.length === 0) {
+            if (res) return res.status(404).send('No recent rows found');
+            return;
         }
 
-        res.json(results);
+        res.json(recentRows);
     } catch (error) {
         console.error('Error querying schema2:', error);
         res.status(500).send('Error querying schema2');
