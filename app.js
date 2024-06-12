@@ -11,8 +11,6 @@ const sequelize = require('./sequelize');
 var debug = require('debug')('express-app:app');
 var http = require('http');
 const axios = require('axios');
-const cron = require('node-cron');
-require('./cronJobs');
 
 const { Viewpoint, Analysis } = require('./models');
 
