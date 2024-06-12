@@ -61,14 +61,19 @@
             }
         });
 
+        // Sort the finalDominance data
+        const sortedData = Object.entries(finalDominance).sort((a, b) => b[1] - a[1]);
+        const sortedLabels = sortedData.map(item => item[0].toUpperCase()); // Capitalize labels
+        const sortedValues = sortedData.map(item => item[1]);
+
         // Create the doughnut chart for finalDominance
         const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
         const doughnutChart = new Chart(ctxDoughnut, {
             type: 'doughnut',
             data: {
-                labels: Object.keys(finalDominance),
+                labels: sortedLabels,
                 datasets: [{
-                    data: Object.values(finalDominance),
+                    data: sortedValues,
                     backgroundColor: [
                         'rgba(255, 99, 132, 0.2)',
                         'rgba(54, 162, 235, 0.2)',
@@ -97,7 +102,40 @@
                 }]
             },
             options: {
-                responsive: true
+                responsive: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw !== undefined ? context.raw.toFixed(2) + '%' : '';
+                                return `${label}: ${value}`;
+                            }
+                        }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'right',
+                        labels: {
+                            generateLabels: function(chart) {
+                                const data = chart.data;
+                                if (data.labels.length && data.datasets.length) {
+                                    return data.labels.map((label, i) => {
+                                        const meta = chart.getDatasetMeta(0);
+                                        const value = data.datasets[0].data[i].toFixed(2) + '%';
+                                        return {
+                                            text: `${label}: ${value}`,
+                                            fillStyle: data.datasets[0].backgroundColor[i],
+                                            hidden: meta.data[i].hidden,
+                                            index: i
+                                        };
+                                    });
+                                }
+                                return [];
+                            }
+                        }
+                    }
+                }
             }
         });
     });
