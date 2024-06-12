@@ -178,8 +178,28 @@ const captureDominance = async function(req, res) {
 const capturePremium = async function(req, res) {
     let browser;
     try {
-        // Query the database for the ten most recent rows
-        const recentRows = await plainDb.query('SELECT id, symbol FROM beuliping ORDER BY datetime DESC LIMIT 5');
+
+        const [latestRow] = await plainDb.query('SELECT datetime FROM beuliping ORDER BY id DESC LIMIT 1');
+
+        if (latestRow.length === 0) {
+            if (res) return res.status(404).send('No rows found');
+            return;
+        }
+
+        console.log(latestRow);
+
+        const latestDatetime = latestRow.datetime;
+
+        // Retrieve all rows that were created within 5 minutes before the latest datetime
+        const recentRows = await plainDb.query(`
+            SELECT id, symbol 
+            FROM beuliping 
+            WHERE datetime BETWEEN DATE_SUB(?, INTERVAL 5 MINUTE) AND ?
+            ORDER BY datetime DESC
+        `, [latestDatetime, latestDatetime]);
+
+        // Log the recent rows for debugging
+        console.log('Recent Rows:', recentRows);
 
         if (recentRows.length === 0) {
             if (res) return res.status(404).send('No recent rows found');
