@@ -12,6 +12,7 @@ var debug = require('debug')('express-app:app');
 var http = require('http');
 const axios = require('axios');
 const cron = require('node-cron');
+require('./cronJobs');
 
 const { Viewpoint, Analysis } = require('./models');
 
@@ -34,6 +35,7 @@ var dominanceRouter = require('./routes/dominance');
 var handleimgRouter = require('./routes/handleimg');
 var healthcheckRouter = require('./routes/healthcheck');
 var captureRouter = require('./routes/capture');
+var plainRouter = require('./routes/plain');
 
 var app = express();
 
@@ -78,6 +80,7 @@ app.use('/dominance', dominanceRouter);
 app.use('/handleimg', handleimgRouter);
 app.use('/healthcheck', healthcheckRouter);
 app.use('/capture', captureRouter);
+app.use('/plain', plainRouter);
 
 // cron.schedule('0 */4 * * *', async () => {
 //   console.log('Running a task every four hours');
