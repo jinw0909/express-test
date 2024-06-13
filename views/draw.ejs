@@ -75,19 +75,19 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Price',
-                        data: priceData,
+                        label: 'Goya Score',
+                        data: scoreData,
                         borderColor: 'rgba(75, 192, 192, 1)',
                         borderWidth: 1,
-                        yAxisID: 'y',
+                        yAxisID: 'y1',
                         cubicInterpolationMode: 'monotone',
                         tension: 0.4
                     }, {
-                        label: 'Goya Score',
-                        data: scoreData,
+                        label: 'Price',
+                        data: priceData,
                         borderColor: 'rgba(153, 102, 255, 1)',
                         borderWidth: 1,
-                        yAxisID: 'y1',
+                        yAxisID: 'y',
                         cubicInterpolationMode: 'monotone',
                         tension: 0.4
                     }]
