@@ -274,6 +274,33 @@ const capturePremium = async function(req, res) {
 router.get('/', capture);
 router.get('/dominance', captureDominance);
 router.get('/premium', capturePremium);
+router.get('/test', async (req, res) => {
+    try {
+        // Launch a headless browser
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        // Open a new page
+        const page = await browser.newPage();
+
+        // Navigate to a webpage
+        await page.goto('https://www.google.com');
+
+        // Capture a screenshot
+        const screenshot = await page.screenshot({ encoding: 'base64' });
+
+        // Close the browser
+        await browser.close();
+
+        // Send the screenshot as the response
+        res.status(200).send(`<img src="data:image/png;base64,${screenshot}" />`);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error occurred while running Puppeteer');
+    }
+})
 
 module.exports = {
     router,
