@@ -161,7 +161,7 @@ async function runCreateConversation(candidates) {
             type: "function",
             function: {
                 name: "get_candidate_articles",
-                description: "Get selected candidate articles based on their IDs from articles published within 24 hours in Blockmedia",
+                description: "Get selected candidate articles based on their IDs from articles published within 12 hours in Blockmedia",
                 parameters: {
                     "type": "object",
                     "properties": {

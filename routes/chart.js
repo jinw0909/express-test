@@ -3,7 +3,6 @@ var router = express.Router();
 const axios = require('axios');
 const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
 const { v4: uuidv4 } = require('uuid');
-
 const OpenAi = require('openai');
 const openai = new OpenAi({
     apiKey : process.env.API_KEY
@@ -161,7 +160,7 @@ async function getAnalysisAndUpdate() {
         const mp3Vn = await generateTTS(combinedTextVn, 'Vietnamese', recentAnalysis.id);
         const mp3Cn = await generateTTS(combinedTextCn, 'Chinese', recentAnalysis.id);
 
-        const images = await captureChart();
+        //const images = await captureChart();
 
         await recentAnalysis.update({
             day_jp: dayJp,
@@ -184,9 +183,7 @@ async function getAnalysisAndUpdate() {
             mp3_jp: mp3Jp,
             mp3_kr: mp3Kr,
             mp3_vn: mp3Vn,
-            mp3_cn: mp3Cn,
-            daychart_imgUrl: images[0],
-            monthchart_imgUrl: images[1]
+            mp3_cn: mp3Cn
         });
     } catch (error) {
         console.error(error);

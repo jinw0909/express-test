@@ -11,7 +11,7 @@ function getKSTTime() {
 console.log(`[${getKSTTime()}] Cron jobs scheduled.`);
 
 // Cron job to run at 8:45 AM and 8:45 PM KST every day for /capture route
-cron.schedule('45 8,20 * * *', async () => {
+cron.schedule('50 8,20 * * *', async () => {
     console.log(`[${getKSTTime()}] Invoking /capture`);
     try {
         await capture();
@@ -24,7 +24,7 @@ cron.schedule('45 8,20 * * *', async () => {
 });
 
 // Cron job to run at 8:45 AM and 8:45 PM KST every day for /capture/dominance route
-cron.schedule('45 8,20 * * *', async () => {
+cron.schedule('50 8,20 * * *', async () => {
     console.log(`[${getKSTTime()}] Invoking /capture/dominance`);
     try {
         await captureDominance();

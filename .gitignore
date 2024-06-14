@@ -5,3 +5,5 @@ package-lock.json
 node_modules
 .ebextensions
 .temp
+BuildFile
+Procfile

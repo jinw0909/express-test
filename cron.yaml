@@ -1,5 +1,0 @@
-version: 1
-cron:
-  - name: "blockmedia"
-    url: "/crawl/articles"
-    schedule: "0 */4 * * *"
