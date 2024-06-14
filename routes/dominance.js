@@ -88,6 +88,18 @@ async function getDominanceData() {
     }
 }
 
+async function getDominanceAnalysis() {
+    try {
+        const dominanceAnalysis = await DominanceAnalysis.findOne({
+            order : [['createdAt', 'DESC']]
+        })
+        return dominanceAnalysis;
+    } catch (error) {
+        console.error('Error fetching dominance analysis');
+        throw error;
+    }
+}
+
 async function fetchGlobalMarketData() {
     const url = 'https://api.coingecko.com/api/v3/global';
 
@@ -232,6 +244,7 @@ router.get('/', async function(req, res, next) {
     try {
         let dominance = await getDominanceData();
         let data = JSON.parse(dominance);
+        let analysis = await getDominanceAnalysis();
         console.log("data: ", data);
         let goyaArr = data.map(el => {
             return el.goya_dominance;
