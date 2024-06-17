@@ -20,7 +20,7 @@ const Blockmedia = sequelize.define('Blockmedia', {
         allowNull: false
     },
     date: {
-        type: DataTypes.STRING,
+        type: DataTypes.DATE,
         allowNull: false
     },
     imageUrl : {
