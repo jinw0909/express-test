@@ -271,9 +271,9 @@ const capturePremium = async function(req, res) {
     }
 };
 
-router.get('/', capture);
-router.get('/dominance', captureDominance);
-router.get('/premium', capturePremium);
+router.post('/', capture);
+router.post('/dominance', captureDominance);
+router.post('/premium', capturePremium);
 router.get('/test', async (req, res) => {
     try {
         // Launch a headless browser

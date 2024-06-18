@@ -891,11 +891,12 @@ async function makeCandidates() {
     const finals = await recurseFinals(candidates);
 
     for (const candidate of finals) {
-        await Candidate.create({
+        await Candidate.upsert({
             articleId: candidate.id,
             summary: candidate.summary,
             reason: candidate.reason,
-            createdAt: new Date()
+            createdAt: new Date(),
+            updatedAt: new Date()
         });
     }
 

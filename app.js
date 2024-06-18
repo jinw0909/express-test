@@ -12,7 +12,6 @@ var debug = require('debug')('express-app:app');
 var http = require('http');
 const axios = require('axios');
 const cron = require('node-cron');
-require('./cronJobs');
 
 const { Viewpoint, Analysis } = require('./models');
 
@@ -43,7 +42,7 @@ console.log('env port: ', process.env.PORT);
 
 (async () => {
   try {
-    await sequelize.sync();
+    await sequelize.sync({alter: true});
     console.log('Database synchronized successfully');
   } catch (error) {
     console.error('Error synchronizing database:', error);

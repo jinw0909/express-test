@@ -64,7 +64,7 @@ const Translation = sequelize.define('Translation', {
         comment: '기사 내용 요약 (중국어)'
     },
     date: {
-        type: DataTypes.STRING,
+        type: DataTypes.DATE,
         allowNull: true,
         comment: '기사 발행 시간'
     },
