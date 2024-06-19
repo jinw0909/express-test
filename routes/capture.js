@@ -45,14 +45,14 @@ const capture = async function(req, res) {
 
         // Prepare S3 upload parameters
         const dayS3Params = {
-            Bucket: 's3bucketjinwoo',
+            Bucket: 'gpt-premium-charts',
             Key: `charts/day-chart-${uuidv4()}.png`,
             Body: dayBuffer,
             ContentType: 'image/png'
         };
 
         const monthS3Params = {
-            Bucket: 's3bucketjinwoo',
+            Bucket: 'gpt-premium-charts',
             Key: `charts/month-chart-${uuidv4()}.png`,
             Body: monthBuffer,
             ContentType: 'image/png'
@@ -126,14 +126,14 @@ const captureDominance = async function(req, res) {
 
         // Prepare S3 upload parameters
         const lineS3Params = {
-            Bucket: 's3bucketjinwoo',
+            Bucket: 'gpt-premium-charts',
             Key: `charts/line-chart-${uuidv4()}.png`,
             Body: lineBuffer,
             ContentType: 'image/png'
         };
 
         const doughnutS3Params = {
-            Bucket: 's3bucketjinwoo',
+            Bucket: 'gpt-premium-charts',
             Key: `charts/doughnut-chart-${uuidv4()}.png`,
             Body: doughnutBuffer,
             ContentType: 'image/png'
@@ -239,7 +239,7 @@ const capturePremium = async function(req, res) {
 
             // Prepare S3 upload parameters
             const chartS3Params = {
-                Bucket: 's3bucketjinwoo',
+                Bucket: 'gpt-premium-charts',
                 Key: `premiumchart-${uuidv4()}.png`,
                 Body: chartBuffer,
                 ContentType: 'image/png'

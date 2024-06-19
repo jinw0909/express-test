@@ -51,7 +51,7 @@ async function generateTTS(content, lang, id) {
             const buffer = Buffer.from(await mp3.arrayBuffer());
 
             const s3Params = {
-                Bucket: 's3bucketjinwoo',
+                Bucket: 'gpt-premium-charts',
                 Key: `bitcoin${id}_${lang}.mp3`,
                 Body: buffer,
                 ContentType: "audio/mpeg",
@@ -101,7 +101,7 @@ async function generateTTS(content, lang, id) {
 
                 // S3 upload parameters
                 const s3Params = {
-                    Bucket: 's3bucketjinwoo',
+                    Bucket: 'gpt-premium-charts',
                     Key: `bitcoin${id}_${lang}.mp3`,
                     Body: data.AudioStream,
                     ContentType: "audio/mpeg",
@@ -711,7 +711,7 @@ const createChartConfiguration = (labels, scores, prices, label) => {
 };
 const saveToS3 = async (buffer, label) => {
     const s3Params = {
-        Bucket: 's3bucketjinwoo',
+        Bucket: 'gpt-premium-charts',
         Key: `charts/${label}-${uuidv4()}.png`,
         Body: buffer,
         ContentType: 'image/png'

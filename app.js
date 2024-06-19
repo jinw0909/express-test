@@ -42,13 +42,12 @@ console.log('env port: ', process.env.PORT);
 
 (async () => {
   try {
-    await sequelize.sync({alter: true});
+    await sequelize.sync();
     console.log('Database synchronized successfully');
   } catch (error) {
     console.error('Error synchronizing database:', error);
   }
 })();
-
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -81,17 +80,53 @@ app.use('/healthcheck', healthcheckRouter);
 app.use('/capture', captureRouter);
 app.use('/plain', plainRouter);
 
-// cron.schedule('0 */4 * * *', async () => {
-//   console.log('Running a task every four hours');
-//
-//   // Make an API call
-//   try {
-//     const response = await axios.get(`${process.env.API_BASE_URL}/crawl/articles`);
-//     console.log('API call successful. Data:', response.data);
-//   } catch (error) {
-//     console.error('Error making API call:', error);
-//   }
-// });
+app.post('/', (req, res) => {
+  const payload = req.body;
+  console.log('Received POST request:', JSON.stringify(payload, null, 2));
+
+  // Validate payload structure
+  if (!payload || !payload.Records || !Array.isArray(payload.Records) || !payload.Records[0].body) {
+    console.error('Validation error: Invalid payload structure', JSON.stringify(payload, null, 2));
+    return res.status(400).json({ error: 'Invalid payload structure' });
+  }
+
+  // Parse the body if it's JSON string
+  let messageBody;
+  try {
+    messageBody = JSON.parse(payload.Records[0].body);
+  } catch (error) {
+    console.error('Error parsing message body:', error);
+    return res.status(400).json({ error: 'Invalid message body format' });
+  }
+
+  // Further validation on message body
+  if (!messageBody.Message || !messageBody.Message.ApplicationReference || !messageBody.Message.Function || !functions[messageBody.Message.Function]) {
+    console.error('Validation error: Missing required fields or unknown function', JSON.stringify(messageBody, null, 2));
+    return res.status(400).json({ error: 'Missing required fields or unknown function' });
+  }
+
+  try {
+    // Invoke the specified function with parameters
+    const functionName = messageBody.Message.Function;
+    const functionParams = messageBody.Message.Parameters || {};
+    functions[functionName](functionParams);
+
+    console.log('Processing message:', messageBody.Message.ApplicationReference);
+    res.status(200).json({ message: 'Request processed successfully' });
+  } catch (error) {
+    console.error('Processing error:', error, JSON.stringify(payload, null, 2));
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+const functions = {
+  processData: (params) => {
+    console.log('Processing data with params:', params);
+    // Your function logic here
+  },
+  // Add other functions as needed
+};
+
 
 app.get('/createdb', (req, res) => {
   let sql = 'CREATE DATABASE testdb';
@@ -101,6 +136,7 @@ app.get('/createdb', (req, res) => {
     console.log(result);
   });
 })
+
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
