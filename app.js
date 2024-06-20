@@ -1,3 +1,4 @@
+
 var createError = require('http-errors');
 var express = require('express');
 var cors = require('cors');
@@ -11,11 +12,8 @@ const sequelize = require('./sequelize');
 var debug = require('debug')('express-app:app');
 var http = require('http');
 const axios = require('axios');
-const cron = require('node-cron');
-
-const { Viewpoint, Analysis } = require('./models');
-
 require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
