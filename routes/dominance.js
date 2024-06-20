@@ -12,14 +12,14 @@ async function runDominanceConversation() {
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients." },
         { role: "system", content: "The dominance score represents the percentage share of a particular cryptocurrency in the entire cryptocurrency market. For example, if BTC's dominance score is 52, it means that Bitcoin occupies 52% of the total cryptocurrency market size. Additionally, the Goya dominance score is an indicator that can predict the overall upward and downward trends in the cryptocurrency market. If the Goya dominance score is on an upward trend, it can be expected that funds will flow into the coin market in the future. Conversely, if the Goya dominance score is on a downward trend, it can be expected that funds will flow out of the coin market in the future."},
-        { role: "user", content: "Analyze the current dominance state of the ten most dominant cryptocurrencies in the context of Bitcoin, Ethereum, and altcoins. The dominance index of the ten most dominant cryptocurrencies of the last seven hours is provided. Additionally, predict how the cryptocurrency market will change in the future based on the Goya dominance score over the past 7 hours. Send out the result in a plain text that can be seamlessly changed into real voice." },
+        { role: "user", content: "Analyze the current dominance state of the ten most dominant cryptocurrencies in the context of Bitcoin, Ethereum, and altcoins (means the rest except Bitcoin and Ethereum). The dominance index of the ten most dominant cryptocurrencies of the last twelve hours is provided. Additionally, predict how the cryptocurrency market will change in the future based on the Goya dominance score over the past twelve hours. When quoting the dominance scores of each cryptocurrency,  it should be rounded to the second decimal place. Additionally You should more focus on analyzing the dominance changes of each cryptocurrencies than analyzing the goya dominance score and predicting the future." },
     ]
     const tools = [
         {
             type: "function",
             function: {
                 name: "get_dominance_data",
-                description: "returns the recent 7 hour's dominance data of the ten crypto currencies and the recent 7 hour's Goya dominance indicator score"
+                description: "returns the recent 12 hour's dominance data of the ten crypto currencies and the recent 12 hour's Goya dominance indicator score. The first element in the array is the most recent data and onwards."
             }
         },
     ]
@@ -77,7 +77,7 @@ async function getGoyaDominance() {
 async function getDominanceData() {
     try {
         const dominanceData = await Dominance.findAll({
-            limit: 7,
+            limit: 12,
             order: [['createdAt', 'DESC']]
         })
         const dominanceJSON = JSON.stringify(dominanceData);
@@ -242,9 +242,12 @@ async function getRSIanalysis() {
 
 router.get('/', async function(req, res, next) {
     try {
+
+        const lang = req.query.lang || 'en';
+
         let dominance = await getDominanceData();
         let data = JSON.parse(dominance);
-        let analysis = await getDominanceAnalysis();
+        data = data.reverse();
         console.log("data: ", data);
         let goyaArr = data.map(el => {
             return el.goya_dominance;
@@ -252,7 +255,20 @@ router.get('/', async function(req, res, next) {
         console.log("goyaArr: ", goyaArr);
         let finalDominance = data[data.length - 1].dominance;
         console.log("finalDominance", finalDominance);
-        res.render("dominance", {goyDominance : goyaArr, dominance : finalDominance});
+
+        let analysisRaw = await getDominanceAnalysis();
+        const langSuffix = lang === 'en' ? '' : `_${lang}`;
+        console.log('langSuffix: ', langSuffix);
+
+        let analysis = {
+            time: analysisRaw.createdAt,
+            analysis: analysisRaw[`analysis${langSuffix}`],
+            mp3: analysisRaw[`mp3${langSuffix}`]
+        }
+
+        console.log("analysis: ", analysis);
+
+        res.render("dominance", {goyDominance : goyaArr, dominance : finalDominance, analysis : analysis});
     } catch (error) {
         console.error(error);
     }
@@ -294,10 +310,11 @@ router.post('/collect', async function(req, res) {
     try {
         const response = await axios.get('https://api.coingecko.com/api/v3/global');
         const dominance = response.data.data.market_cap_percentage;
-        console.log("dominance: ", dominance);
-        const goya = await axios.get('http://15.165.194.33/analysis/dominance?hour=1');
-        console.log("goya: ", goya);
-        const goyaDominance = goya.data.result[0].dominance;
+        // console.log("dominance: ", dominance);
+        // const goya = await axios.get('http://15.165.194.33/analysis/dominance?hour=1');
+        // console.log("goya: ", goya);
+        // const goyaDominance = goya.data.result[0].dominance;
+        const goyaDominance = (Math.random() * 10 + 5).toFixed(2);
         console.log("goyaDominance: ", goyaDominance);
         await Dominance.create({
             dominance,

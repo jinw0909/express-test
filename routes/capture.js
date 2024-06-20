@@ -21,6 +21,9 @@ const capture = async function(req, res) {
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
         const page = await browser.newPage();
+        await page.setViewport({
+            deviceScaleFactor: 2 // Set the device scale factor
+        });
         await page.goto('https://blocksquare-automation.com/chart/draw', { waitUntil: 'networkidle0' });
 
         // Increase timeout and wait for the canvas elements
@@ -102,7 +105,7 @@ const captureDominance = async function(req, res) {
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
         const page = await browser.newPage();
-        await page.goto('https://blocksquare-automation.com/dominance', { waitUntil: 'networkidle0' });
+        await page.goto('http://localhost:8080/dominance', { waitUntil: 'networkidle0' });
 
         // Increase timeout and wait for the canvas elements
         console.log('Waiting for #lineChart...');
@@ -118,6 +121,24 @@ const captureDominance = async function(req, res) {
         if (!lineElement || !doughnutElement) {
             throw new Error('One or more elements not found on the page');
         }
+
+        const boundingBox = await doughnutElement.boundingBox();
+        // Function to hover over specific coordinates on the canvas
+        // Function to add a delay
+        // const delay = time => new Promise(resolve => setTimeout(resolve, time));
+        // const hoverOverCanvas = async (x, y) => {
+        //     const xPos = boundingBox.x + x;
+        //     const yPos = boundingBox.y + y;
+        //     console.log(`Hovering at: (${xPos}, ${yPos})`); // Log coordinates
+        //     await page.mouse.move(xPos, yPos);
+        //     await delay(500); // Wait for 1 second to see the hover effect
+        // };
+        //
+        // // Hover over specific coordinates within the canvas
+        // // await hoverOverCanvas(150, 125); // Coordinates (50, 50)
+        // // await hoverOverCanvas(45, 200); // Coordinates (100, 100)
+        // await hoverOverCanvas(0, 0); // Coordinates (150, 150)
+
 
         const lineBuffer = await lineElement.screenshot();
         const doughnutBuffer = await doughnutElement.screenshot();

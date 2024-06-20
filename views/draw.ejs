@@ -121,19 +121,6 @@
 
         function renderAnalysis() {
             console.log("renderAnalysis()");
-            const resultsContainer = document.getElementById('analysis');
-            resultsContainer.innerHTML = '';
-            for (const key in analysis) {
-                if (analysis.hasOwnProperty(key)) {
-                    const div = document.createElement('div');
-                    div.className = 'result-div';
-                    div.innerHTML = `<strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${analysis[key]}`;
-                    resultsContainer.appendChild(div);
-                }
-            }
-        }
-        function renderAnalysis() {
-            console.log("renderAnalysis()");
 
             // Get the elements by their ids
             const dayContainer = document.getElementById('day');

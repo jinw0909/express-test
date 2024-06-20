@@ -199,11 +199,11 @@ async function runAnalysisConversation() {
             role: "system",
             content: "Through the analysis of the Goya score, you can predict the price of Bitcoin 24 to 48 hours in the future. If the Goya score increases, the price of Bitcoin will rise about 24 to 48 hours later, depending on the rate of increase. Conversely, if the Goya score decreases, the price of Bitcoin will fall after 24 to 48 hours, depending on the rate of decrease. If the price of Bitcoin rises or falls 24 to 48 hours after a rise or fall in the Goya score, it can be considered that the Goya score's prediction was successful.\n" +
                 "\n" +
-                "You can analyze the fluctuations of the Goya score as well as the actual changes in Bitcoin price within the same period, to calculate the points and instances where the Goya score's predictions were successful.\n" +
+                "You can analyze the fluctuations of the Goya score as well as the actual changes in Bitcoin price in USD within the same period, to calculate the points and instances where the Goya score's predictions were successful.\n" +
                 "\n" +
-                "Additionally, you can compare and analyze the fluctuations of the Goya score with the actual Bitcoin prices to roughly predict the price of Bitcoin 24 to 48 hours from the current time." +
+                "Additionally, you can compare and analyze the fluctuations of the Goya score with the actual Bitcoin prices in USD to roughly predict the price of Bitcoin 24 to 48 hours from the current time." +
                 "\n" +
-                "You can convey your analysis in English, Japanese, Korean, Vietnamese, and Chinese"
+                "You are capable to convey your analysis in English, Japanese, Korean, Vietnamese, and Chinese"
         },
         {
             role: "user",
@@ -215,21 +215,21 @@ async function runAnalysisConversation() {
             type: "function",
             function: {
                 name: "get_goyascore_day",
-                description: "returns the list of the Goya score and Bitcoin price within the last 24 hours. Each score and price in the array represents the score and price of the hour."
+                description: "returns the list of the Goya score and Bitcoin price within the last 24 hours. Each score and price in the array represents the score and price of the hour. The provided price unit is USD."
             }
         },
         {
             type: "function",
             function: {
                 name: "get_goyascore_week",
-                description: "returns the list of the Goya score and Bitcoin price within last 7 days. Each score in the array represents the average score and price of each day."
+                description: "returns the list of the Goya score and Bitcoin price within last 7 days. Each score in the array represents the average score and price of each day. The provided price unit is USD."
             }
         },
         {
             type: "function",
             function: {
                 name: "get_goyascore_month",
-                description: "returns the list of the Goya score and Bitcoin price within last 30 days. Each score in the array represents the average score and price of each day."
+                description: "returns the list of the Goya score and Bitcoin price within last 30 days. Each score in the array represents the average score and price of each day. The provided price unit is USD."
             }
         },
         {
@@ -289,9 +289,9 @@ async function runChartConversation() {
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. You are also capable of deriving the bitcoin market trend by analyzing the bitcoin price movement within a certain period, and capable of deriving the relationship between the trend and real-world events" },
         { role: "system", content: "Through the analysis of the Goya score, you can predict the price of Bitcoin 24 to 48 hours in the future. If the Goya score increases, the price of Bitcoin will rise about 24 to 48 hours later, depending on the rate of increase. Conversely, if the Goya score decreases, the price of Bitcoin will fall after 24 to 48 hours, depending on the rate of decrease. If the price of Bitcoin rises or falls 24 to 48 hours after a rise or fall in the Goya score, it can be considered that the Goya score's prediction was successful.\n" +
         "\n" +
-        "You can analyze the fluctuations of the Goya score of the past 7 days(168 hours) and the past 24 hours, as well as the actual changes in Bitcoin price within the same period, to calculate the points and instances where the Goya score's predictions were successful.\n" +
+        "You can analyze the fluctuations of the Goya score of the past 7 days(168 hours) and the past 24 hours, as well as the actual changes in Bitcoin price in USD within the same period, to calculate the points and instances where the Goya score's predictions were successful.\n" +
         "\n" +
-        "Additionally, you can compare and analyze the fluctuations of the Goya score with the actual Bitcoin prices to roughly predict the price of Bitcoin 24 to 48 hours from the current time."},
+        "Additionally, you can compare and analyze the fluctuations of the Goya score with the actual Bitcoin prices in USD to roughly predict the price of Bitcoin 24 to 48 hours from the current time."},
         { role: "user", content: "Based on the Goya score data within 7 days and within 24 hours, the actual bitcoin price movement data within 7 days and within 24 hours, please tell me some points where the Goya score prediction was highly successful. Also tell me what the bitcoin price would be like after 24 to 48 hours based on the Goya score data and your analysis"},
     ]
     const tools = [
@@ -881,7 +881,7 @@ router.post('/price-analysis', async function(req, res) {
 
         await getAnalysisAndUpdate();
 
-        res.redirect('/chart/draw');
+        res.send('ok');
     } catch (error) {
         console.error(error);
         throw error;
@@ -891,9 +891,7 @@ router.post('/price-analysis', async function(req, res) {
 
 router.get('/draw', async function(req, res) {
    try {
-
        const lang = req.query.lang || 'en';
-
        const [day, week, month] = await Promise.all([
            BitcoinPrice.findOne({ where: { period: 'day' }, order: [['requestTime', 'DESC']] }),
            BitcoinPrice.findOne({ where: { period: 'week' }, order: [['requestTime', 'DESC']] }),
@@ -921,13 +919,6 @@ router.get('/draw', async function(req, res) {
            mp3: analysisRaw[`mp3${langSuffix}`]
        };
 
-       // let analysis = {
-       //     time: analysisRaw.requestTime,
-       //     day: analysisRaw.day,
-       //     week: analysisRaw.week,
-       //     month: analysisRaw.month,
-       //     prediction: analysisRaw.prediction
-       // }
        console.log("analysis: ", analysis);
        res.render('draw', {data: data, analysis: analysis})
    } catch (error) {

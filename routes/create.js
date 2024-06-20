@@ -10,10 +10,7 @@ const openai = new OpenAi({
 
 const { Sequelize } = require("sequelize");
 const { Op } = require('sequelize');
-const multer = require("multer");
 const AWS = require("aws-sdk");
-// const Viewpoint = require("../viewpoint");
-// const Analysis = require('../analysis');
 const { Blockmedia, Viewpoint, Analysis, Candidate, Translation } = require('../models');
 async function getCoinPriceWeek() {
     try {
@@ -39,116 +36,6 @@ async function getCoinPriceDay() {
 
 //get latest 5 articles from blockmedia and save it to the db
 //also return the data for further processing (for test only)
-async function getLatestArticle() {
-    try {
-        let baseURL = process.env.API_BASE_URL
-        const response = await fetch(`${baseURL}/crawl/articles`);
-
-        // Check if the response was successful
-        if (!response.ok) {
-            throw new Error('Network response was not ok: ' + response.statusText);
-        }
-
-        const data = await response.json();
-        console.log("article data: ", data);
-        return JSON.stringify(data, null, 2);
-    } catch(err) {
-        console.error(err);
-        return { error: err.message }
-    }
-}
-
-async function get24articles() {
-    try {
-        //Calculate the datetime 24 hours ago
-        const yesterday = new Date(new Date() - 24 * 60 * 60 * 1000);
-        const twelveHoursAgo = new Date(new Date() - 12 * 60 * 60 * 1000);
-
-        const articles = await Blockmedia.findAll({
-            where: {
-                createdAt: {
-                    [Sequelize.Op.gte]: twelveHoursAgo
-                }
-            }
-        })
-        if (!articles.length) {
-            console.log('No articles published in the last 12 hours');
-            return JSON.stringify([]);
-        }
-        console.log("Article data: ", articles);
-        // const data = await response.json();
-        return JSON.stringify(articles, null, 2);
-    } catch(err) {
-        console.error(err);
-        return { error: err.message }
-    }
-}
-
-async function runIndexConversation() {
-    //Step 1 : send the conversation and available functions to the model
-    const messages = [
-        { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-        { role: "user", content: "From the articles of Blockmedia within the past 24 hours, select five articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, and give me each article's id and the reason for its selection in a json format. Don't improvise the id and search from the provided function call result."},
-        // { role: "function", name: "get_blockmedia_articles_24"},
-        { role: "assistant", content: '{"selected_articles" : [{"id": 523806, "reason": "This article discusses BNP Paribas\' investment in a Bitcoin spot ETF managed by BlackRock, marking a significant entry by one of Europe\'s largest banks into the cryptocurrency space. The move reflects growing institutional interest in cryptocurrencies, which can be a bullish indicator for the market."}, {"id": 524335, "reason" : "Coinbase, a major cryptocurrency exchange in the U.S., reported a substantial increase in revenue and profits due to the surge in Bitcoin prices. This reflects heightened trading activity and could signify ongoing interest and investment in the cryptocurrency from both retail and institutional investors."}, {"id": 523502, "reason": "The delay in expected rate cuts by the Federal Reserve could have implications for the cryptocurrency market. Typically, lower interest rates can lead to higher investments in risk assets like cryptocurrencies, so any delays can affect market sentiment and investment flows."}, {"id": 523654, "reason": "Although Fed Chair Jerome Powell indicated that an immediate rate hike isn\'t forthcoming, the ongoing concerns about inflation and economic overheating can create a volatile environment for cryptocurrencies, as investors might reassess risk assets."}, {"id": 523725, "reason": "This article covers how Bitcoin adoption in El Salvador and other Latin American countries is influencing the regional economy and sparking a widespread interest in cryptocurrencies. The regional adoption can play a crucial role in highlighting the utility and acceptance of cryptocurrencies on a broader scale. These articles provide insights into regulatory movements, economic conditions, and significant market activities that are crucial for understanding the current trends and future movements of the cryptocurrency market."}]'},
-        { role: "user", content: "From the articles of Blockmedia within the past 24 hours, select five articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, and give me each article's id and the reason for its selection in a json format with a key of 'selected_articles'. Don't improvise the id and search the article id from the provided function call result."},
-    ];
-    const tools = [
-        {
-            type: "function",
-            function: {
-                name: "get_blockmedia_articles_24",
-                description: "returns the list of all the articles published by Blockmedia within 24 hours in a JSON format",
-            }
-        }
-    ]
-
-    const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: messages,
-        tools: tools,
-        tool_choice : "auto", //auto is default, but we'll be explicit
-        response_format: {type: "json_object"}
-    });
-    const responseMessage = response.choices[0].message;
-
-    // Step 2: check if the model wanted to call a function
-    const toolCalls = responseMessage.tool_calls;
-    if (responseMessage.tool_calls) {
-        // Step3. call the function
-        // Note: the JSON response may not always be valid; be sure to handle errors
-        const availableFunctions = {
-            get_blockmedia_articles_24 : get24articles
-        }; //only one function in this example, but you can have multiple
-        messages.push(responseMessage); //extend the conversation with assistant's reply
-        for (const toolCall of toolCalls) {
-            const functionName = toolCall.function.name;
-            console.log("functionName: ", functionName);
-            const functionToCall = availableFunctions[functionName];
-            const functionArgs = JSON.parse(toolCall.function.arguments || '{}');
-            const functionResponse = await functionToCall(
-                functionArgs.location,
-                functionArgs.unit
-            );
-            console.log("functionResponse: ", functionResponse);
-            messages.push({
-                tool_call_id: toolCall.id,
-                role: "tool",
-                name: functionName,
-                content: functionResponse,
-            }); //extend the conversation with function response
-        }
-
-        const secondResponse = await openai.chat.completions.create({
-            //model: "gpt-3.5-turbo-0125",
-            model: "gpt-4o",
-            messages: messages,
-            response_format: {type: "json_object"}
-        });
-        return secondResponse.choices;
-    }
-
-}
 
 async function runCreateConversation(candidates) {
     //Step 1 : send the conversation and available functions to the model
@@ -242,22 +129,6 @@ async function getCandidates(indexList) {
         throw err;
     }
 }
-async function getRecent() {
-    try {
-        const recentAnalyses = await Analysis.findAll({
-            order: [['createdAt', 'DESC']], //Order by 'createdAt' in descending order
-            limit: 4
-        });
-        const analyses = recentAnalyses.map(analysis => {
-            return { id: analysis.id, analysis: analysis.analysis, summary: analysis.summary}
-        });
-        return analyses;
-    } catch (error) {
-        console.error("Error fetching recent analysis:", error);
-        throw error;
-    }
-}
-
 async function getRecentAndUpdate() {
     try {
         const recentAnalyses = await Analysis.findAll({
@@ -299,37 +170,6 @@ async function getRecentAndUpdate() {
                 const mp3Vn = await generateTTS(analysisVn, 'Vietnamese', analysis.id);
                 const mp3Cn = await generateTTS(analysisCn, 'Chinese', analysis.id);
 
-                // Update the Analysis entry with values from the Blockmedia entry
-                // await analysis.update({
-                //     title: title,
-                //     title_kr: blockmediaEntry.title,
-                //     title_jp: titleJp,
-                //     title_vn: titleVn,
-                //     title_cn: titleCn,
-                //     content: blockmediaEntry.content,
-                //     imageUrl: blockmediaEntry.imageUrl,
-                //     date: blockmediaEntry.date,
-                //     publisher: blockmediaEntry.publisher,
-                //     analysis_jp: analysisJp,
-                //     analysis_kr: analysisKr,
-                //     analysis_vn: analysisVn,
-                //     analysis_cn: analysisCn,
-                //     summary_jp: summaryJp,
-                //     summary_kr: summaryKr,
-                //     summary_vn: summaryVn,
-                //     summary_cn: summaryCn,
-                //     content: content,
-                //     content_jp: contentJp,
-                //     content_kr: contentKr,
-                //     content_vn: contentVn,
-                //     content_cn: contentCn,
-                //     updatedAt: new Date(),
-                //     mp3: mp3En, // Path or URL to the English MP3 file
-                //     mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
-                //     mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
-                //     mp3_vn: mp3Vn, // Path or URL to the Vietnamese MP3 file
-                //     mp3_cn: mp3Cn // Path or URL to the Chinese MP3 file
-                // });
                 await Translation.upsert({
                     id: analysis.id,
                     title: title,
@@ -356,6 +196,7 @@ async function getRecentAndUpdate() {
                     summary_vn: summaryVn,
                     summary_cn: summaryCn,
                     updatedAt: new Date(),
+                    createdAt: new Date(),
                     mp3: mp3En, // Path or URL to the English MP3 file
                     mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
                     mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
@@ -378,144 +219,6 @@ async function getRecentAndUpdate() {
         throw error;
     }
 }
-
-async function getRecentAndUpdateTest() {
-    try {
-        const recentAnalyses = await Analysis.findAll({
-            order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
-            limit: 1
-        });
-
-        for (const analysis of recentAnalyses) {
-            // Retrieve the matching entry from the Blockmedia table
-            const blockmediaEntry = await Blockmedia.findOne({
-                where: { id: analysis.id }
-            });
-
-            if (blockmediaEntry) {
-
-                const title = await translateText(blockmediaEntry.title, 'English');
-                const titleJp = await translateText(blockmediaEntry.title, 'Japanese');
-                const titleVn = await translateText(blockmediaEntry.title, 'Vietnamese');
-                const titleCn = await translateText(blockmediaEntry.title, 'Chinese');
-
-                const analysisJp = await translateText(analysis.analysis, 'Japanese');
-                const analysisKr = await translateText(analysis.analysis, 'Korean');
-                const analysisVn = await translateText(analysis.analysis, 'Vietnamese');
-                const analysisCn = await translateText(analysis.analysis, 'Chinese');
-
-                const summaryJp = await translateText(analysis.summary, 'Japanese');
-                const summaryKr = await translateText(analysis.summary, 'Korean');
-                const summaryVn = await translateText(analysis.summary, 'Vietnamese');
-                const summaryCn = await translateText(analysis.summary, 'Chinese');
-
-                const content = await translateText(blockmediaEntry.content, 'English');
-                const contentJp = await translateText(blockmediaEntry.content, 'Japanese');
-                const contentVn = await translateText(blockmediaEntry.content, 'Vietnamese');
-                const contentCn = await translateText(blockmediaEntry.content, 'Chinese');
-
-                const mp3En = await generateTTS(analysis.analysis, 'English', analysis.id);
-                const mp3Jp = await generateTTS(analysisJp, 'Japanese', analysis.id);
-                const mp3Kr = await generateTTS(analysisKr, 'Korean', analysis.id);
-                const mp3Vn = await generateTTS(analysisVn, 'Vietnamese', analysis.id);
-                const mp3Cn = await generateTTS(analysisCn, 'Chinese', analysis.id);
-
-                // Update the Analysis entry with values from the Blockmedia entry
-                // await analysis.update({
-                //     title: title,
-                //     title_kr: blockmediaEntry.title,
-                //     title_jp: titleJp,
-                //     title_vn: titleVn,
-                //     title_cn: titleCn,
-                //     content: blockmediaEntry.content,
-                //     imageUrl: blockmediaEntry.imageUrl,
-                //     date: blockmediaEntry.date,
-                //     publisher: blockmediaEntry.publisher,
-                //     analysis_jp: analysisJp,
-                //     analysis_kr: analysisKr,
-                //     analysis_vn: analysisVn,
-                //     analysis_cn: analysisCn,
-                //     summary_jp: summaryJp,
-                //     summary_kr: summaryKr,
-                //     summary_vn: summaryVn,
-                //     summary_cn: summaryCn,
-                //     content: content,
-                //     content_jp: contentJp,
-                //     content_kr: contentKr,
-                //     content_vn: contentVn,
-                //     content_cn: contentCn,
-                //     updatedAt: new Date(),
-                //     mp3: mp3En, // Path or URL to the English MP3 file
-                //     mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
-                //     mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
-                //     mp3_vn: mp3Vn, // Path or URL to the Vietnamese MP3 file
-                //     mp3_cn: mp3Cn // Path or URL to the Chinese MP3 file
-                // });
-                await Translation.upsert({
-                    id: analysis.id,
-                    title: title,
-                    title_kr: blockmediaEntry.title,
-                    title_jp: titleJp,
-                    title_vn: titleVn,
-                    title_cn: titleCn,
-                    content: content,
-                    content_kr: blockmediaEntry.content,
-                    content_jp: contentJp,
-                    content_vn: contentVn,
-                    content_cn : contentCn,
-                    imageUrl: blockmediaEntry.imageUrl,
-                    date: blockmediaEntry.date,
-                    publisher: blockmediaEntry.publisher,
-                    analysis: analysis.analysis,
-                    analysis_jp: analysisJp,
-                    analysis_kr: analysisKr,
-                    analysis_vn: analysisVn,
-                    analysis_cn: analysisCn,
-                    summary: analysis.summary,
-                    summary_jp: summaryJp,
-                    summary_kr: summaryKr,
-                    summary_vn: summaryVn,
-                    summary_cn: summaryCn,
-                    updatedAt: new Date(),
-                    mp3: mp3En, // Path or URL to the English MP3 file
-                    mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
-                    mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
-                    mp3_vn: mp3Vn, // Path or URL to the Vietnamese MP3 file
-                    mp3_cn: mp3Cn // Path or URL to the Chinese MP3 file
-                });
-            }
-        }
-
-        // Optionally, return the updated analyses
-        // const updatedAnalyses = await Analysis.findAll({
-        //     order: [['createdAt', 'DESC']], // Optionally re-fetch to send updated data back
-        //     limit: 4
-        // });
-        //
-        // return updatedAnalyses.map(a => a);
-
-    } catch (error) {
-        console.error("Error fetching and updating recent analysis:", error);
-        throw error;
-    }
-}
-// async function translateText(content, lang) {
-//     let messages = [
-//         { role: "system", content: "You are a professional translator capable of translating between English, Japanese, and Korean. You can understand the context of sentences and derive the meanings of words within that context, enabling you to translate accurately and appropriately for English, Japanese, and Korean speakers. Additionally, you possess knowledge about cryptocurrencies, Bitcoin, stocks, and finance in general, allowing you to aptly translate articles and analyses related to these topics into the respective languages."},
-//         { role: "user", content: "Please translate the following document into Japanese. I only need the translated output, without any additional comments or indicators. Document: The report on national and corporate Bitcoin accumulations reveals significant crypto asset holdings by entities like MicroStrategy and various governments, including the U.S. and China. This trend underscores a substantial institutional and governmental embrace of Bitcoin, posing implications for market stability and pricing structures. Institutional holding can lead to lower market volatility and potentially higher price floors due to reduced circulatory supply. Understanding these dynamics is critical for evaluating Bitcoin's broader adoption and its perception as a store of value."},
-//         { role: "assistant", content: "国と企業のビットコイン蓄積に関するレポートは、MicroStrategyやアメリカ、中国などの政府を含む機関がかなりの暗号資産を保有していることを明らかにしています。この傾向は、ビットコインに対する大規模な機関および政府の受容を強調し、市場の安定性と価格構造に対する影響を示唆しています。機関の保有は、流通供給の減少により市場のボラティリティを低下させ、潜在的にはより高い価格の床を可能にするかもしれません。これらのダイナミクスを理解することは、ビットコインの広範な採用と価値の保存としての認識を評価する上で重要です。"},
-//         { role: "user", content: `Please translate the following document into ${lang}. I only need the translated output, without any additional comments or indicators. Document: ${content}`},
-//     ];
-//
-//     const response  = await openai.chat.completions.create({
-//         model: "gpt-4-turbo",
-//         messages: messages
-//     })
-//
-//     const responseMessage = response.choices[0].message.content;
-//     console.log("response message: ", responseMessage);
-//     return responseMessage;
-// }
 async function translateText(content, lang) {
     let messages = [
         { role: "system", content: "You are a professional translator capable of translating between English, Japanese, Korean, Vietnamese, and Chinese. You can understand the context of sentences and derive the meanings of words within that context, enabling you to translate accurately and appropriately for English, Japanese, Korean, Vietnamese and Chinese speakers. Additionally, you possess knowledge about cryptocurrencies, Bitcoin, stocks, and finance in general, allowing you to aptly translate articles and analyses related to these topics into the respective languages. You can also naturally translate article headlines or titles into other languages."},
@@ -536,8 +239,6 @@ async function translateText(content, lang) {
     return responseMessage;
 }
 
-const storage = multer.memoryStorage();
-const upload = multer({storage: storage});
 AWS.config.update({
     region: process.env.S3_REGION,
     accessKeyId: process.env.S3_KEY,
@@ -798,7 +499,7 @@ async function getArticlesDay() {
         const yesterday = new Date(new Date() - 12 * 60 * 60 * 1000);
         const articles = await Blockmedia.findAll({
             where: {
-                createdAt: {
+                date: {
                     [Sequelize.Op.gte]: yesterday
                 }
             },
@@ -809,8 +510,6 @@ async function getArticlesDay() {
         }
 
         console.log("Article data: ", articles);
-        // const data = await response.json();
-        // return JSON.stringify(transformedArticles, null, 2);
         return articles;
     } catch(err) {
         console.error(err);
@@ -1095,10 +794,17 @@ router.post('/completevp', async function(req, res) {
         res.send("An error occurred");
     }
 })
-router.post('/recent', async function(req, res) {
+router.get('/recent', async function(req, res) {
     try {
-        const result = await getRecentAndUpdateTest();
-        console.log("result: ", result);
+        const result = await getArticlesDay();
+        const arr = result.map((article) => {
+            return [
+                article.id,
+                article.title,
+                article.date
+            ]
+        })
+        res.send(arr);
     } catch (error) {
         console.error(error);
     }
