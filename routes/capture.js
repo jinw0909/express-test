@@ -21,9 +21,6 @@ const capture = async function(req, res) {
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
         const page = await browser.newPage();
-        await page.setViewport({
-            deviceScaleFactor: 2 // Set the device scale factor
-        });
         await page.goto('https://blocksquare-automation.com/chart/draw', { waitUntil: 'networkidle0' });
 
         // Increase timeout and wait for the canvas elements
@@ -123,22 +120,6 @@ const captureDominance = async function(req, res) {
         }
 
         const boundingBox = await doughnutElement.boundingBox();
-        // Function to hover over specific coordinates on the canvas
-        // Function to add a delay
-        // const delay = time => new Promise(resolve => setTimeout(resolve, time));
-        // const hoverOverCanvas = async (x, y) => {
-        //     const xPos = boundingBox.x + x;
-        //     const yPos = boundingBox.y + y;
-        //     console.log(`Hovering at: (${xPos}, ${yPos})`); // Log coordinates
-        //     await page.mouse.move(xPos, yPos);
-        //     await delay(500); // Wait for 1 second to see the hover effect
-        // };
-        //
-        // // Hover over specific coordinates within the canvas
-        // // await hoverOverCanvas(150, 125); // Coordinates (50, 50)
-        // // await hoverOverCanvas(45, 200); // Coordinates (100, 100)
-        // await hoverOverCanvas(0, 0); // Coordinates (150, 150)
-
 
         const lineBuffer = await lineElement.screenshot();
         const doughnutBuffer = await doughnutElement.screenshot();
@@ -184,6 +165,76 @@ const captureDominance = async function(req, res) {
             goya_imgUrl: lineImageUrl,
             dominance_imgUrl: doughnutImageUrl
         });
+
+        if (res) res.send(`Line chart screenshot saved to S3: ${lineImageUrl}, Doughnut chart screenshot saved to S3: ${doughnutImageUrl}`);
+    } catch (error) {
+        console.error('Error:', error);
+        if (res) res.status(500).send('Error processing request');
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+};
+
+const captureDominanceS3 = async function(req, res) {
+    let browser;
+    const start = req.query.start;
+    const end = req.query.end;
+    try {
+        // Launch browser and navigate to the page
+        browser = await puppeteer.launch({
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        const page = await browser.newPage();
+        await page.goto(`http://localhost:8080/self/dominance?start=${start}&end=${end}`, { waitUntil: 'networkidle0' });
+
+        // Increase timeout and wait for the canvas elements
+        console.log('Waiting for #lineChart...');
+        await page.waitForSelector('#lineChart', { timeout: 60000 }); // Increase timeout to 60 seconds
+
+        console.log('Waiting for #doughnutChart...');
+        await page.waitForSelector('#doughnutChart', { timeout: 60000 }); // Increase timeout to 60 seconds
+
+        // Select the canvas elements and take screenshots
+        const lineElement = await page.$('#lineChart');
+        const doughnutElement = await page.$('#doughnutChart');
+
+        if (!lineElement || !doughnutElement) {
+            throw new Error('One or more elements not found on the page');
+        }
+
+        const boundingBox = await doughnutElement.boundingBox();
+
+        const lineBuffer = await lineElement.screenshot();
+        const doughnutBuffer = await doughnutElement.screenshot();
+
+        await browser.close();
+
+        // Prepare S3 upload parameters
+        const lineS3Params = {
+            Bucket: 'gpt-premium-charts',
+            Key: `charts/line-chart-${uuidv4()}.png`,
+            Body: lineBuffer,
+            ContentType: 'image/png'
+        };
+
+        const doughnutS3Params = {
+            Bucket: 'gpt-premium-charts',
+            Key: `charts/doughnut-chart-${uuidv4()}.png`,
+            Body: doughnutBuffer,
+            ContentType: 'image/png'
+        };
+
+        // Upload both screenshots to S3
+        const [lineS3Response, doughnutS3Response] = await Promise.all([
+            s3.upload(lineS3Params).promise(),
+            s3.upload(doughnutS3Params).promise()
+        ]);
+
+        // Get the URLs from the S3 responses
+        const lineImageUrl = lineS3Response.Location;
+        const doughnutImageUrl = doughnutS3Response.Location;
 
         if (res) res.send(`Line chart screenshot saved to S3: ${lineImageUrl}, Doughnut chart screenshot saved to S3: ${doughnutImageUrl}`);
     } catch (error) {
@@ -323,6 +374,8 @@ router.get('/test', async (req, res) => {
         res.status(500).send('Error occurred while running Puppeteer');
     }
 })
+
+router.get('/dominanceS3', captureDominanceS3);
 
 module.exports = {
     router,

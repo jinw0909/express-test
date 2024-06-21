@@ -10,9 +10,6 @@
             max-width: 768px;
             margin: auto;
         }
-        /*.charts {*/
-        /*    display: flex;*/
-        /*}*/
     </style>
 </head>
 <body>
@@ -47,7 +44,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Get the data from the server
-        const goyaArr = <%- JSON.stringify(goyDominance) %>;
+        const goyaArr = <%- JSON.stringify(goyaDominance) %>;
         const finalDominance = <%- JSON.stringify(dominance) %>;
 
         // Function to generate greyscale colors from near-white to near-black
@@ -116,7 +113,18 @@
                 labels: sortedLabels,
                 datasets: [{
                     data: sortedValues,
-                    backgroundColor: greyscaleColors,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)',
+                        'rgba(255, 99, 71, 0.2)',
+                        'rgba(144, 238, 144, 0.2)',
+                        'rgba(32, 178, 170, 0.2)',
+                        'rgba(173, 216, 230, 0.2)'
+                    ],
                     borderColor: 'rgba(0,0,0,1)',
                     borderWidth: 1
                 }]
@@ -163,6 +171,13 @@
                         }
                     }
                 },
+                elements: {
+                    arc: {
+                        borderWidth: 1,
+                        borderColor: 'rgba(0, 0, 0, 1)',
+                        spacing: 8 // Add spacing between segments
+                    }
+                }
             },
         });
 

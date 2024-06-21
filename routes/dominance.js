@@ -268,7 +268,7 @@ router.get('/', async function(req, res, next) {
 
         console.log("analysis: ", analysis);
 
-        res.render("dominance", {goyDominance : goyaArr, dominance : finalDominance, analysis : analysis});
+        res.render("dominance", {goyaDominance : goyaArr, dominance : finalDominance, analysis : analysis});
     } catch (error) {
         console.error(error);
     }

@@ -36,12 +36,11 @@ async function getCoinPriceDay() {
 
 //get latest 5 articles from blockmedia and save it to the db
 //also return the data for further processing (for test only)
-
 async function runCreateConversation(candidates) {
     //Step 1 : send the conversation and available functions to the model
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-        { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 24 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least ten sentences in english and the summary has to be at least six sentences in english. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease. Don't improvise the id of the created Analysis and be sure that the id, analysis, and summary matches the provided article.`}
+        { role: "user", content: `${JSON.stringify(candidates)} /// This is a  data which shows the selected candidate article's id, and the reason for its selection, among all of the Blockmedia articles published within 12 hours. What i want you to do is give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least ten sentences in english and the summary has to be at least six sentences in english. The response should be formatted as a JSON [{id : integer, analysis: text, summary: text}] with key named "summaries_and_analyses" so I can save each summary and analysis in a local database with much ease. Don't improvise the id of the created Analysis and be sure that the id, analysis, and summary matches the provided article.`}
     ];
     const tools = [
         {
@@ -135,6 +134,8 @@ async function getRecentAndUpdate() {
             order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
             limit: 4
         });
+
+        console.log("recent analysis: ", recentAnalyses);
 
         for (const analysis of recentAnalyses) {
             // Retrieve the matching entry from the Blockmedia table
@@ -335,29 +336,29 @@ async function generateTTS(content, lang, id) {
 }
 async function runViewpointConversation() {
     const messages = [
-        { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. You are also capable of derive the bitcoin market trend by analyzing the bitcoin price movement within a certain period, and capable of deriving the relationship between the trend and real-world events" },
-        { role: "user", content: "From the analysis conducted on the Blockmedia articles, provide your final viewpoint derived from the most recent five analyses regarding the Bitcoin and cryptocurrency markets. Also, relate your viewpoint to the price fluctuations in the Bitcoin market over the past 7 days and within the last 24 hours. Additionally, based on your final viewpoint, if possible, provide a rough estimate of the future changes in the price of Bitcoin. Don't mention 'Blockmedia' in your viewpoint response and don't mention the analysis' id or title too. I Also want you to return the id's of five analysis you used to create the viewpoint as refs. Please return the result in JSON format as {'viewpoint': 'text', 'refs': [number, number, number, number, number]}."},
+        { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. You are also capable of deriving the bitcoin market trend by analyzing the bitcoin price movement within a certain period, and capable of deriving the relationship between the trend and real-world events" },
+        { role: "user", content: "From the analysis conducted on the Blockmedia articles, provide your final viewpoint derived from the most recent four analyses regarding the Bitcoin and cryptocurrency markets. Also, relate your viewpoint to the price fluctuations in the Bitcoin market over the past 7 days and within the last 24 hours. Additionally, based on your final viewpoint, if possible, provide a rough estimate of the future changes in the price of Bitcoin. Don't mention 'Blockmedia' in your viewpoint response and don't mention the analysis' id or title too. I Also want you to return the id's of four analysis you used to create the viewpoint as refs. Please return the result in JSON format as {'viewpoint': 'text', 'refs': [number, number, number, number, number]}."},
     ]
     const tools = [
         {
             type: "function",
             function: {
                 name: "get_recent_analyses",
-                description: "returns the list of the 5 most recent analyses created. "
+                description: "returns the list of the four most recent analyses created."
             }
         },
         {
             type: "function",
             function: {
                 name: "get_coinprice_week",
-                description: "returns the bitcoin price movement within the last seven days. "
+                description: "returns the bitcoin price movement within the last seven days."
             }
         },
         {
             type: "function",
             function: {
                 name: "get_coinprice_day",
-                description: "returns the bitcoin price movement within the last 24 hours. "
+                description: "returns the bitcoin price movement within the last 24 hours."
             }
         }
     ]
@@ -805,6 +806,85 @@ router.get('/recent', async function(req, res) {
             ]
         })
         res.send(arr);
+    } catch (error) {
+        console.error(error);
+    }
+})
+router.get('/translate', async function(req, res) {
+   try {
+       const result = await getRecentAndUpdate();
+       console.log("translation result: ", result);
+       res.send(result);
+   } catch (error) {
+       console.error(error);
+   }
+});
+
+router.get('/viewpoint', async function(req, res) {
+   try {
+       const result = await runViewpointConversation();
+       const content = result[0].message.content;
+       const { viewpoint, refs } = JSON.parse(content);
+       console.log("viewpoint: ", viewpoint);
+       console.log("refs: ", refs);
+
+       const today = new Date();
+       console.log("today: ", today); // Logs current date and time in UTC
+       // Convert to KST using toLocaleString
+       const kstDate = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+       console.log("kstDate: ", kstDate); // Logs the adjusted date and time for KST
+       // Get the KST hours using local time
+       const kstHours = kstDate.getHours();
+       console.log("kstHours: ", kstHours); // Logs the KST hours correctly
+       // Determine AM/PM suffix
+       const period = kstHours >= 12 ? 'PM' : 'AM';
+       // Construct the ID using the KST date and period
+       const year = kstDate.getFullYear();
+       const month = String(kstDate.getMonth() + 1).padStart(2, '0');
+       const day = String(kstDate.getDate()).padStart(2, '0');
+       const id = `${year}${month}${day}_${period}`;
+       console.log("id: ", id); // Logs the constructed ID based on KST date and period
+       try {
+           const [instance, created] = await Viewpoint.upsert({
+               id: id,
+               viewpoint: viewpoint,
+               imageUrl: '/defaultImg.png',
+               createdAt: new Date(),
+               updatedAt: new Date()
+           });
+           if (created) {
+               console.log('New Viewpoint instance created:', instance.toJSON());
+           } else {
+               console.log('Viewpoint updated:', instance.toJSON());
+           }
+           // Update ref column in analysis table
+           if (refs && refs.length > 0) {
+               await Analysis.update({ ref: id }, {
+                   where: {
+                       id: refs  // Assuming `refs` is an array of IDs
+                   }
+               });
+           }
+       } catch (error) {
+           console.error(error);
+       }
+
+       const recent = await Viewpoint.findOne({
+           order: [['createdAt', 'DESC']]
+       })
+
+       res.send(recent);
+
+   } catch (error) {
+       console.error(error);
+   }
+});
+
+router.get('/translatevp', async function(req, res) {
+    try {
+        const updatedVp = await getViewpointAndUpdate();
+        console.log("updatedVp: ", updatedVp);
+        res.status(200).send(updatedVp); // Send response with
     } catch (error) {
         console.error(error);
     }

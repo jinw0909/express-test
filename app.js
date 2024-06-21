@@ -1,4 +1,3 @@
-
 var createError = require('http-errors');
 var express = require('express');
 var cors = require('cors');
@@ -33,6 +32,7 @@ var handleimgRouter = require('./routes/handleimg');
 var healthcheckRouter = require('./routes/healthcheck');
 var captureRouter = require('./routes/capture').router;
 var plainRouter = require('./routes/plain');
+var selfRouter = require('./routes/self');
 
 var app = express();
 
@@ -77,6 +77,7 @@ app.use('/handleimg', handleimgRouter);
 app.use('/healthcheck', healthcheckRouter);
 app.use('/capture', captureRouter);
 app.use('/plain', plainRouter);
+app.use('/self', selfRouter);
 
 app.post('/', (req, res) => {
   const payload = req.body;
