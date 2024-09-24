@@ -37,6 +37,9 @@ const Polly = new AWS.Polly({
     signatureVersion: '',
     region: 'us-east-1'
 });
+
+const goyaDb = require('../goyaConnection');
+
 async function generateTTS(content, lang, id) {
     if (lang === 'Vietnamese') {
         // Use OpenAI TTS for Vietnamese
@@ -372,7 +375,6 @@ async function runChartConversation() {
         return secondResponse.choices;
     }
 }
-
 async function getMDH() {
     const now = new Date();// Korean Standard Time (KST) is UTC+9
     const options = {
@@ -402,7 +404,6 @@ async function getMDH() {
     };
     return JSON.stringify(format);
 }
-
 async function getCoinPriceMonth() {
     try {
         const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=30');
@@ -413,7 +414,6 @@ async function getCoinPriceMonth() {
         throw err;
     }
 }
-
 async function getCoinPriceWeek() {
     try {
         const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
@@ -434,7 +434,6 @@ async function getCoinPriceDay() {
         return { error: err.message }
     }
 }
-
 // Function to fetch Bitcoin price data
 function extractScorePrice(data) {
     let score = [];
@@ -453,7 +452,6 @@ function extractScorePrice(data) {
     console.log(result);
     return result;
 }
-
 function extractScorePriceWeek(data) {
     let scores = [];
     let prices = [];
@@ -517,30 +515,6 @@ async function getGoyaScoreMonth() {
     const scoreArray = extractScorePriceWeek(jsonData.data);
     console.log("monthArray: ", scoreArray);
     return JSON.stringify(scoreArray);
-}
-
-async function getCurrentKST() {
-    // Create a new Date object with the current time
-    const now = new Date();
-
-    // Convert the current time to KST (UTC+9) using toLocaleString with timeZone option
-    const options = { timeZone: 'Asia/Seoul', hour12: false };
-    const kstString = now.toLocaleString('en-US', options);
-
-    // Create a new Date object from the KST string
-    const kstDate = new Date(kstString);
-
-    // Extract and format the components
-    const year = kstDate.getFullYear();
-    const month = String(kstDate.getMonth() + 1).padStart(2, '0');
-    const date = String(kstDate.getDate()).padStart(2, '0');
-    const hour = String(kstDate.getHours()).padStart(2, '0');
-    const minute = String(kstDate.getMinutes()).padStart(2, '0');
-
-    // Combine the components into the desired format
-    const formattedKST = `${year}-${month}-${date}-${hour}:${minute}`;
-
-    return formattedKST;
 }
 
 router.get('/', async function(req, res, next) {

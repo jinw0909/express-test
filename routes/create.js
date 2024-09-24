@@ -819,7 +819,7 @@ async function createViewpointImage() {
         // Call the OpenAI API to generate an image
         const response = await openai.images.generate({
             model: "dall-e-3",
-            prompt: `Generate the image from the next daily perspective on the crypto market. Ensure that charts or text are not included in the generated image as much as possible. PROVIDED TEXT: ${viewpointText}`,
+            prompt: `Generate the image from the given daily perspective of the crypto market. Ensure that charts or text are not included in the generated image as much as possible. PROVIDED TEXT: ${viewpointText}`,
             style: "vivid",
             size: '1024x1024',
             response_format: "url"
@@ -1069,7 +1069,7 @@ router.post('/complete', async function(req, res) {
 
         const updatedVp = await getViewpointAndUpdate();
         console.log("updatedVp: ", updatedVp);
-        await createViewpointImage();
+        const imageUrl = await createViewpointImage();
 
         // res.status(200).send('ok');
         res.send('ok');
