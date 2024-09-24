@@ -138,6 +138,70 @@ router.get('/coinness', async function(req, res) {
     // }
 });
 
+const performArticleCrawl = async () => {
+    try {
+        const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
+        const latestNews = [];
+        for (let i = 0; i < 10 && i < feed.items.length; i++) {
+            const item = feed.items[i];
+            console.log("item: ", item);
+            const title = item.title;
+            const link = item.link;
+            // const imageUrl = item.enclosure && item.enclosure.url;
+            let imageUrl = '/defaultImg.png';
+            if (item.imageUrl) {
+                imageUrl = item.imageUrl['$'].url;
+            }
+            const date = item.isoDate;
+            const content = await fetchContent(link);
+            const index = i;
+            const publisher = 'blockmedia';
+            let id = 0;
+
+            let url = item.guid;
+            let match = url.match(/p=(\d+)/);
+            if (match) {
+                id = match[1];
+            } else {
+                console.log("No number found");
+            }
+
+            latestNews.push({
+                id,
+                title,
+                content,
+                imageUrl,
+                date,
+                publisher,
+            });
+        }
+        for (const item of latestNews) {
+            try {
+                const [blockmedia, created] = await Blockmedia.upsert({
+                    id: item.id,
+                    title: item.title,
+                    content: item.content,
+                    imageUrl: item.imageUrl,
+                    date: item.date,
+                    publisher: item.publisher,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                });
+
+                if (created) {
+                    console.log('Blockmedia entry created:', blockmedia.toJSON());
+                } else {
+                    console.log('Blockmedia entry updated:', blockmedia.toJSON());
+                }
+            } catch (error) {
+                console.error('Error upserting Blockmedia entry: ', error);
+            }
+        }
+        return "crawl success";
+    } catch (error) {
+        console.error(error);
+    }
+}
 router.post('/articles', async function(req, res, next) {
     try {
         const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
@@ -177,7 +241,9 @@ router.post('/articles', async function(req, res, next) {
 
         }
 
-        for (const item of latestNews) {
+        const reversedNews = [...latestNews].reverse();
+
+        for (const item of reversedNews) {
             try {
                 const [blockmedia, created] = await Blockmedia.upsert({
                     id: item.id,
@@ -185,93 +251,21 @@ router.post('/articles', async function(req, res, next) {
                     content: item.content,
                     imageUrl: item.imageUrl,
                     date: item.date,
-                    publisher: item.publisher,
-                    createdAt: new Date(),
-                    updatedAt: new Date()
+                    publisher: item.publisher
+                }, {
+                    conflictFields: ['id']
                 });
 
-                if (created) {
-                    console.log('Blockmedia entry created:', blockmedia.toJSON());
-                } else {
-                    console.log('Blockmedia entry updated:', blockmedia.toJSON());
-                }
+                console.log(`Processed: ${item.id}, Created: ${created}`);
             } catch (error) {
-                console.error('Error upserting Blockmedia entry: ', error);
+                console.error(`Error processing: ${item.id}`, error);
             }
         }
-        res.json(latestNews);
+        res.json(reversedNews);
 
     } catch (error) {
         console.error(error);
     }
 })
 
-router.post('/articles', async function(req, res, next) {
-    try {
-        const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
-        const latestNews = [];
-        for (let i = 0; i < 10 && i < feed.items.length; i++) {
-            const item = feed.items[i];
-            console.log("item: ", item);
-            const title = item.title;
-            const link = item.link;
-            // const imageUrl = item.enclosure && item.enclosure.url;
-            let imageUrl = '/defaultImg.png';
-            if (item.imageUrl) {
-                imageUrl = item.imageUrl['$'].url;
-            }
-            const date = item.isoDate;
-            const content = await fetchContent(link);
-            const index = i;
-            const publisher = 'blockmedia';
-            let id = 0;
-
-            let url = item.guid;
-            let match = url.match(/p=(\d+)/);
-            if (match) {
-                id = match[1];
-            } else {
-                console.log("No number found");
-            }
-
-            latestNews.push({
-                id,
-                title,
-                content,
-                imageUrl,
-                date,
-                publisher,
-            });
-
-        }
-
-        for (const item of latestNews) {
-            try {
-                const [blockmedia, created] = await Blockmedia.upsert({
-                    id: item.id,
-                    title: item.title,
-                    content: item.content,
-                    imageUrl: item.imageUrl,
-                    date: item.date,
-                    publisher: item.publisher,
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                });
-
-                if (created) {
-                    console.log('Blockmedia entry created:', blockmedia.toJSON());
-                } else {
-                    console.log('Blockmedia entry updated:', blockmedia.toJSON());
-                }
-            } catch (error) {
-                console.error('Error upserting Blockmedia entry: ', error);
-            }
-        }
-        res.json(latestNews);
-
-    } catch (error) {
-        console.error(error);
-    }
-})
-
-module.exports = router;
+module.exports = { router, performArticleCrawl };

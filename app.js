@@ -11,28 +11,30 @@ const sequelize = require('./sequelize');
 var debug = require('debug')('express-app:app');
 var http = require('http');
 const axios = require('axios');
+// const { startCronJobs } = require('./cronJobs');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
-
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var fortuneTellRouter = require('./routes/fortuneTell');
-var crawlRouter = require('./routes/crawl');
+var crawlRouter = require('./routes/crawl').router;
 var functionRouter = require('./routes/function');
 // var puppetRouter = require('./routes/puppet');
 var voiceRouter = require('./routes/voice');
 var briefRouter = require('./routes/brief');
 var runRouter = require('./routes/run');
-var createRouter = require('./routes/create');
+var createRouter = require('./routes/create').router;
 var feedRouter = require('./routes/feed');
 var screenshotRouter = require('./routes/screenshot');
-var chartRouter = require('./routes/chart');
-var dominanceRouter = require('./routes/dominance');
+var chartRouter = require('./routes/chart').router;
+var dominanceRouter = require('./routes/dominance').router;
 var handleimgRouter = require('./routes/handleimg');
 var healthcheckRouter = require('./routes/healthcheck');
 var captureRouter = require('./routes/capture').router;
 var plainRouter = require('./routes/plain');
 var selfRouter = require('./routes/self');
+var deleteRouter = require('./routes/delete');
+const { getArticlesDay } = require('./routes/create');
 
 var app = express();
 
@@ -78,6 +80,7 @@ app.use('/healthcheck', healthcheckRouter);
 app.use('/capture', captureRouter);
 app.use('/plain', plainRouter);
 app.use('/self', selfRouter);
+app.use('/delete', deleteRouter);
 
 app.post('/', (req, res) => {
   const payload = req.body;
@@ -126,7 +129,6 @@ const functions = {
   // Add other functions as needed
 };
 
-
 app.get('/createdb', (req, res) => {
   let sql = 'CREATE DATABASE testdb';
   db.query(sql, (err, result) => {
@@ -134,6 +136,12 @@ app.get('/createdb', (req, res) => {
     res.send('Database created');
     console.log(result);
   });
+})
+
+app.get('/articles', async (req, res) => {
+  let articles = await getArticlesDay();
+  console.log("articles: ", articles);
+  res.json(articles);
 })
 
 // catch 404 and forward to error handler
@@ -167,7 +175,6 @@ function normalizePort(val) {
 
   return false;
 }
-
 
 function onError(error) {
   if (error.syscall !== 'listen') {

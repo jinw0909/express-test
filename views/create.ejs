@@ -61,22 +61,10 @@
     <div class="vp-list">
         <h4>Briefing List</h4>
         <div class="result-div-vplist">
-            <ul>
-                <% vpList.forEach(vp => { %>
-                    <li>
-                        <h3><%= vp.title %> (Viewpoint ID: <%= vp.id %>)</h3>
-                        <p>Related Analyses:</p>
-                        <ul>
-                            <% vp.Analyses.forEach(analysis => { %>
-                                <li>Analysis ID: <%= analysis.id %></li>
-                            <% }) %>
-                            <% if (vp.Analyses.length === 0) { %>
-                                <li>No related analyses.</li>
-                            <% } %>
-                        </ul>
-                    </li>
-                <% }) %>
-            </ul>
+            <div><button id="openList">Open List</button></div>
+            <div id="vpContainer">
+
+            </div>
         </div>
     </div>
 </div>
@@ -144,6 +132,35 @@
         axios.post('/dominance/collect')
             .then(response => {
                 console.log("success: ", response);
+            })
+            .catch(err => {
+                console.error("failure: ", err);
+            })
+    })
+
+    document.querySelector('#openList').addEventListener('click', function() {
+        axios.get('/create/open')
+            .then(response => {
+                console.log("success: ", response.data);
+                response.data.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'item';
+                    const idElement = document.createElement('h3');
+                    idElement.textContent = `ID: ${item.id}`;
+                    itemDiv.appendChild(idElement);
+
+                    const analysesElement = document.createElement('ul');
+                    item.Analyses.forEach(analysis => {
+                        const analysisItem = document.createElement('li');
+                        analysisItem.textContent = `Analysis ID: ${analysis.id}, ${analysis.createdAt} `;
+                        analysesElement.appendChild(analysisItem);
+                    })
+
+                    itemDiv.appendChild(analysesElement);
+
+                    document.querySelector('#vpContainer').appendChild(itemDiv);
+
+                })
             })
             .catch(err => {
                 console.error("failure: ", err);

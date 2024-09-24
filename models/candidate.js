@@ -2,11 +2,6 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../sequelize');
 
 const Candidate = sequelize.define('Candidates', {
-    //Define model attributes
-    createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false
-    },
     articleId: {
         type: DataTypes.INTEGER,
         allowNull: false
@@ -19,6 +14,8 @@ const Candidate = sequelize.define('Candidates', {
         type: DataTypes.TEXT,
         allowNull: false
     }
+}, {
+    timestamps: true
 })
 
 module.exports = Candidate;

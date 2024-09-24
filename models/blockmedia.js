@@ -4,12 +4,9 @@ const sequelize = require('../sequelize');
 const Blockmedia = sequelize.define('Blockmedia', {
     id : {
         type: DataTypes.INTEGER,
+        allowNull: false,
+        unique: true,
         primaryKey: true
-    },
-    //Define model attributes
-    createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false
     },
     title : {
         type: DataTypes.STRING,
@@ -30,11 +27,9 @@ const Blockmedia = sequelize.define('Blockmedia', {
     publisher: {
         type: DataTypes.STRING,
         allowNull: false
-    },
-    updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false
     }
-})
+}, {
+    timestamps: true //Enable automatic timestamps management
+});
 
 module.exports = Blockmedia;

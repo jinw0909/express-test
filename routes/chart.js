@@ -50,7 +50,7 @@ async function generateTTS(content, lang, id) {
             const buffer = Buffer.from(await mp3.arrayBuffer());
 
             const s3Params = {
-                Bucket: 'gpt-premium-charts',
+                Bucket: process.env.S3_BUCKET,
                 Key: `bitcoin${id}_${lang}.mp3`,
                 Body: buffer,
                 ContentType: "audio/mpeg",
@@ -100,7 +100,7 @@ async function generateTTS(content, lang, id) {
 
                 // S3 upload parameters
                 const s3Params = {
-                    Bucket: 'gpt-premium-charts',
+                    Bucket: process.env.S3_BUCKET,
                     Key: `bitcoin${id}_${lang}.mp3`,
                     Body: data.AudioStream,
                     ContentType: "audio/mpeg",
@@ -153,11 +153,11 @@ async function getAnalysisAndUpdate() {
         const combinedTextCn = `${dayCn} ${weekCn} ${monthCn} ${predictionCn}`;
 
         // Generate TTS for each language
-        const mp3En = await generateTTS(combinedText, 'English', recentAnalysis.id);
-        const mp3Jp = await generateTTS(combinedTextJp, 'Japanese', recentAnalysis.id);
-        const mp3Kr = await generateTTS(combinedTextKr, 'Korean', recentAnalysis.id);
-        const mp3Vn = await generateTTS(combinedTextVn, 'Vietnamese', recentAnalysis.id);
-        const mp3Cn = await generateTTS(combinedTextCn, 'Chinese', recentAnalysis.id);
+        // const mp3En = await generateTTS(combinedText, 'English', recentAnalysis.id);
+        // const mp3Jp = await generateTTS(combinedTextJp, 'Japanese', recentAnalysis.id);
+        // const mp3Kr = await generateTTS(combinedTextKr, 'Korean', recentAnalysis.id);
+        // const mp3Vn = await generateTTS(combinedTextVn, 'Vietnamese', recentAnalysis.id);
+        // const mp3Cn = await generateTTS(combinedTextCn, 'Chinese', recentAnalysis.id);
 
         //const images = await captureChart();
 
@@ -178,11 +178,16 @@ async function getAnalysisAndUpdate() {
             prediction_kr: predictionKr,
             prediction_vn: predictionVn,
             prediction_cn: predictionCn,
-            mp3: mp3En,
-            mp3_jp: mp3Jp,
-            mp3_kr: mp3Kr,
-            mp3_vn: mp3Vn,
-            mp3_cn: mp3Cn
+            mp3: "",
+            mp3_jp: "",
+            mp3_kr: "",
+            mp3_vn: "",
+            mp3_cn: "",
+            // mp3: mp3En,
+            // mp3_jp: mp3Jp,
+            // mp3_kr: mp3Kr,
+            // mp3_vn: mp3Vn,
+            // mp3_cn: mp3Cn
         });
     } catch (error) {
         console.error(error);
@@ -507,7 +512,6 @@ async function getGoyaScoreWeek() {
     console.log("weekArray: ", scoreArray);
     return JSON.stringify(scoreArray);
 }
-
 async function getGoyaScoreMonth() {
     const jsonData = await axios.get('https://won.korbot.com/page/predict_chart_api.php?kind=BTCUSDT&ob_number=672');
     const scoreArray = extractScorePriceWeek(jsonData.data);
@@ -638,15 +642,11 @@ async function updatePriceWithAnalysisId(analysisId, day, week, month) {
 }
 
 const parseData = (data) => data.map(value => parseFloat(value));
-
-// Function to get the scale limits
-// Function to get the scale limits for each dataset
 const getScaleLimits = (data) => {
     const min = Math.min(...data);
     const max = Math.max(...data);
     return { min, max };
 };
-
 // Chart configuration function
 const createChartConfiguration = (labels, scores, prices, label) => {
     const scoreLimits = getScaleLimits(scores);
@@ -710,7 +710,7 @@ const createChartConfiguration = (labels, scores, prices, label) => {
 };
 const saveToS3 = async (buffer, label) => {
     const s3Params = {
-        Bucket: 'gpt-premium-charts',
+        Bucket: process.env.S3_BUCKET,
         Key: `charts/${label}-${uuidv4()}.png`,
         Body: buffer,
         ContentType: 'image/png'
@@ -720,7 +720,6 @@ const saveToS3 = async (buffer, label) => {
     console.log("s3Response: ", s3Response.Location);
     return s3Response.Location;
 };
-
 const captureChart = async () => {
     try {
         const [day, week, month] = await Promise.all([
@@ -778,14 +777,6 @@ router.get('/goya', async function(req, res) {
         throw error;
     }
 })
-
-
-// router.get('/time', async function(req, res) {
-//     const time = await getCurrentKST();
-//     console.log("kstTime: ", time);
-//     res.send(time);
-// });
-
 router.get('/price', async function(req,res) {
     const scoreDay = await getGoyaScoreDay();
     const scoreWeek = await getGoyaScoreWeek();
@@ -799,7 +790,6 @@ router.get('/price', async function(req,res) {
     // console.log("jsonData: ", jsonData);
     res.render('price', {data: data});
 })
-
 router.get('/analysis', async function(req,res) {
     const result = await runAnalysisConversation();
     console.log("result: ", result);
@@ -807,7 +797,6 @@ router.get('/analysis', async function(req,res) {
     console.log("response: ", response);
     res.send(response);
 });
-
 router.get('/analysis-save', async function(req, res) {
     try {
         const [day, week, month] = await Promise.all([
@@ -832,7 +821,6 @@ router.get('/analysis-save', async function(req, res) {
         console.error(error);
     }
 })
-
 router.post('/save', async function(req, res) {
     try {
         const requestTime = new Date();
@@ -856,7 +844,6 @@ router.post('/save', async function(req, res) {
         res.status(500).send('Failed to fetch and save data');
     }
 })
-
 router.post('/price-analysis', async function(req, res) {
     try {
         const requestTime = new Date();
@@ -885,9 +872,38 @@ router.post('/price-analysis', async function(req, res) {
         console.error(error);
         throw error;
     }
+});
 
-})
+const performPriceAnalysis = async () => {
+    try {
+        const requestTime = new Data();
+        const [dayResponse, weekResponse, monthResponse] = await Promise.all([
+            getGoyaScoreDay(),
+            getGoyaScoreWeek(),
+            getGoyaScoreMonth()
+        ]);
+        const dayData = JSON.parse(dayResponse);
+        const weekData = JSON.parse(weekResponse);
+        const monthData = JSON.parse(monthResponse);
 
+        await savePriceToDb(requestTime, 'day', dayData);
+        await savePriceToDb(requestTime, 'week', weekData);
+        await savePriceToDb(requestTime, 'month', monthData);
+
+        const result = await runAnalysisConversation();
+        const response = JSON.parse(result[0].message.content);
+
+        await saveAnalysisToDb(response.day, response.week, response.month, response.prediction, requestTime);
+
+        await getAnalysisAndUpdate();
+
+        return 'Data and analysis saved successfully'
+
+    } catch (error) {
+        console.error(error);
+        throw new Error('Error in analysis and save process');
+    }
+}
 router.get('/draw', async function(req, res) {
    try {
        const lang = req.query.lang || 'en';
@@ -924,63 +940,14 @@ router.get('/draw', async function(req, res) {
        console.error(error);
    }
 });
-
 router.get('/capture', async function(req, res) {
     try {
-    //     const [day, week, month] = await Promise.all([
-    //         BitcoinPrice.findOne({ where: { period: 'day' }, order: [['requestTime', 'DESC']] }),
-    //         BitcoinPrice.findOne({ where: { period: 'week' }, order: [['requestTime', 'DESC']] }),
-    //         BitcoinPrice.findOne({ where: { period: 'month' }, order: [['requestTime', 'DESC']] })
-    //     ]);
-    //     let data = {
-    //         scoreDay: { score: day.score, price: day.price },
-    //         scoreWeek: { score: week.score, price: week.price },
-    //         scoreMonth: { score: month.score, price: month.price }
-    //     }
-    //     console.log("data: ", data);
-    //
-    //     const width = 800;
-    //     const height = 600;
-    //     const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height});
-    //
-    //     // Configure AWS S3
-    //     const s3 = new AWS.S3({
-    //         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    //         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    //         region: process.env.AWS_REGION
-    //     });
-    //
-    //     const dailyData = {
-    //         labels: Array.from({ length: 24}, (_, i) => i + 1),
-    //         scores: data.scoreDay.score,
-    //         prices: data.scoreDay.price
-    //     }
-    //
-    //     try {
-    //         const configuration = createChartConfiguration(dailyData.labels,     dailyData.scores, dailyData.prices, 'Daily');
-    //         const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration);
-    //
-    //         const s3Params = {
-    //             Bucket: 's3bucketjinwoo',
-    //             Key: `charts/daily-${uuidv4()}.png`,
-    //             Body: imageBuffer,
-    //             ContentType: 'image/png'
-    //         };
-    //
-    //         const s3Url = await saveToS3(imageBuffer, 'Daily');
-    //         res.send(`Daily chart saved to S3: ${s3Url}`);
-    //     } catch (error) {
-    //         console.error(error);
-    //         res.status(500).send('An error occurred');
-    //     }
-
         let urls = await captureChart();
         res.send(`Chart images saved to S3', ${urls}`);
     } catch (error) {
         console.error(error);
     }
 })
-
 router.get('/construct', async function(req, res) {
     try {
         await getAnalysisAndUpdate();
@@ -990,11 +957,10 @@ router.get('/construct', async function(req, res) {
     }
 
 });
-
 router.get('/time', async function(req,res) {
     const time = await getMDH();
     console.log("time: ", time);
     res.send('ok');
 })
 
-module.exports = router;
+module.exports = { performPriceAnalysis, router };

@@ -45,14 +45,14 @@ const capture = async function(req, res) {
 
         // Prepare S3 upload parameters
         const dayS3Params = {
-            Bucket: 'gpt-premium-charts',
+            Bucket: process.env.S3_BUCKET,
             Key: `charts/day-chart-${uuidv4()}.png`,
             Body: dayBuffer,
             ContentType: 'image/png'
         };
 
         const monthS3Params = {
-            Bucket: 'gpt-premium-charts',
+            Bucket: process.env.S3_BUCKET,
             Key: `charts/month-chart-${uuidv4()}.png`,
             Body: monthBuffer,
             ContentType: 'image/png'
@@ -93,7 +93,6 @@ const capture = async function(req, res) {
         }
     }
 };
-
 const captureDominance = async function(req, res) {
     let browser;
     try {
@@ -128,14 +127,14 @@ const captureDominance = async function(req, res) {
 
         // Prepare S3 upload parameters
         const lineS3Params = {
-            Bucket: 'gpt-premium-charts',
+            Bucket: process.env.S3_BUCKET,
             Key: `charts/line-chart-${uuidv4()}.png`,
             Body: lineBuffer,
             ContentType: 'image/png'
         };
 
         const doughnutS3Params = {
-            Bucket: 'gpt-premium-charts',
+            Bucket: process.env.S3_BUCKET,
             Key: `charts/doughnut-chart-${uuidv4()}.png`,
             Body: doughnutBuffer,
             ContentType: 'image/png'
@@ -213,14 +212,14 @@ const captureDominanceS3 = async function(req, res) {
 
         // Prepare S3 upload parameters
         const lineS3Params = {
-            Bucket: 'gpt-premium-charts',
+            Bucket: process.env.S3_BUCKET,
             Key: `charts/line-chart-${uuidv4()}.png`,
             Body: lineBuffer,
             ContentType: 'image/png'
         };
 
         const doughnutS3Params = {
-            Bucket: 'gpt-premium-charts',
+            Bucket: process.env.S3_BUCKET,
             Key: `charts/doughnut-chart-${uuidv4()}.png`,
             Body: doughnutBuffer,
             ContentType: 'image/png'
@@ -253,27 +252,44 @@ const capturePremium = async function(req, res) {
 
         const [latestRow] = await plainDb.query('SELECT datetime FROM beuliping ORDER BY id DESC LIMIT 1');
 
-        if (latestRow.length === 0) {
+        if (!latestRow || latestRow.length === 0) {
             if (res) return res.status(404).send('No rows found');
             return;
         }
 
-        console.log(latestRow);
-
         const latestDatetime = latestRow.datetime;
+        console.log('Latest Datetime: ', latestDatetime);
 
         // Retrieve all rows that were created within 5 minutes before the latest datetime
+        // const recentRows = await plainDb.query(`
+        //     SELECT id, symbol
+        //     FROM beuliping
+        //     WHERE datetime BETWEEN DATE_SUB(?, INTERVAL 5 MINUTE) AND ?
+        //     ORDER BY datetime DESC
+        // `, [latestDatetime, latestDatetime]);
         const recentRows = await plainDb.query(`
-            SELECT id, symbol 
-            FROM beuliping 
-            WHERE datetime BETWEEN DATE_SUB(?, INTERVAL 5 MINUTE) AND ?
-            ORDER BY datetime DESC
-        `, [latestDatetime, latestDatetime]);
+            SELECT id, symbol
+            FROM beuliping
+            WHERE datetime = ?
+            ORDER BY id DESC
+        `, [latestDatetime]);
+        // const recentRows = await plainDb.query(`
+        //     SELECT id, symbol
+        //     FROM beuliping
+        //     ORDER BY id DESC
+        //     LIMIT 15
+        // `);
+        // const recentRows = await plainDb.query(`
+        //     SELECT id, symbol
+        //     FROM beuliping
+        //     WHERE id BETWEEN 5515 AND 5538
+        //     ORDER BY id DESC
+        // `);
 
         // Log the recent rows for debugging
         console.log('Recent Rows:', recentRows);
 
-        if (recentRows.length === 0) {
+        if (!recentRows || recentRows.length === 0) {
             if (res) return res.status(404).send('No recent rows found');
             return;
         }
@@ -283,24 +299,65 @@ const capturePremium = async function(req, res) {
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
-        // Process each row
+        // Process each row in parallel
+        // await Promise.all(recentRows.map(async (row) => {
+        //     const { id, symbol } = row;
+        //     if (symbol === '1000BONK') return; // Skip this row
+        //
+        //     const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
+        //     const page = await browser.newPage();
+        //     const viewport = page.viewport();
+        //     console.log('Default viewport:', viewport);
+        //
+        //     await page.goto(url, { waitUntil: 'networkidle0' });
+        //
+        //     console.log(`Waiting for #chart to load for symbol ${symbol}...`);
+        //     await page.waitForSelector('canvas', { timeout: 60000 });
+        //
+        //     const chartElement = await page.$('.tv-lightweight-charts');
+        //     if (!chartElement) {
+        //         console.error(`Chart element not found for symbol ${symbol}`);
+        //         await page.close();
+        //         return;
+        //     }
+        //
+        //     const chartBuffer = await chartElement.screenshot();
+        //
+        //     const chartS3Params = {
+        //         Bucket: 'gpt-premium-charts',
+        //         Key: `premiumchart-${uuidv4()}.png`,
+        //         Body: chartBuffer,
+        //         ContentType: 'image/png'
+        //     };
+        //
+        //     const chartS3Response = await s3.upload(chartS3Params).promise();
+        //     const chartImageUrl = chartS3Response.Location;
+        //
+        //     await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
+        //     console.log(`Updated row ${id} with image URL ${chartImageUrl}`);
+        //
+        //     await page.close();
+        // }));
+        // Process each row sequentially
         for (const row of recentRows) {
             const { id, symbol } = row;
+            if (symbol === '1000BONK') continue;
 
-            // Construct the URL
             const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
-
-            // Open a new page and navigate to the URL
             const page = await browser.newPage();
+
+            // Set the viewport size
+            // await page.setViewport({
+            //     width: 1280, // set your desired width here
+            //     height: 800  // set your desired height here
+            // });
+
             await page.goto(url, { waitUntil: 'networkidle0' });
 
-            // Wait for the chart to load
             console.log(`Waiting for #chart to load for symbol ${symbol}...`);
             await page.waitForSelector('canvas', { timeout: 60000 });
 
-            // Select the canvas element and take a screenshot
             const chartElement = await page.$('.tv-lightweight-charts');
-
             if (!chartElement) {
                 console.error(`Chart element not found for symbol ${symbol}`);
                 await page.close();
@@ -309,26 +366,19 @@ const capturePremium = async function(req, res) {
 
             const chartBuffer = await chartElement.screenshot();
 
-            // Prepare S3 upload parameters
             const chartS3Params = {
-                Bucket: 'gpt-premium-charts',
+                Bucket: process.env.S3_BUCKET,
                 Key: `premiumchart-${uuidv4()}.png`,
                 Body: chartBuffer,
                 ContentType: 'image/png'
             };
 
-            // Upload the screenshot to S3
             const chartS3Response = await s3.upload(chartS3Params).promise();
-
-            // Get the URL from the S3 response
             const chartImageUrl = chartS3Response.Location;
 
-            // Update the database with the image URL
             await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
-
             console.log(`Updated row ${id} with image URL ${chartImageUrl}`);
 
-            // Close the page
             await page.close();
         }
 

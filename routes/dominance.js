@@ -12,7 +12,7 @@ async function runDominanceConversation() {
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients." },
         { role: "system", content: "The dominance score represents the percentage share of a particular cryptocurrency in the entire cryptocurrency market. For example, if BTC's dominance score is 52, it means that Bitcoin occupies 52% of the total cryptocurrency market size. Additionally, the Goya dominance score is an indicator that can predict the overall upward and downward trends in the cryptocurrency market. If the Goya dominance score is on an upward trend, it can be expected that funds will flow into the coin market in the future. Conversely, if the Goya dominance score is on a downward trend, it can be expected that funds will flow out of the coin market in the future."},
-        { role: "user", content: "Analyze the current dominance state of the ten most dominant cryptocurrencies in the context of Bitcoin, Ethereum, and altcoins (means the rest except Bitcoin and Ethereum). The dominance index of the ten most dominant cryptocurrencies of the last twelve hours is provided. Additionally, predict how the cryptocurrency market will change in the future based on the Goya dominance score over the past twelve hours. When quoting the dominance scores of each cryptocurrency,  it should be rounded to the second decimal place. Additionally You should more focus on analyzing the dominance changes of each cryptocurrencies than analyzing the goya dominance score and predicting the future." },
+        { role: "user", content: "Analyze the current dominance state of the ten most dominant cryptocurrencies in the context of Bitcoin, Ethereum, and altcoins (means the rest except Bitcoin and Ethereum). The dominance index of the ten most dominant cryptocurrencies of the last twelve hours is provided. Additionally, predict how the cryptocurrency market will change in the future based on the Goya dominance score over the past twelve hours. When quoting the dominance scores of each cryptocurrency,  it should be rounded to the second decimal place. Additionally You should more focus on analyzing the dominance changes of each cryptocurrencies than analyzing the goya dominance score and predicting the future. Don't comment to ask for further explanation on the analysis." },
     ]
     const tools = [
         {
@@ -273,7 +273,37 @@ router.get('/', async function(req, res, next) {
         console.error(error);
     }
 });
+const performDominanceAnalysis = async () => {
+    try {
+        let result = await runDominanceConversation();
+        console.log("result: ", result[0].message.content);
 
+        let analysis = await DominanceAnalysis.create({
+            analysis: result[0].message.content,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        })
+        // Translate the analysis content
+        const analysisJp = await translateText(analysis.analysis, 'Japanese');
+        const analysisKr = await translateText(analysis.analysis, 'Korean');
+        const analysisVn = await translateText(analysis.analysis, 'Vietnamese');
+        const analysisCn = await translateText(analysis.analysis, 'Chinese');
+
+        // Update the analysis entry with translated content
+        analysis.analysis_jp = analysisJp;
+        analysis.analysis_kr = analysisKr;
+        analysis.analysis_vn = analysisVn;
+        analysis.analysis_cn = analysisCn;
+
+        // Save the updated analysis entry
+        await analysis.save();
+
+        return 'Dominance and analysis saved succesfully';
+    } catch (error) {
+        console.error(error);
+        throw new Error('Error in creating dominance analysis');
+    }
+}
 router.post('/create', async function(req, res) {
    try {
         let result = await runDominanceConversation();
@@ -283,7 +313,7 @@ router.post('/create', async function(req, res) {
             analysis: result[0].message.content,
             createdAt: new Date(),
             updatedAt: new Date()
-        })
+        });
        // Translate the analysis content
        const analysisJp = await translateText(analysis.analysis, 'Japanese');
        const analysisKr = await translateText(analysis.analysis, 'Korean');
@@ -305,15 +335,26 @@ router.post('/create', async function(req, res) {
        res.status(500).send('Error creating analysis');
    }
 });
-
+const performDominanceCollect = async () => {
+    try {
+        const response = await axios.get('https://api.coingecko.com/api/v3/global');
+        const dominance = response.data.data.market_cap_percentage;
+        const goyaDominance = (Math.random() * 10 + 5).toFixed(2);
+        console.log("goyaDominance: ", goyaDominance);
+        await Dominance.create({
+            dominance,
+            goya_dominance: goyaDominance
+        });
+        return 'Dominance data collected and inserted successfully.';
+    } catch (error) {
+        console.error('Error fetching dominance data');
+        return new Error('Error fetching dominance data');
+    }
+}
 router.post('/collect', async function(req, res) {
     try {
         const response = await axios.get('https://api.coingecko.com/api/v3/global');
         const dominance = response.data.data.market_cap_percentage;
-        // console.log("dominance: ", dominance);
-        // const goya = await axios.get('http://15.165.194.33/analysis/dominance?hour=1');
-        // console.log("goya: ", goya);
-        // const goyaDominance = goya.data.result[0].dominance;
         const goyaDominance = (Math.random() * 10 + 5).toFixed(2);
         console.log("goyaDominance: ", goyaDominance);
         await Dominance.create({
@@ -321,13 +362,11 @@ router.post('/collect', async function(req, res) {
             goya_dominance: goyaDominance
         });
         res.status(200).send('Dominance data collected and inserted successfully.');
-        // await fetchHistoricalDominanceData();
     } catch (error) {
         console.error('Error fetching dominance data');
         res.status(500).send('Error fetching dominance data');
     }
 })
-
 router.post('/rsi', async function(req, res) {
     try {
         await getRSIanalysis();
@@ -337,4 +376,4 @@ router.post('/rsi', async function(req, res) {
     }
 })
 
-module.exports = router;
+module.exports = { router, performDominanceAnalysis, performDominanceCollect };

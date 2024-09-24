@@ -96,14 +96,12 @@ async function runConversation() {
 
 async function runCandidateConversation(articles) {
    const messages = [
-      { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-      { role: "user", content: "From the given articles, select four articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, return the selected articles in a json format as following. {'candidates' : [{'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}]. . Also Don't improvise the 'id' and search from the given article list's id. 'summary' should be the brief summary of the article content. 'reason' should be the reason why the article was selected as a candidate. Article List : " + JSON.stringify(articles)},
+      { role: "system", content: "Article List: " + JSON.stringify(articles) + ". You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context." },
+      { role: "user", content: "From the given articles, select four articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement, return the selected articles in a json format as following. {'candidates' : [{'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}]. Don't improvise the 'id' and search from the given article list's id. It is very important that you return the exact 'id' that matches with the id of the article. 'summary' should be the brief summary of the article content in english and 'reason' should be the reason why the article was selected as a candidate, in english." },
    ];
    const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: messages,
-      // tools: tools,
-      // tool_choice : "auto", //auto is default, but we'll be explicit
       response_format: { type: "json_object" }
    });
 
@@ -115,14 +113,12 @@ async function runCandidateConversation(articles) {
 
 async function runFinalConversation(candidates) {
    const messages = [
-      { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
-      { role: "user", content: "From the given article candidates, select four candidates that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement. The 'reason' is about why the article was selected as a candidate. Return the four candidates in a json format as following. {'finals' : [{'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}] Just return the list without a key. Also Don't improvise the 'id', 'summary', 'reason' and search from the given candidate list. Candidate List : " + JSON.stringify(candidates)},
+      { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context." },
+      { role: "user", content: "Candidate List: " + JSON.stringify(candidates) + ". From the provided candidates select and return the four candidates that is the most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement. The 'reason' is explaining why the article was selected as a candidate. Return the four candidates in a json format as following. {'finals' : [{'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}, {'id': 'integer', 'summary' : 'text', 'reason' : 'text'}] . Also Don't improvise the 'id', 'summary', 'reason' and find them from the given candidate list." },
    ];
    const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: messages,
-      // tools: tools,
-      // tool_choice : "auto", //auto is default, but we'll be explicit
       response_format: { type: "json_object" }
    });
 
@@ -149,8 +145,6 @@ async function getArticlesDay() {
       }
 
       console.log("Article data: ", articles);
-      // const data = await response.json();
-      // return JSON.stringify(transformedArticles, null, 2);
       return articles;
    } catch(err) {
       console.error(err);

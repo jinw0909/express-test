@@ -48,6 +48,6 @@ router.get('/test', async (req, res) => {
         console.error('Error querying schema2:', error);
         res.status(500).send('Error querying schema2');
     }
-})
+});
 
 module.exports = router;
