@@ -1069,6 +1069,7 @@ router.post('/complete', async function(req, res) {
 
         const updatedVp = await getViewpointAndUpdate();
         console.log("updatedVp: ", updatedVp);
+        await createViewpointImage();
 
         // res.status(200).send('ok');
         res.send('ok');

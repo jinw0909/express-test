@@ -164,7 +164,7 @@
 
     document.querySelector('.send-btn-construct').addEventListener('click', function() {
         document.querySelector('#flag4').textContent = "sent";
-        axios.get('/brief/construct')
+        axios.post('/create/complete')
             .then((response) => {
                 console.log("post success: ", response);
             })
