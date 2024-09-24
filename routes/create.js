@@ -795,7 +795,7 @@ async function getAllViewpointWithAnalysisIds() {
         console.error(error);
     }
 }
-const createViewpointImage = async () => {
+async function createViewpointImage() {
     try {
         // Fetch the most recent viewpoint from the database
         const recentViewpoint = await Viewpoint.findOne({
@@ -874,8 +874,8 @@ const createViewpointImage = async () => {
     } catch (error) {
         console.error("Error during image generation or upload:", error);
     }
-};
-const performArticleAnalysis = async () => {
+}
+async function performArticleAnalysis() {
     try {
         // console.log("step 1: candidates: ", candidates);
         const candidates = await makeCandidates();
@@ -963,6 +963,7 @@ const performArticleAnalysis = async () => {
 
         const updatedVp = await getViewpointAndUpdate();
         console.log("updatedVp: ", updatedVp);
+        await createViewpointImage();
 
         // res.status(200).send('ok');
         return "Successfully created and saved article analysis"

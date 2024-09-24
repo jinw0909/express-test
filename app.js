@@ -211,6 +211,8 @@ var port = normalizePort(process.env.PORT || 3000);
 app.set('port', port);
 let server = http.createServer(app);
 
+server.timeout = 1200000; //20 minutes
+
 server.listen(port, () => {
   console.log(`server is running on port ${port}`);
   //console.log('Cron job scheduled. The process will keep running to execute the scheduled task.')
