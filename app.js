@@ -42,7 +42,7 @@ console.log('env port: ', process.env.PORT);
 
 (async () => {
   try {
-    await sequelize.sync({alter: true});
+    await sequelize.sync();
     console.log('Database synchronized successfully');
   } catch (error) {
     console.error('Error synchronizing database:', error);
