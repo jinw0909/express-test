@@ -395,7 +395,7 @@ const capturePremium = async function(req, res) {
             // Set a higher-resolution viewport and device scale factor
             await page.setViewport({
                 width: 760,        // Set the width of the viewport
-                height: 1080,       // Set the height of the viewport
+                height: 540,       // Set the height of the viewport
                 deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
             });
 
