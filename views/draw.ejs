@@ -70,7 +70,63 @@
         console.log("analysis: ", analysis);
 
         // Function to create chart
+        // function createChart(ctx, labels, scoreData, priceData) {
+        //     return new Chart(ctx, {
+        //         type: 'line',
+        //         data: {
+        //             labels: labels,
+        //             datasets: [{
+        //                 label: 'Goya Score',
+        //                 data: scoreData,
+        //                 borderColor: 'rgba(54, 162, 235, 1)',
+        //                 borderWidth: 2,
+        //                 yAxisID: 'y',
+        //                 // cubicInterpolationMode: 'monotone',
+        //                 tension: 0.4,
+        //                 borderCapStyle: 'round',
+        //                 borderJoinStyle: 'round'
+        //             }, {
+        //                 label: 'Price',
+        //                 data: priceData,
+        //                 borderColor: 'rgba(255, 99, 132, 1)',
+        //                 borderWidth: 2,
+        //                 yAxisID: 'y1',
+        //                 // cubicInterpolationMode: 'monotone',
+        //                 tension: 0.4,
+        //                 borderCapStyle: 'round',
+        //                 borderJoinStyle: 'round'
+        //             }]
+        //         },
+        //         options: {
+        //             scales: {
+        //                 y: {
+        //                     type: 'linear',
+        //                     position: 'left',
+        //                     grid: {
+        //                         display: false
+        //                     }
+        //                 },
+        //                 y1: {
+        //                     type: 'linear',
+        //                     position: 'right',
+        //                     grid: {
+        //                         display: false
+        //                     }
+        //                 },
+        //                 x: {
+        //                     grid: {
+        //                         display: false
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     });
+        // }
+
         function createChart(ctx, labels, scoreData, priceData) {
+
+            ctx.canvas.style.backgroundColor = '#22262F';
+
             return new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -81,7 +137,6 @@
                         borderColor: 'rgba(54, 162, 235, 1)',
                         borderWidth: 2,
                         yAxisID: 'y',
-                        // cubicInterpolationMode: 'monotone',
                         tension: 0.4,
                         borderCapStyle: 'round',
                         borderJoinStyle: 'round'
@@ -91,7 +146,6 @@
                         borderColor: 'rgba(255, 99, 132, 1)',
                         borderWidth: 2,
                         yAxisID: 'y1',
-                        // cubicInterpolationMode: 'monotone',
                         tension: 0.4,
                         borderCapStyle: 'round',
                         borderJoinStyle: 'round'
@@ -104,6 +158,14 @@
                             position: 'left',
                             grid: {
                                 display: false
+                            },
+                            ticks: {
+                                color: 'white',  // Change y-axis ticks color
+                            },
+                            title: {
+                                display: false,
+                                text: 'Goya Score',
+                                color: 'blue'   // Change y-axis label color
                             }
                         },
                         y1: {
@@ -111,17 +173,46 @@
                             position: 'right',
                             grid: {
                                 display: false
+                            },
+                            ticks: {
+                                color: 'white',  // Change y1-axis ticks color
+                            },
+                            title: {
+                                display: false,
+                                text: 'Price',
+                                color: 'red'    // Change y1-axis label color
                             }
                         },
                         x: {
                             grid: {
                                 display: false
+                            },
+                            ticks: {
+                                color: 'white'  // Change x-axis ticks color
+                            },
+                            title: {
+                                display: false,
+                                text: 'Time',
+                                color: 'green'  // Change x-axis label color
                             }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white'  // Change legend text color
+                            }
+                        },
+                        title: {
+                            display: false,
+                            text: 'Goya Score and Price Chart',
+                            color: 'orange'    // Change title color
                         }
                     }
                 }
             });
         }
+
 
         // Day chart
         const ctxDay = document.getElementById('dayChart').getContext('2d');

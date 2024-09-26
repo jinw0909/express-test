@@ -21,7 +21,16 @@ const capture = async function(req, res) {
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
         const page = await browser.newPage();
-        await page.goto('https://blocksquare-automation.com/chart/draw', { waitUntil: 'networkidle0' });
+
+        // Set a high-resolution viewport
+        await page.setViewport({
+            width: 1920,  // Increase width for a larger screenshot
+            height: 1080, // Increase height
+            deviceScaleFactor: 2 // Set to 2 for high-resolution screens, increase further if needed
+        });
+
+        // await page.goto('https://blocksquare-automation.com/chart/draw', { waitUntil: 'networkidle0' });
+        await page.goto('https://goya-regular-brief.com/chart/draw', { waitUntil: 'networkidle0' });
 
         // Increase timeout and wait for the canvas elements
         console.log('Waiting for #dayChart...');
