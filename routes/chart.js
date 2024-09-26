@@ -134,10 +134,10 @@ async function getAnalysisAndUpdate() {
         const dayVn = await translateText(recentAnalysis.day, 'Vietnamese');
         const dayCn = await translateText(recentAnalysis.day, 'Chinese');
 
-        const weekJp = await translateText(recentAnalysis.week, 'Japanese');
-        const weekKr = await translateText(recentAnalysis.week, 'Korean');
-        const weekVn = await translateText(recentAnalysis.week, 'Vietnamese');
-        const weekCn = await translateText(recentAnalysis.week, 'Chinese');
+        // const weekJp = await translateText(recentAnalysis.week, 'Japanese');
+        // const weekKr = await translateText(recentAnalysis.week, 'Korean');
+        // const weekVn = await translateText(recentAnalysis.week, 'Vietnamese');
+        // const weekCn = await translateText(recentAnalysis.week, 'Chinese');
 
         const monthJp = await translateText(recentAnalysis.month, 'Japanese');
         const monthKr = await translateText(recentAnalysis.month, 'Korean');
@@ -149,11 +149,11 @@ async function getAnalysisAndUpdate() {
         const predictionVn = await translateText(recentAnalysis.prediction, 'Vietnamese');
         const predictionCn = await translateText(recentAnalysis.prediction, 'Chinese');
 
-        const combinedText = `${recentAnalysis.day} ${recentAnalysis.week} ${recentAnalysis.month} ${recentAnalysis.prediction}`
-        const combinedTextJp = `${dayJp} ${weekJp} ${monthJp} ${predictionJp}`;
-        const combinedTextKr = `${dayKr} ${weekKr} ${monthKr} ${predictionKr}`;
-        const combinedTextVn = `${dayVn} ${weekVn} ${monthVn} ${predictionVn}`;
-        const combinedTextCn = `${dayCn} ${weekCn} ${monthCn} ${predictionCn}`;
+        // const combinedText = `${recentAnalysis.day} ${recentAnalysis.week} ${recentAnalysis.month} ${recentAnalysis.prediction}`
+        // const combinedTextJp = `${dayJp} ${weekJp} ${monthJp} ${predictionJp}`;
+        // const combinedTextKr = `${dayKr} ${weekKr} ${monthKr} ${predictionKr}`;
+        // const combinedTextVn = `${dayVn} ${weekVn} ${monthVn} ${predictionVn}`;
+        // const combinedTextCn = `${dayCn} ${weekCn} ${monthCn} ${predictionCn}`;
 
         // Generate TTS for each language
         // const mp3En = await generateTTS(combinedText, 'English', recentAnalysis.id);
@@ -169,10 +169,14 @@ async function getAnalysisAndUpdate() {
             day_kr: dayKr,
             day_vn: dayVn,
             day_cn: dayCn,
-            week_jp: weekJp,
-            week_kr: weekKr,
-            week_vn: weekVn,
-            week_cn: weekCn,
+            // week_jp: weekJp,
+            // week_kr: weekKr,
+            // week_vn: weekVn,
+            // week_cn: weekCn,
+            week_jp: '',
+            week_kr: '',
+            week_vn: '',
+            week_cn: '',
             month_jp: monthJp,
             month_kr: monthKr,
             month_vn: monthVn,
@@ -1013,21 +1017,21 @@ router.post('/price-analysis', async function(req, res) {
         const requestTime = new Date();
         const [dayResponse, weekResponse, monthResponse] = await Promise.all([
             getGoyaScoreDay(),
-            getGoyaScoreWeek(),
+            // getGoyaScoreWeek(),
             getGoyaScoreMonth()
         ]);
         const dayData = JSON.parse(dayResponse);
-        const weekData = JSON.parse(weekResponse);
+        // const weekData = JSON.parse(weekResponse);
         const monthData = JSON.parse(monthResponse);
 
         await savePriceToDb(requestTime, 'day', dayData);
-        await savePriceToDb(requestTime, 'week', weekData);
+        // await savePriceToDb(requestTime, 'week', weekData);
         await savePriceToDb(requestTime, 'month', monthData);
 
         const result = await runAnalysisConversation();
         const response = JSON.parse(result[0].message.content);
 
-        await saveAnalysisToDb(response.day, response.week, response.month, response.prediction, requestTime);
+        await saveAnalysisToDb(response.day, response.month, response.prediction, requestTime);
 
         await getAnalysisAndUpdate();
 

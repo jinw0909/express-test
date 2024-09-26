@@ -37,7 +37,7 @@ var deleteRouter = require('./routes/delete');
 const { getArticlesDay } = require('./routes/create');
 
 var app = express();
-startCronJobs();
+// startCronJobs();
 console.log('env port: ', process.env.PORT);
 
 (async () => {

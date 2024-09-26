@@ -6,3 +6,6 @@ node_modules
 .temp
 BuildFile
 Procfile
+Procfileecosystem.config.js
+ecosystem.config.js
+.archive.zip
