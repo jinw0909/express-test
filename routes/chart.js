@@ -214,7 +214,7 @@ async function runAnalysisConversation() {
         },
         {
             role: "user",
-            content: "Analyze the Goya score and the Bitcoin price movement within 24 hours, 7 days, and 30 days. Also tell me what the bitcoin price would be like after one day, one week, and one month based on the Goya score data and your analysis. When you reference a time, the calculations should be made on the current Korean Standard Time as a criteria. the The response should be in a JSON format {'day': 'text', 'week' : 'text', 'month' : 'text', 'prediction' : 'text'} but the items marked as 'text' should be in a plain word for presentation."
+            content: "Analyze the Goya score and the Bitcoin price movement within 24 hours and 30 days. The analysis should not only mention the highest and the lowest prices but also mention the points when there was a significant change in the price and the score. Also tell me what the bitcoin price would be like after one day, one week, and one month based on the Goya score data and your analysis. The prediction should include reasonable reasons for being made. The response should be in a JSON format {'day': 'text', 'month' : 'text', 'prediction' : 'text'} but the items marked as 'text' should be in a plain word for presentation."
         },
     ]
     const tools = [
@@ -225,71 +225,76 @@ async function runAnalysisConversation() {
                 description: "returns the list of the Goya score and Bitcoin price within the last 24 hours. Each score and price in the array represents the score and price of the hour. The provided price unit is USD."
             }
         },
-        {
-            type: "function",
-            function: {
-                name: "get_goyascore_week",
-                description: "returns the list of the Goya score and Bitcoin price within last 7 days. Each score in the array represents the average score and price of each day. The provided price unit is USD."
-            }
-        },
+        // {
+        //     type: "function",
+        //     function: {
+        //         name: "get_goyascore_week",
+        //         description: "returns the list of the Goya score and Bitcoin price within last 7 days. Each score in the array represents the average score and price of each day. The provided price unit is in USD."
+        //     }
+        // },
         {
             type: "function",
             function: {
                 name: "get_goyascore_month",
-                description: "returns the list of the Goya score and Bitcoin price within last 30 days. Each score in the array represents the average score and price of each day. The provided price unit is USD."
+                description: "Returns the list of the Goya score and Bitcoin price within last 30 days. Each score in the array represents the average score and price of each day. The provided price unit is in USD."
             }
         },
         {
             type: "function",
             function: {
                 name: "get_month_day_hour",
-                description: "returns the current Korean Standard Time in a month, day, and hour format"
+                description: "Returns the current Korean Standard Time in a month, day, and hour format"
             }
         }
     ]
-    const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: messages,
-        tools: tools,
-        tool_choice: "auto", //auto is default, but we'll be explicit
-        response_format: {type: "json_object"}
-    });
-    const responseMessage = response.choices[0].message;
-    const toolCalls = responseMessage.tool_calls;
-    if (responseMessage.tool_calls) {
-        const availableFunctions = {
-            get_goyascore_day: getGoyaScoreDay,
-            get_goyascore_week: getGoyaScoreWeek,
-            get_goyascore_month: getGoyaScoreMonth,
-            get_month_day_hour: getMDH
-        };
-        messages.push(responseMessage);
-        for (const toolCall of toolCalls) {
-            const functionName = toolCall.function.name;
-            const functionToCall = availableFunctions[functionName];
-            console.log("functionToCall: ", functionToCall);
-            const functionArgs = JSON.parse(toolCall.function.arguments || "{}");
-            const functionResponse = await functionToCall(
-                functionArgs
-            )
-            console.log("functionResponse: ", functionResponse);
-
-            messages.push({
-                tool_call_id: toolCall.id,
-                role: "tool",
-                name: functionName,
-                content: functionResponse,
-            })
-        }
-
-        const secondResponse = await openai.chat.completions.create({
+    try {
+        const response = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: messages,
+            tools: tools,
+            tool_choice: "auto", //auto is default, but we'll be explicit
             response_format: {type: "json_object"}
         });
+        const responseMessage = response.choices[0].message;
+        const toolCalls = responseMessage.tool_calls;
+        if (responseMessage.tool_calls) {
+            const availableFunctions = {
+                get_goyascore_day: getGoyaScoreDayForGPT,
+                get_goyascore_week: getGoyaScoreWeek,
+                get_goyascore_month: getGoyaScoreMonthForGPT,
+                get_month_day_hour: getMDH
+            };
+            messages.push(responseMessage);
+            for (const toolCall of toolCalls) {
+                const functionName = toolCall.function.name;
+                const functionToCall = availableFunctions[functionName];
+                console.log("functionToCall: ", functionToCall);
+                const functionArgs = JSON.parse(toolCall.function.arguments || "{}");
+                const functionResponse = await functionToCall(
+                    functionArgs
+                )
+                console.log("functionResponse: ", functionResponse);
 
-        return secondResponse.choices;
+                messages.push({
+                    tool_call_id: toolCall.id,
+                    role: "tool",
+                    name: functionName,
+                    content: functionResponse,
+                })
+            }
+
+            const secondResponse = await openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: messages,
+                response_format: {type: "json_object"}
+            });
+
+            return secondResponse.choices;
+        }
+    } catch (error) {
+        console.log("Error communicating with OpenAI : ", error);
     }
+
 }
 async function runChartConversation() {
     const messages = [
@@ -300,7 +305,7 @@ async function runChartConversation() {
         "\n" +
         "Additionally, you can compare and analyze the fluctuations of the Goya score with the actual Bitcoin prices in USD to roughly predict the price of Bitcoin 24 to 48 hours from the current time."},
         { role: "user", content: "Based on the Goya score data within 7 days and within 24 hours, the actual bitcoin price movement data within 7 days and within 24 hours, please tell me some points where the Goya score prediction was highly successful. Also tell me what the bitcoin price would be like after 24 to 48 hours based on the Goya score data and your analysis"},
-    ]
+    ];
     const tools = [
         {
             type: "function",
@@ -330,7 +335,7 @@ async function runChartConversation() {
                 description: "returns the bitcoin price movement within the last 24 hours. The unit is dollars."
             }
         }
-    ]
+    ];
     const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: messages,
@@ -438,83 +443,267 @@ async function getCoinPriceDay() {
 function extractScorePrice(data) {
     let score = [];
     let price = [];
+    let datetime = [];
 
-    for (let key in data) {
-        if (data.hasOwnProperty(key) && key !== 'info') {
-            score.push(data[key].score);
-            price.push(parseFloat(data[key].price))
-        }
-    }
+    data.forEach(row => {
+        score.push(parseFloat(row.score));  // Convert score to a number
+        price.push(parseFloat(row.price));  // Convert price to a floating-point number
+        datetime.push(formatHourMinute(row.datetime));
+    });
+
     let result = {
         score: score,
-        price: price
+        price: price,
+        datetime: datetime
     }
+
     console.log(result);
     return result;
 }
+
+// function extractScorePriceWeek(data) {
+//     let scores = [];
+//     let prices = [];
+//
+//     // Collect all scores and prices from the data object
+//     for (let key in data) {
+//         if (data.hasOwnProperty(key) && key !== 'info') {
+//             scores.push(data[key].score);
+//             prices.push(parseFloat(data[key].price));
+//         }
+//     }
+//
+//     // Function to calculate average of an array
+//     function calculateAverage(arr) {
+//         const sum = arr.reduce((acc, val) => acc + val, 0);
+//         const average = sum / arr.length;
+//         return parseFloat(average.toFixed(2));
+//     }
+//
+//     let avgScores = [];
+//     let avgPrices = [];
+//
+//     // Calculate the average for each 24-hour chunk
+//     for (let i = 0; i < scores.length; i += 24) {
+//         let scoreChunk = scores.slice(i, i + 24);
+//         let priceChunk = prices.slice(i, i + 24);
+//
+//         avgScores.push(calculateAverage(scoreChunk));
+//         avgPrices.push(calculateAverage(priceChunk));
+//     }
+//
+//     let result = {
+//         score: avgScores,
+//         price: avgPrices
+//     };
+//
+//     console.log(result);
+//     return result;
+// }
 function extractScorePriceWeek(data) {
+
     let scores = [];
     let prices = [];
+    let datetimes = [];
+
+    data.forEach(row => {
+        scores.push(parseFloat(row.score));  // Convert score to a number
+        prices.push(parseFloat(row.price));  // Convert price to a floating-point number
+        datetimes.push(formatMonthDate(row.datetime));  // Convert price to a floating-point number
+    });
 
     // Collect all scores and prices from the data object
-    for (let key in data) {
-        if (data.hasOwnProperty(key) && key !== 'info') {
-            scores.push(data[key].score);
-            prices.push(parseFloat(data[key].price));
-        }
-    }
+    // for (let key in data) {
+    //     if (data.hasOwnProperty(key) && key !== 'info') {
+    //         scores.push(data[key].score);
+    //         prices.push(parseFloat(data[key].price));
+    //     }
+    // }
 
-    // Function to calculate average of an array
-    function calculateAverage(arr) {
-        const sum = arr.reduce((acc, val) => acc + val, 0);
-        const average = sum / arr.length;
-        return parseFloat(average.toFixed(2));
-    }
+    let lastScores = [];
+    let lastPrices = [];
+    let lastDatetimes = [];
 
-    let avgScores = [];
-    let avgPrices = [];
-
-    // Calculate the average for each 24-hour chunk
+    // Instead of averaging, get the last value of each 24-hour chunk
     for (let i = 0; i < scores.length; i += 24) {
-        let scoreChunk = scores.slice(i, i + 24);
-        let priceChunk = prices.slice(i, i + 24);
+        let lastScore = scores[i]; // Last score in the 24-hour chunk
+        let lastPrice = prices[i]; // Last price in the 24-hour chunk
+        let lastDatetime = datetimes[i];
 
-        avgScores.push(calculateAverage(scoreChunk));
-        avgPrices.push(calculateAverage(priceChunk));
+        // Push the last value of the chunk into the respective arrays
+        lastScores.push(lastScore);
+        lastPrices.push(lastPrice);
+        lastDatetimes.push(lastDatetime);
     }
 
     let result = {
-        score: avgScores,
-        price: avgPrices
+        score: lastScores.reverse(),
+        price: lastPrices.reverse(),
+        datetime: lastDatetimes.reverse()
     };
 
     console.log(result);
     return result;
 }
 function extractPrice(data) {
-    let result = data.map((elem, index) => {
+    return data.map((elem, index) => {
         return elem[1];
     });
-    return result;
 }
 
+// async function getGoyaScoreDay() {
+//     const jsonData = await axios.get('https://won.korbot.com/page/predict_chart_api.php?kind=BTCUSDT&ob_number=24');
+//     const scoreArray = extractScorePrice(jsonData.data);
+//     console.log("dayArray: ", scoreArray);
+//     return JSON.stringify(scoreArray);
+// }
 async function getGoyaScoreDay() {
-    const jsonData = await axios.get('https://won.korbot.com/page/predict_chart_api.php?kind=BTCUSDT&ob_number=24');
-    const scoreArray = extractScorePrice(jsonData.data);
-    console.log("dayArray: ", scoreArray);
-    return JSON.stringify(scoreArray);
+    const query = `
+        SELECT score, price, CONVERT_TZ(datetime, '+00:00', '+09:00') AS datetime 
+        FROM retri_chart_data 
+        WHERE simbol = 'BTCUSDT' 
+        ORDER BY regdate DESC 
+        LIMIT 24
+    `;
+
+    try {
+        const result = await goyaDb.query(query);
+        const reversedResult = result.reverse();
+        const scorePriceObject = extractScorePrice(reversedResult);
+        console.log("dayArray: ", scorePriceObject);
+        return JSON.stringify(scorePriceObject);
+    } catch (error) {
+        console.error("Error fetching data for day: ", error);
+    }
 }
+
+async function getGoyaScoreDayForGPT() {
+    const query = `
+        SELECT simbol AS symbol, score, price, CONVERT_TZ(datetime, '+00:00', '+09:00') AS datetime
+        FROM retri_chart_data 
+        WHERE simbol = 'BTCUSDT' 
+        ORDER BY datetime DESC 
+        LIMIT 24
+    `;
+
+    try {
+        const result = await goyaDb.query(query);
+        console.log("getGoyaScoreDayForGPT query result: ", result);
+
+        const reversedResult = result.reverse();
+
+        // Format the result to the desired structure
+        const formattedResult = reversedResult.map(row => ({
+            symbol: row.symbol,                  // Add symbol in front
+            price: parseFloat(row.price),        // Convert price to number
+            score: parseFloat(row.score),            // Convert score to number
+            datetime: row.datetime // Convert datetime to ISO string
+        }));
+
+        console.log("getGoyaScoreDayForGPT dayArray: ", formattedResult);
+        return JSON.stringify(formattedResult);
+    } catch (error) {
+        console.error("Error fetching data for day: ", error);
+        return '';
+    }
+}
+
+
+// async function getGoyaScoreWeek() {
+//     const jsonData = await axios.get('https://won.korbot.com/page/predict_chart_api.php?kind=BTCUSDT&ob_number=168');
+//     const scoreArray = extractScorePriceWeek(jsonData.data);
+//     console.log("weekArray: ", scoreArray);
+//     return JSON.stringify(scoreArray);
+// }
 async function getGoyaScoreWeek() {
-    const jsonData = await axios.get('https://won.korbot.com/page/predict_chart_api.php?kind=BTCUSDT&ob_number=168');
-    const scoreArray = extractScorePriceWeek(jsonData.data);
-    console.log("weekArray: ", scoreArray);
-    return JSON.stringify(scoreArray);
+    const query = `
+        SELECT score, price, datetime 
+        FROM retri_chart_data 
+        WHERE simbol = 'BTCUSDT' 
+        ORDER BY regdate DESC 
+        LIMIT 168
+    `;
+
+    try {
+        const result = await goyaDb.query(query);
+        const scorePriceObject = extractScorePriceWeek(result);
+        console.log("weekArray: ", scorePriceObject);
+        return JSON.stringify(scorePriceObject);
+    } catch (error) {
+        console.error("Error fetching data for week: ", error);
+    }
 }
+// async function getGoyaScoreDayForGPT() {
+//     const jsonData = await axios.get('https://won.korbot.com/page/predict_chart_api.php?kind=BTCUSDT&ob_number=672');
+//     const scoreArray = extractScorePriceWeek(jsonData.data);
+//     console.log("monthArray: ", scoreArray);
+//     return JSON.stringify(scoreArray);
+// }
 async function getGoyaScoreMonth() {
-    const jsonData = await axios.get('https://won.korbot.com/page/predict_chart_api.php?kind=BTCUSDT&ob_number=672');
-    const scoreArray = extractScorePriceWeek(jsonData.data);
-    console.log("monthArray: ", scoreArray);
-    return JSON.stringify(scoreArray);
+    const query = `
+        SELECT score, price, CONVERT_TZ(datetime, '+00:00', '+09:00') AS datetime
+        FROM retri_chart_data 
+        WHERE simbol = 'BTCUSDT' 
+        ORDER BY datetime DESC 
+        LIMIT 672
+    `;
+
+    try {
+        const result = await goyaDb.query(query);
+        const scorePriceObject = extractScorePriceWeek(result);
+        console.log("getGoyaScoreMonth: monthArray: ", scorePriceObject);
+        return JSON.stringify(scorePriceObject);
+    } catch (error) {
+        console.error("Error fetching data for month: ", error);
+    }
+}
+async function getGoyaScoreMonthForGPT() {
+    const query = `
+        SELECT simbol AS symbol, score, price, CONVERT_TZ(datetime, '+00:00', '+09:00') AS datetime
+        FROM retri_chart_data 
+        WHERE simbol = 'BTCUSDT' 
+        ORDER BY datetime DESC 
+        LIMIT 672 -- 24 data points per day for 28 days
+    `;
+
+    try {
+        const result = await goyaDb.query(query);
+        // Format the result to the desired structure and chunk by 24 elements
+        const formattedResult = [];
+        for (let i = 0; i < result.length; i += 24) {
+            const row = result[i];  // Get the last element from the 24-hour chunk
+            formattedResult.push({
+                symbol: row.symbol,
+                price: parseFloat(row.price),      // Convert price to number
+                score: parseFloat(row.score),          // Convert score to number
+                datetime: row.datetime  // Convert datetime to ISO string
+            });
+        }
+        let resultArray = formattedResult.reverse();
+
+        console.log("getGoyaScoreMonthForGPT: monthArray: ", resultArray);
+        return JSON.stringify(resultArray);
+    } catch (error) {
+        console.error("Error fetching data for month: ", error);
+    }
+}
+
+// Helper function to format datetime to MM-DD
+function formatMonthDate(datetime) {
+    const date = new Date(datetime);  // Create a new Date object
+    const month = String(date.getMonth() + 1).padStart(2, '0');  // Get month and pad to 2 digits
+    const day = String(date.getDate()).padStart(2, '0');         // Get day and pad to 2 digits
+    return `${month}-${day}`;  // Return formatted string as MM-DD
+}
+
+function formatHourMinute(datetime) {
+    const date = new Date(datetime);  // Create a new Date object
+    console.log("formatHourMinute : ", date);
+    const hours = String(date.getUTCHours()).padStart(2, '0');    // Get hours and pad to 2 digits
+    console.log("hours: ", hours);
+    const minutes = String(date.getUTCMinutes()).padStart(2, '0');  // Get minutes and pad to 2 digits
+    console.log("minutes: ", minutes);
+    return `${hours}:${minutes}`;  // Return formatted string as HH:MM
 }
 
 router.get('/', async function(req, res, next) {
@@ -572,7 +761,8 @@ async function savePriceToDb(requestTime, period, data) {
             requestTime,
             period,
             score: data.score,
-            price: data.price
+            price: data.price,
+            datetime: data.datetime
         })
         console.log(`Data for ${period} saved successfully`);
     } catch (error) {
@@ -585,7 +775,7 @@ async function saveAnalysisToDb(dayData, weekData, monthData, predictionText, re
         await BitcoinAnalysis.create({
             requestTime,
             day: dayData,
-            week: weekData,
+            week: '',
             month: monthData,
             prediction: predictionText
         })
@@ -798,18 +988,18 @@ router.get('/analysis-save', async function(req, res) {
 router.post('/save', async function(req, res) {
     try {
         const requestTime = new Date();
-        const [dayResponse, weekResponse, monthResponse] = await Promise.all([
+        const [dayResponse, monthResponse] = await Promise.all([
             getGoyaScoreDay(),
-            getGoyaScoreWeek(),
+            // getGoyaScoreWeek(),
             getGoyaScoreMonth()
         ]);
 
         const dayData = JSON.parse(dayResponse);
-        const weekData = JSON.parse(weekResponse);
+        // const weekData = JSON.parse(weekResponse);
         const monthData = JSON.parse(monthResponse);
 
         await savePriceToDb(requestTime, 'day', dayData);
-        await savePriceToDb(requestTime, 'week', weekData);
+        // await savePriceToDb(requestTime, 'week', weekData);
         await savePriceToDb(requestTime, 'month', monthData);
 
         res.send('Data saved successfully');
@@ -847,21 +1037,25 @@ router.post('/price-analysis', async function(req, res) {
         throw error;
     }
 });
+router.get('/day', async function(req, res) {
+    let result = await getGoyaScoreDay();
+    res.json(result);
+});
 
 const performPriceAnalysis = async () => {
     try {
         const requestTime = new Data();
-        const [dayResponse, weekResponse, monthResponse] = await Promise.all([
+        const [dayResponse, monthResponse] = await Promise.all([
             getGoyaScoreDay(),
-            getGoyaScoreWeek(),
+            // getGoyaScoreWeek(),
             getGoyaScoreMonth()
         ]);
         const dayData = JSON.parse(dayResponse);
-        const weekData = JSON.parse(weekResponse);
+        // const weekData = JSON.parse(weekResponse);
         const monthData = JSON.parse(monthResponse);
 
         await savePriceToDb(requestTime, 'day', dayData);
-        await savePriceToDb(requestTime, 'week', weekData);
+        // await savePriceToDb(requestTime, 'week', weekData);
         await savePriceToDb(requestTime, 'month', monthData);
 
         const result = await runAnalysisConversation();
@@ -887,9 +1081,8 @@ router.get('/draw', async function(req, res) {
            BitcoinPrice.findOne({ where: { period: 'month' }, order: [['requestTime', 'DESC']] })
        ]);
        let data = {
-           scoreDay: { score: day.score, price: day.price },
-           scoreWeek: { score: week.score, price: week.price },
-           scoreMonth: { score: month.score, price: month.price }
+           scoreDay: { score: day.score, price: day.price, datetime: day.datetime },
+           scoreMonth: { score: month.score, price: month.price, datetime: month.datetime }
        }
        console.log("data: ", data);
        const analysisRaw = await BitcoinAnalysis.findOne({
@@ -902,10 +1095,10 @@ router.get('/draw', async function(req, res) {
        let analysis = {
            time: analysisRaw.requestTime,
            day: analysisRaw[`day${langSuffix}`],
-           week: analysisRaw[`week${langSuffix}`],
+           // week: analysisRaw[`week${langSuffix}`],
            month: analysisRaw[`month${langSuffix}`],
            prediction: analysisRaw[`prediction${langSuffix}`],
-           mp3: analysisRaw[`mp3${langSuffix}`]
+           // mp3: analysisRaw[`mp3${langSuffix}`]
        };
 
        console.log("analysis: ", analysis);

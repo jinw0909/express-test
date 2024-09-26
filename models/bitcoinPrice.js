@@ -18,6 +18,10 @@ const BitcoinPrice = sequelize.define('BitcoinPrice', {
         type: DataTypes.JSON,
         allowNull: false
     },
+    datetime: {
+        type: DataTypes.JSON,
+        allowNull: false
+    }
 }, {
     tableName: 'Bitcoin_Price',
     timestamps: false
