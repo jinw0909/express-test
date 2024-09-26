@@ -774,7 +774,7 @@ async function savePriceToDb(requestTime, period, data) {
     }
 }
 
-async function saveAnalysisToDb(dayData, weekData, monthData, predictionText, requestTime) {
+async function saveAnalysisToDb(dayData, monthData, predictionText, requestTime) {
     try {
         await BitcoinAnalysis.create({
             requestTime,
@@ -1015,7 +1015,7 @@ router.post('/save', async function(req, res) {
 router.post('/price-analysis', async function(req, res) {
     try {
         const requestTime = new Date();
-        const [dayResponse, weekResponse, monthResponse] = await Promise.all([
+        const [dayResponse, monthResponse] = await Promise.all([
             getGoyaScoreDay(),
             // getGoyaScoreWeek(),
             getGoyaScoreMonth()
