@@ -617,7 +617,7 @@ async function getGoyaScoreDayForGPT() {
             symbol: row.symbol,                  // Add symbol in front
             price: parseFloat(row.price),        // Convert price to number
             score: parseFloat(row.score),            // Convert score to number
-            datetime: row.datetime // Convert datetime to ISO string
+            datetime: row.datetime.toISOString().replace('.000Z', '')
         }));
 
         console.log("getGoyaScoreDayForGPT dayArray: ", formattedResult);
@@ -712,7 +712,7 @@ async function getGoyaScoreMonthForGPT() {
                 symbol: row.symbol,
                 price: parseFloat(row.price),      // Convert price to number
                 score: parseFloat(row.score),          // Convert score to number
-                datetime: row.datetime  // Convert datetime to ISO string
+                datetime: row.datetime.toISOString().replace('000Z', '')
             });
         }
         let resultArray = formattedResult.reverse();
