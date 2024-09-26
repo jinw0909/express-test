@@ -563,12 +563,20 @@ function extractPrice(data) {
 // }
 async function getGoyaScoreDay() {
     const query = `
-        SELECT score, price, CONVERT_TZ(datetime, '+00:00', '+09:00') AS datetime 
+        SELECT score, price, datetime 
         FROM retri_chart_data 
         WHERE simbol = 'BTCUSDT' 
         ORDER BY regdate DESC 
         LIMIT 24
     `;
+
+    // const query = `
+    //     SELECT score, price, CONVERT_TZ(datetime, '+00:00', '+09:00') AS datetime
+    //     FROM retri_chart_data
+    //     WHERE simbol = 'BTCUSDT'
+    //     ORDER BY regdate DESC
+    //     LIMIT 24
+    // `;
 
     try {
         const result = await goyaDb.query(query);
@@ -583,12 +591,20 @@ async function getGoyaScoreDay() {
 
 async function getGoyaScoreDayForGPT() {
     const query = `
-        SELECT simbol AS symbol, score, price, CONVERT_TZ(datetime, '+00:00', '+09:00') AS datetime
+        SELECT simbol AS symbol, score, price, datetime
         FROM retri_chart_data 
         WHERE simbol = 'BTCUSDT' 
         ORDER BY datetime DESC 
         LIMIT 24
     `;
+
+    // const query = `
+    //     SELECT simbol AS symbol, score, price, CONVERT_TZ(datetime, '+00:00', '+09:00') AS datetime
+    //     FROM retri_chart_data
+    //     WHERE simbol = 'BTCUSDT'
+    //     ORDER BY datetime DESC
+    //     LIMIT 24
+    // `;
 
     try {
         const result = await goyaDb.query(query);
@@ -645,12 +661,20 @@ async function getGoyaScoreWeek() {
 // }
 async function getGoyaScoreMonth() {
     const query = `
-        SELECT score, price, CONVERT_TZ(datetime, '+00:00', '+09:00') AS datetime
+        SELECT score, price, datetime
         FROM retri_chart_data 
         WHERE simbol = 'BTCUSDT' 
         ORDER BY datetime DESC 
         LIMIT 672
     `;
+
+    // const query = `
+    //     SELECT score, price, CONVERT_TZ(datetime, '+00:00', '+09:00') AS datetime
+    //     FROM retri_chart_data
+    //     WHERE simbol = 'BTCUSDT'
+    //     ORDER BY datetime DESC
+    //     LIMIT 672
+    // `;
 
     try {
         const result = await goyaDb.query(query);
@@ -663,12 +687,20 @@ async function getGoyaScoreMonth() {
 }
 async function getGoyaScoreMonthForGPT() {
     const query = `
-        SELECT simbol AS symbol, score, price, CONVERT_TZ(datetime, '+00:00', '+09:00') AS datetime
+        SELECT simbol AS symbol, score, price, datetime
         FROM retri_chart_data 
         WHERE simbol = 'BTCUSDT' 
         ORDER BY datetime DESC 
         LIMIT 672 -- 24 data points per day for 28 days
     `;
+
+    // const query = `
+    //     SELECT simbol AS symbol, score, price, CONVERT_TZ(datetime, '+00:00', '+09:00') AS datetime
+    //     FROM retri_chart_data
+    //     WHERE simbol = 'BTCUSDT'
+    //     ORDER BY datetime DESC
+    //     LIMIT 672 -- 24 data points per day for 28 days
+    // `;
 
     try {
         const result = await goyaDb.query(query);
