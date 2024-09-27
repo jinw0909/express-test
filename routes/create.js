@@ -71,6 +71,21 @@ async function getArticlesDay() {
         return { error: err.message }
     }
 }
+async function checkDatabaseTimezone() {
+    try {
+        const result = await Blockmedia.findOne({
+            attributes: ['date'],
+            order: [['id', 'DESC']]
+        });
+        console.log("Last article datetime: ", result.date);
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+        console.log("Twelve hours ago: ", twelveHoursAgo);
+        console.log("Now: ", new Date(Date.now()));
+    } catch (err) {
+        console.error(err);
+    }
+}
+checkDatabaseTimezone();
 async function getCandidates(indexList) {
     try {
         const articles = await Blockmedia.findAll({
@@ -1081,6 +1096,10 @@ router.post('/complete', async function(req, res) {
 router.get('/recent', async function(req, res) {
     try {
         const result = await getArticlesDay();
+        if (!result || result.length === 0) {
+            res.send("there are no results");
+            return;
+        }
         const arr = result.map((article) => {
             return [
                 article.id,
