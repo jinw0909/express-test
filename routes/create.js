@@ -113,8 +113,8 @@ async function getArticles(indexList) {
                 }
             },
             limit: 12
-        })
-
+        });
+        console.log("articles: ", articles);
         //Convert each article to a plain object
         const plainArticles = articles.map(article => article.get({plain: true}));
         console.log("query result: ", plainArticles);
@@ -255,7 +255,7 @@ async function translateText(content, lang) {
     ];
 
     const response  = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-2024-08-06",
         messages: messages
     })
 
@@ -375,11 +375,30 @@ async function runViewpointConversation() {
         }
     ]
     const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-2024-08-06",
         messages: messages,
         tools: tools,
         tool_choice : "auto", //auto is default, but we'll be explicit
-        response_format: {type: "json_object"}
+        response_format: {
+            type: "json_schema",
+            json_schema: {
+                name: "Viewpoint",
+                strict: true,
+                schema: {
+                    type: "object",
+                    properties: {
+                        viewpoint: { type: "string" },
+                        refs: {
+                            type : 'array',
+                            items: { type: "number", description: "the id of article used to created the viewpoint." }
+                        }
+                    },
+                    required: ['viewpoint', 'refs'],
+                    additionalProperties: false
+                }
+            }
+        },
+        parallel_tool_calls: true
     });
     const responseMessage = response.choices[0].message;
     const toolCalls = responseMessage.tool_calls;
@@ -409,11 +428,29 @@ async function runViewpointConversation() {
         }
 
         const secondResponse = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-4o-2024-08-06",
             messages: messages,
-            response_format: {type: "json_object"}
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "Viewpoint",
+                    strict: true,
+                    schema: {
+                        type: "object",
+                        properties: {
+                            viewpoint: { type: "string" },
+                            refs: {
+                                type : 'array',
+                                items: { type: "number", description: "the id of article used to created the viewpoint." }
+                            }
+                        },
+                        required: ['viewpoint', 'refs'],
+                        additionalProperties: false
+                    }
+                }
+            },
         });
-
+        console.log(secondResponse.choices);
         return secondResponse.choices;
     }
 }
@@ -495,7 +532,9 @@ async function getRecentViewpoint() {
 
 async function makeCandidates() {
     const candidates = await createCandidates();
+    console.log("verified candidates: ", candidates);
     const finals = await recurseFinals(candidates);
+    console.log("final candidates: ", finals);
 
     for (const candidate of finals) {
         await Candidate.upsert({
@@ -516,22 +555,53 @@ async function makeCandidates() {
         reason: candidate.reason
     }));
 }
+// async function createCandidates() {
+//     try {
+//         const articleIds = await getArticlesDay();
+//         // const articleIds = articles.map(article => article.id);
+//         console.log("article ids: ", articleIds);
+//         const candidates = [];
+//
+//         for (let i = 0; i < articleIds.length; i += 12) {
+//             const batch = articleIds.slice(i, i + 12);
+//             const result = await runCandidateConversation(batch);
+//             const left = await runVerifyConversation(result);
+//             candidates.push(...left);
+//         }
+//
+//         return candidates;
+//     } catch (error) {
+//         console.error(error);
+//         throw error;
+//     }
+//
+// }
 async function createCandidates() {
+    try {
+        const articleIds = await getArticlesDay();
+        if (!articleIds || articleIds.length === 0) {
+            console.log("No articles found or articleIds is null.");
+            return []; // Return an empty array or handle the scenario as per your logic
+        }
 
-    const articleIds = await getArticlesDay();
-    // const articleIds = articles.map(article => article.id);
-    console.log("article ids: ", articleIds);
-    const candidates = [];
+        console.log("article ids: ", articleIds);
+        const candidates = [];
 
-    for (let i = 0; i < articleIds.length; i += 12) {
-        const batch = articleIds.slice(i, i + 12);
-        const result = await runCandidateConversation(batch);
-        const left = await runVerifyConversation(result);
-        candidates.push(...left);
+        for (let i = 0; i < articleIds.length; i += 12) {
+            const batch = articleIds.slice(i, i + 12);
+            const result = await runCandidateConversation(batch);
+            const left = await runVerifyConversation(result);
+            candidates.push(...left);
+        }
+
+        return candidates;
+    } catch (error) {
+        console.error("Error in createCandidates: ", error);
+        // Return an empty array or continue based on your requirement
+        return []; // Optionally return an empty array to prevent system crashes
     }
-
-    return candidates;
 }
+
 async function runCandidateConversation(articleIds) {
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and summarize the main points and significance of the articles in that context. You are also capable to compare various articles and select the candidates that tend to have more significance than others. Since you are very accurate in your work, the candidate IDs you derive always match the original article IDs exactly."},
@@ -543,30 +613,66 @@ async function runCandidateConversation(articleIds) {
         {
             type: "function",
             function: {
-                name: "get_articles_with_id",
+                name: "get_articles_with_ids",
+                strict: true,
                 description: "Get the original article of each candidate based on its id.",
                 parameters: {
-                    "type": "object",
-                    "properties": {
-                        "indexList": {
-                            "type": "array",
-                            "items": {
-                                "type": "integer",
-                                "description": "A list of candidate articles' IDs that point to their original articles"
+                    type: "object",
+                    properties: {
+                        indexList: {
+                            type: "array",
+                            items: {
+                                type: "integer",
+                                description: "candidate articles' ID that point to its original article"
                             }
                         }
                     },
-                    "required": ["indexList"]
+                    required: ["indexList"],
+                    additionalProperties: false
                 }
             }
         }
     ]
+    // const response = await openai.chat.completions.create({
+    //     model: "gpt-4o-2024-08-06",
+    //     messages: messages,
+    //     tools: tools,
+    //     tool_choice: "auto",
+    //     response_format: { type: "json_object" }
+    // });
     const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-2024-08-06",
         messages: messages,
         tools: tools,
-        tool_choice: "auto",
-        response_format: { type: "json_object" }
+        tool_choice: {type: "function", function: {name: "get_articles_with_ids"}},
+        response_format: {
+            type: "json_schema",
+            json_schema: {
+                name: "Candidates",
+                strict: true,
+                schema: {
+                    type: "object",
+                    properties: {
+                        candidates: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "number"},
+                                    summary: { type: "string" },
+                                    reason: { type: "string" }
+                                },
+                                required: ["id", "summary", "reason"],
+                                additionalProperties: false
+                            }
+                        }
+                    },
+                    required: ["candidates"],
+                    additionalProperties: false
+                }
+            }
+        },
+        parallel_tool_calls: false
     });
 
     const responseMessage = response.choices[0].message;
@@ -574,15 +680,16 @@ async function runCandidateConversation(articleIds) {
     const toolCalls = responseMessage.tool_calls;
     if (responseMessage.tool_calls) {
         const availableFunctions = {
-            get_articles_with_id : getArticles
+            get_articles_with_ids : getArticles
         }
         messages.push(responseMessage);
 
         for (const toolCall of toolCalls) {
             const functionName = toolCall.function.name;
-            console.log("functionName: ", functionName);
+            console.log("runCandidateConversation functionName: ", functionName);
             const functionToCall = availableFunctions[functionName];
             const functionArgs = JSON.parse(toolCall.function.arguments);
+            console.log("runCandidateConversation functionArgs: ", functionArgs);
             const functionResponse = await functionToCall(
                 functionArgs.indexList,
             );
@@ -595,9 +702,35 @@ async function runCandidateConversation(articleIds) {
         }
 
         const secondResponse = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-4o-2024-08-06",
             messages: messages,
-            response_format: { type: "json_object" }
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "Candidates",
+                    strict: true,
+                    schema: {
+                        type: "object",
+                        properties: {
+                            candidates: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        id: { type: "number"},
+                                        summary: { type: "string" },
+                                        reason: { type: "string" }
+                                    },
+                                    required: ["id", "summary", "reason"],
+                                    additionalProperties: false
+                                }
+                            }
+                        },
+                        required: ["candidates"],
+                        additionalProperties: false
+                    }
+                }
+            },
         });
         const finalResponse= secondResponse.choices[0].message;
         const parsed = JSON.parse(finalResponse.content);
@@ -614,34 +747,67 @@ async function runVerifyConversation(candidates) {
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. Also you are capable to compare the summary of the article and the original article content, and check if the summary is correct."},
         { role: "user", content: "I will provide you the list of the candidates"},
         { role: "user", content: JSON.stringify(candidates)},
-        { role: "user", content: "The provided candidate's id point to its original article. The 'summary' is the summary of the article that it refers to. the 'reason' is why the article was selected as a candidate. Using the id of the provided candidate, look up the original article that it points to and check if the summary of the article is correctly made. If the summary is not correct, then drop that candidate from the provided list. After checking all the candidates in the list, return the list that dropped the candidates whose summary was not correct. Return the list in a json format as follows. {'candidates' : [{'id': 'INT', 'summary' : 'TEXT', 'reason' : 'TEXT'}...} The length of the list depends on how many candidates were dropped from the initially provided list." }
+        { role: "user", content: "The provided candidate's id point to its original article. The 'summary' is the summary of the article that it refers to. The 'reason' is why the article was selected as a candidate. Using the id of the provided candidate, look up the original article that it points to and check if the summary of the article is correctly made. If the summary is not correct, then drop that candidate from the provided list. After checking all the candidates in the list, return the list that dropped the candidates whose summary was not correct. Return the list in a json format as follows. {'candidates' : [{'id': 'INT', 'summary' : 'TEXT', 'reason' : 'TEXT'}...} The length of the list depends on how many candidates were dropped from the initially provided list." }
     ];
     const tools = [
         {
             type: "function",
             function: {
-                name: "get_article_with_id",
-                description: "Get the original article of the candidate based on its id.",
+                name: "get_articles_with_ids",
+                strict: true,
+                description: "Get the original article of each candidate based on its id.",
                 parameters: {
-                    "type": "object",
-                    "properties": {
-                        "index": {
-                            "type": "integer",
-                            "description": "A candidate's id that points to its original article"
+                    type: "object",
+                    properties: {
+                        indexList: {
+                            type: "array",
+                            items: {
+                                type: "number",
+                                description: "candidate articles' ID that point to its original article"
+                            }
                         }
                     },
-                    "required": ["index"]
+                    required: ["indexList"],
+                    additionalProperties: false
                 }
+
             }
         }
     ]
 
     const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-2024-08-06",
         messages: messages,
         tools: tools,
-        tool_choice: "auto",
-        response_format: { type: "json_object" }
+        tool_choice: {type: "function", function: {name: "get_articles_with_ids"}},
+        response_format: {
+            type: "json_schema",
+            json_schema: {
+                name: "Candidates",
+                strict: true,
+                schema: {
+                    type: "object",
+                    properties: {
+                        candidates: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "number"},
+                                    summary: { type: "string" },
+                                    reason: { type: "string" }
+                                },
+                                required: ["id", "summary", "reason"],
+                                additionalProperties: false
+                            }
+                        }
+                    },
+                    required: ["candidates"],
+                    additionalProperties: false
+                }
+            }
+        },
+        parallel_tool_calls: false
     });
 
     const responseMessage = response.choices[0].message;
@@ -649,17 +815,18 @@ async function runVerifyConversation(candidates) {
     const toolCalls = responseMessage.tool_calls;
     if (responseMessage.tool_calls) {
         const availableFunctions = {
-            get_article_with_id : getArticle
+            get_articles_with_ids : getArticles
         }
         messages.push(responseMessage);
 
         for (const toolCall of toolCalls) {
             const functionName = toolCall.function.name;
-            console.log("functionName: ", functionName);
+            console.log("runVerifyConversation functionName: ", functionName);
             const functionToCall = availableFunctions[functionName];
             const functionArgs = JSON.parse(toolCall.function.arguments);
+            console.log("runVerifyConversation functionArgs: ", functionArgs);
             const functionResponse = await functionToCall(
-                functionArgs.index,
+                functionArgs.indexList,
             );
             messages.push({
                 tool_call_id: toolCall.id,
@@ -670,9 +837,35 @@ async function runVerifyConversation(candidates) {
         }
 
         const secondResponse = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-4o-2024-08-06",
             messages: messages,
-            response_format: { type: "json_object" }
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "Candidates",
+                    strict: true,
+                    schema: {
+                        type: "object",
+                        properties: {
+                            candidates: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        id: { type: "number"},
+                                        summary: { type: "string" },
+                                        reason: { type: "string" }
+                                    },
+                                    required: ["id", "summary", "reason"],
+                                    additionalProperties: false
+                                }
+                            }
+                        },
+                        required: ["candidates"],
+                        additionalProperties: false
+                    }
+                }
+            },
         });
         const finalResponse= secondResponse.choices[0].message;
         const parsed = JSON.parse(finalResponse.content);
@@ -687,14 +880,40 @@ async function runVerifyConversation(candidates) {
 async function runFinalConversation(candidates) {
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles in relevance with the overall flow of the coin market, and understand the main points and significance of the articles in that context." },
-        { role: "user", content: "Here is a list of article candidates which includes the summary and the reason why it was selected as a candidate : " },
+        { role: "user", content: "Here is a list of candidates which is the summary and the reason why it was selected as a candidate : " },
         { role: "user" ,content: JSON.stringify(candidates)},
-        { role: "user", content: "From the provided article candidates' list , select four candidates that are the most relevant with the movement of the cryptocurrency market and that are helpful in predicting the cryptocurrency market movement. Additionally, the final four selected candidates should not have duplicated or identical content. The 'reason' is about why the candidate was selected among other articles, and the 'summary' is the summary of the candidate's original content. The 'id' is the value that points to the original article of that candidate. Return four candidates in a json format as follows: {'finals' : [{'id': 'EXACT_ID_FROM_LIST', 'summary' : 'EXACT_SUMMARY_FROM_LIST', 'reason' : 'EXACT_REASON_FROM_LIST'}, {'id': 'EXACT_ID_FROM_LIST', 'summary' : 'EXACT_SUMMARY_FROM_LIST', 'reason' : 'EXACT_REASON_FROM_LIST'}, {'id': 'EXACT_ID_FROM_LIST', 'summary' : 'EXACT_SUMMARY_FROM_LIST', 'reason' : 'EXACT_REASON_FROM_LIST'}, {'id': 'EXACT_ID_FROM_LIST', 'summary' : 'EXACT_SUMMARY_FROM_LIST', 'reason' : 'EXACT_REASON_FROM_LIST'}]. Ensure the IDs exactly match the provided candidates' IDs." },
+        { role: "user", content: "From the provided candidates list , select four candidates that are the most relevant with the movement of the cryptocurrency market and that are helpful in predicting the cryptocurrency market movement. The final four candidates should not have duplicated or identical content. The given 'reason' is about why this candidate was selected among other articles, and the given 'summary' is the summary of the candidate's original content. The given 'id' is the value that points to the original article of the candidate. Return the final four candidates in a json format as follows: {'finals' : [{'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, {'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, {'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, {'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}]. Ensure the ID of each element exactly match the ID of the provided candidate list" },
     ];
     const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-2024-08-06",
         messages: messages,
-        response_format: { type: "json_object" }
+        response_format: {
+            type: "json_schema",
+            json_schema: {
+                name: "Candidates",
+                strict: true,
+                schema: {
+                    type: "object",
+                    properties: {
+                        finals: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "number"},
+                                    summary: { type: "string" },
+                                    reason: { type: "string" }
+                                },
+                                required: ["id", "summary", "reason"],
+                                additionalProperties: false
+                            }
+                        }
+                    },
+                    required: ["finals"],
+                    additionalProperties: false
+                }
+            }
+        },
     });
 
     const responseMessage = response.choices[0].message;
@@ -716,28 +935,55 @@ async function runCreateConversation(candidates) {
                 name: "get_candidate_articles",
                 description: "Get the original article of each candidate based on its id.",
                 parameters: {
-                    "type": "object",
-                    "properties": {
-                        "indexList": {
-                            "type": "array",
-                            "items": {
-                                "type": "integer",
-                                "description": "A list of candidate articles' IDs that point to their original articles"
+                    type: "object",
+                    properties: {
+                        indexList: {
+                            type: "array",
+                            items: {
+                                type: "number",
+                                description: "candidate articles' ID that point to its original article"
                             }
                         }
                     },
-                    "required": ["indexList"]
+                    required: ["indexList"],
+                    additionalProperties: false
                 }
             }
         }
     ]
 
     const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-2024-08-06",
         messages: messages,
         tools: tools,
-        tool_choice : "auto", //auto is default, but we'll be explicit
-        response_format: {type: "json_object"}
+        tool_choice : { type: "function", function: { name: "get_candidate_articles"}}, //auto is default, but we'll be explicit
+        response_format: {
+            type: "json_schema",
+            json_schema: {
+                name: "Analysis",
+                schema: {
+                    type: "object",
+                    properties: {
+                        summaries_and_analyses : {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    id : { type: "number"},
+                                    analysis: { type: "string"},
+                                    summary: {type: "string"}
+                                },
+                                required: ["id", "analysis", "summary"],
+                                additionalProperties: false
+                            }
+                        }
+                    },
+                    required: ["summaries_and_analyses"],
+                    additionalProperties: false
+                }
+            }
+        },
+        parallel_tool_calls: false
     });
     const responseMessage = response.choices[0].message;
 
@@ -767,9 +1013,34 @@ async function runCreateConversation(candidates) {
         }
 
         const secondResponse = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-4o-2024-08-06",
             messages: messages,
-            response_format: { type: "json_object" }
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "Analysis",
+                    schema: {
+                        type: "object",
+                        properties: {
+                            summaries_and_analyses : {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        id : { type: "number"},
+                                        analysis: { type: "string"},
+                                        summary: {type: "string"}
+                                    },
+                                    required: ["id", "analysis", "summary"],
+                                    additionalProperties: false
+                                }
+                            }
+                        },
+                        required: ["summaries_and_analyses"],
+                        additionalProperties: false
+                    }
+                }
+            },
         });
         console.log("secondResponse: ", secondResponse.choices);
         return secondResponse.choices;
@@ -893,15 +1164,18 @@ async function createViewpointImage() {
 async function performArticleAnalysis() {
     try {
         // console.log("step 1: candidates: ", candidates);
+        console.log("step 1: select final candidates");
         const candidates = await makeCandidates();
         console.log("candidates: ", candidates);
+
+        console.log("step 2: analyze final candidates");
         // Then, pass these indexes to runCreateConveration
         const createResult = await runCreateConversation(candidates);
+        const analyses = JSON.parse(createResult[0].message.content)['summaries_and_analyses'];
+        console.log("created analyses: ", analyses);
 
-        const articles = JSON.parse(createResult[0].message.content)['summaries_and_analyses'];
-        console.log("step 2: articles: ", articles);
-
-        for (const article of articles) { // Loop through each article
+        console.log("step 3: translate analyses: ", analyses);
+        for (const analysis of analyses) { // Loop through each article
             try {
                 const [instance, created] = await Analysis.upsert({
                     id: article.id,
@@ -920,10 +1194,10 @@ async function performArticleAnalysis() {
                 console.error('Error upserting article:', err);
             }
         }
-
         const updated = await getRecentAndUpdate();
-        console.log("updated: ", updated);
+        console.log("translated analyses: ", updated);
 
+        console.log("step 4: create viewpoint");
         const result = await runViewpointConversation();
         const content = result[0].message.content;
         const { viewpoint, refs } = JSON.parse(content);
@@ -931,19 +1205,9 @@ async function performArticleAnalysis() {
         console.log("refs: ", refs);
 
         const today = new Date();
-        console.log("today: ", today); // Logs current date and time in UTC
-
-        // Convert to KST using toLocaleString
         const kstDate = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-        console.log("kstDate: ", kstDate); // Logs the adjusted date and time for KST
-
-        // Get the KST hours using local time
         const kstHours = kstDate.getHours();
-        console.log("kstHours: ", kstHours); // Logs the KST hours correctly
-
-        // Determine AM/PM suffix
         const period = kstHours >= 12 ? 'PM' : 'AM';
-
         // Construct the ID using the KST date and period
         const year = kstDate.getFullYear();
         const month = String(kstDate.getMonth() + 1).padStart(2, '0');
@@ -976,9 +1240,12 @@ async function performArticleAnalysis() {
             console.error(error);
         }
 
+        console.log("step 5: translate viewpoints and create viewpoint image");
+
         const updatedVp = await getViewpointAndUpdate();
-        console.log("updatedVp: ", updatedVp);
         await createViewpointImage();
+
+        console.log("translatedVp: ", updatedVp);
 
         // res.status(200).send('ok');
         return "Successfully created and saved article analysis"
@@ -997,101 +1264,102 @@ router.get('/open', async function(req, res) {
    res.send(vpList);
 });
 router.post('/complete', async function(req, res) {
-    try {
-        // console.log("step 1: candidates: ", candidates);
-        const candidates = await makeCandidates();
-        console.log("candidates: ", candidates);
-        // Then, pass these indexes to runCreateConveration
-        const createResult = await runCreateConversation(candidates);
-
-        const articles = JSON.parse(createResult[0].message.content)['summaries_and_analyses'];
-        console.log("step 2: articles: ", articles);
-
-        for (const article of articles) { // Loop through each article
-            try {
-                const [instance, created] = await Analysis.upsert({
-                    id: article.id,
-                    analysis: article.analysis,
-                    summary: article.summary,
-                    createdAt: new Date(), // Consider managing this within Sequelize model definition
-                    updatedAt: new Date()  // Sequelize can handle updatedAt automatically
-                });
-
-                if (created) {
-                    console.log(`Analysis with ID ${article.id} was created.`);
-                } else {
-                    console.log(`Analysis with ID ${article.id} was updated.`);
-                }
-            } catch (err) {
-                console.error('Error upserting article:', err);
-            }
-        }
-
-        const updated = await getRecentAndUpdate();
-        console.log("updated: ", updated);
-
-        const result = await runViewpointConversation();
-        const content = result[0].message.content;
-        const { viewpoint, refs } = JSON.parse(content);
-        console.log("viewpoint: ", viewpoint);
-        console.log("refs: ", refs);
-
-        const today = new Date();
-        console.log("today: ", today); // Logs current date and time in UTC
-
-        // Convert to KST using toLocaleString
-        const kstDate = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-        console.log("kstDate: ", kstDate); // Logs the adjusted date and time for KST
-
-        // Get the KST hours using local time
-        const kstHours = kstDate.getHours();
-        console.log("kstHours: ", kstHours); // Logs the KST hours correctly
-
-        // Determine AM/PM suffix
-        const period = kstHours >= 12 ? 'PM' : 'AM';
-
-        // Construct the ID using the KST date and period
-        const year = kstDate.getFullYear();
-        const month = String(kstDate.getMonth() + 1).padStart(2, '0');
-        const day = String(kstDate.getDate()).padStart(2, '0');
-        const id = `${year}${month}${day}_${period}`;
-        console.log("id: ", id); // Logs the constructed ID based on KST date and period
-
-        try {
-            const [instance, created] = await Viewpoint.upsert({
-                id: id,
-                viewpoint: viewpoint,
-                imageUrl: '/defaultImg.png',
-                createdAt: new Date(),
-                updatedAt: new Date()
-            });
-            if (created) {
-                console.log('New Viewpoint instance created:', instance.toJSON());
-            } else {
-                console.log('Viewpoint updated:', instance.toJSON());
-            }
-            // Update ref column in analysis table
-            if (refs && refs.length > 0) {
-                await Analysis.update({ ref: id }, {
-                    where: {
-                        id: refs  // Assuming `refs` is an array of IDs
-                    }
-                });
-            }
-        } catch (error) {
-            console.error(error);
-        }
-
-        const updatedVp = await getViewpointAndUpdate();
-        console.log("updatedVp: ", updatedVp);
-        const imageUrl = await createViewpointImage();
-
-        // res.status(200).send('ok');
-        res.send('ok');
-    } catch (error) {
-        console.error("Error during operations: ", error);
-        res.status(500).send("An error occurred");
-    }
+    await performArticleAnalysis();
+    // try {
+    //     // console.log("step 1: candidates: ", candidates);
+    //     const candidates = await makeCandidates();
+    //     console.log("candidates: ", candidates);
+    //     // Then, pass these indexes to runCreateConveration
+    //     const createResult = await runCreateConversation(candidates);
+    //
+    //     const articles = JSON.parse(createResult[0].message.content)['summaries_and_analyses'];
+    //     console.log("step 2: articles: ", articles);
+    //
+    //     for (const article of articles) { // Loop through each article
+    //         try {
+    //             const [instance, created] = await Analysis.upsert({
+    //                 id: article.id,
+    //                 analysis: article.analysis,
+    //                 summary: article.summary,
+    //                 createdAt: new Date(), // Consider managing this within Sequelize model definition
+    //                 updatedAt: new Date()  // Sequelize can handle updatedAt automatically
+    //             });
+    //
+    //             if (created) {
+    //                 console.log(`Analysis with ID ${article.id} was created.`);
+    //             } else {
+    //                 console.log(`Analysis with ID ${article.id} was updated.`);
+    //             }
+    //         } catch (err) {
+    //             console.error('Error upserting article:', err);
+    //         }
+    //     }
+    //
+    //     const updated = await getRecentAndUpdate();
+    //     console.log("updated: ", updated);
+    //
+    //     const result = await runViewpointConversation();
+    //     const content = result[0].message.content;
+    //     const { viewpoint, refs } = JSON.parse(content);
+    //     console.log("viewpoint: ", viewpoint);
+    //     console.log("refs: ", refs);
+    //
+    //     const today = new Date();
+    //     console.log("today: ", today); // Logs current date and time in UTC
+    //
+    //     // Convert to KST using toLocaleString
+    //     const kstDate = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+    //     console.log("kstDate: ", kstDate); // Logs the adjusted date and time for KST
+    //
+    //     // Get the KST hours using local time
+    //     const kstHours = kstDate.getHours();
+    //     console.log("kstHours: ", kstHours); // Logs the KST hours correctly
+    //
+    //     // Determine AM/PM suffix
+    //     const period = kstHours >= 12 ? 'PM' : 'AM';
+    //
+    //     // Construct the ID using the KST date and period
+    //     const year = kstDate.getFullYear();
+    //     const month = String(kstDate.getMonth() + 1).padStart(2, '0');
+    //     const day = String(kstDate.getDate()).padStart(2, '0');
+    //     const id = `${year}${month}${day}_${period}`;
+    //     console.log("id: ", id); // Logs the constructed ID based on KST date and period
+    //
+    //     try {
+    //         const [instance, created] = await Viewpoint.upsert({
+    //             id: id,
+    //             viewpoint: viewpoint,
+    //             imageUrl: '/defaultImg.png',
+    //             createdAt: new Date(),
+    //             updatedAt: new Date()
+    //         });
+    //         if (created) {
+    //             console.log('New Viewpoint instance created:', instance.toJSON());
+    //         } else {
+    //             console.log('Viewpoint updated:', instance.toJSON());
+    //         }
+    //         // Update ref column in analysis table
+    //         if (refs && refs.length > 0) {
+    //             await Analysis.update({ ref: id }, {
+    //                 where: {
+    //                     id: refs  // Assuming `refs` is an array of IDs
+    //                 }
+    //             });
+    //         }
+    //     } catch (error) {
+    //         console.error(error);
+    //     }
+    //
+    //     const updatedVp = await getViewpointAndUpdate();
+    //     console.log("updatedVp: ", updatedVp);
+    //     const imageUrl = await createViewpointImage();
+    //
+    //     // res.status(200).send('ok');
+    //     res.send('ok');
+    // } catch (error) {
+    //     console.error("Error during operations: ", error);
+    //     res.status(500).send("An error occurred");
+    // }
 });
 router.get('/recent', async function(req, res) {
     try {
@@ -1134,4 +1402,7 @@ router.post('/image', async function(req, res) {
         res.status(500).json({ error: "An error occurred: " + error.message });
     }
 });
+router.get('/viewpoint', async function(req, res ){
+    await runViewpointConversation();
+})
 module.exports = { router, performArticleAnalysis, getArticlesDay };

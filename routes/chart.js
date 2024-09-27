@@ -7,7 +7,6 @@ const openai = new OpenAi({
     apiKey : process.env.API_KEY
 });
 
-
 const {BitcoinAnalysis, BitcoinPrice} = require('../models');
 const AWS = require("aws-sdk");
 
@@ -254,11 +253,29 @@ async function runAnalysisConversation() {
     ]
     try {
         const response = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-4o-2024-08-06",
             messages: messages,
             tools: tools,
             tool_choice: "auto", //auto is default, but we'll be explicit
-            response_format: {type: "json_object"}
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "Analysis",
+                    strict: true,
+                    schema: {
+                        type: "object",
+                        properties: {
+                            day: { type: "string" },
+                            month: { type: "string" },
+                            prediction: { type: "string" },
+                        },
+                        required: ["day", 'month', 'prediction'],
+                        additionalProperties: false
+                    }
+                }
+
+            },
+            parallel_tool_calls: true
         });
         const responseMessage = response.choices[0].message;
         const toolCalls = responseMessage.tool_calls;
@@ -289,9 +306,26 @@ async function runAnalysisConversation() {
             }
 
             const secondResponse = await openai.chat.completions.create({
-                model: "gpt-4o",
+                model: "gpt-4o-2024-08-06",
                 messages: messages,
-                response_format: {type: "json_object"}
+                response_format: {
+                    type: "json_schema",
+                    json_schema: {
+                        name: "Analysis",
+                        strict: true,
+                        schema: {
+                            type: "object",
+                            properties: {
+                                day: { type: "string" },
+                                month: { type: "string" },
+                                prediction: { type: "string" },
+                            },
+                            required: ["day", 'month', 'prediction'],
+                            additionalProperties: false
+                        }
+                    }
+
+                },
             });
 
             return secondResponse.choices;
@@ -465,46 +499,6 @@ function extractScorePrice(data) {
     console.log(result);
     return result;
 }
-
-// function extractScorePriceWeek(data) {
-//     let scores = [];
-//     let prices = [];
-//
-//     // Collect all scores and prices from the data object
-//     for (let key in data) {
-//         if (data.hasOwnProperty(key) && key !== 'info') {
-//             scores.push(data[key].score);
-//             prices.push(parseFloat(data[key].price));
-//         }
-//     }
-//
-//     // Function to calculate average of an array
-//     function calculateAverage(arr) {
-//         const sum = arr.reduce((acc, val) => acc + val, 0);
-//         const average = sum / arr.length;
-//         return parseFloat(average.toFixed(2));
-//     }
-//
-//     let avgScores = [];
-//     let avgPrices = [];
-//
-//     // Calculate the average for each 24-hour chunk
-//     for (let i = 0; i < scores.length; i += 24) {
-//         let scoreChunk = scores.slice(i, i + 24);
-//         let priceChunk = prices.slice(i, i + 24);
-//
-//         avgScores.push(calculateAverage(scoreChunk));
-//         avgPrices.push(calculateAverage(priceChunk));
-//     }
-//
-//     let result = {
-//         score: avgScores,
-//         price: avgPrices
-//     };
-//
-//     console.log(result);
-//     return result;
-// }
 function extractScorePriceWeek(data) {
 
     let scores = [];
@@ -516,14 +510,6 @@ function extractScorePriceWeek(data) {
         prices.push(parseFloat(row.price));  // Convert price to a floating-point number
         datetimes.push(formatMonthDate(row.datetime));  // Convert price to a floating-point number
     });
-
-    // Collect all scores and prices from the data object
-    // for (let key in data) {
-    //     if (data.hasOwnProperty(key) && key !== 'info') {
-    //         scores.push(data[key].score);
-    //         prices.push(parseFloat(data[key].price));
-    //     }
-    // }
 
     let lastScores = [];
     let lastPrices = [];
@@ -555,13 +541,6 @@ function extractPrice(data) {
         return elem[1];
     });
 }
-
-// async function getGoyaScoreDay() {
-//     const jsonData = await axios.get('https://won.korbot.com/page/predict_chart_api.php?kind=BTCUSDT&ob_number=24');
-//     const scoreArray = extractScorePrice(jsonData.data);
-//     console.log("dayArray: ", scoreArray);
-//     return JSON.stringify(scoreArray);
-// }
 async function getGoyaScoreDay() {
     const query = `
         SELECT score, price, datetime 
