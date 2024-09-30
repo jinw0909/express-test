@@ -590,8 +590,8 @@ async function createCandidates() {
         for (let i = 0; i < articleIds.length; i += 12) {
             const batch = articleIds.slice(i, i + 12);
             const result = await runCandidateConversation(batch);
-            const left = await runVerifyConversation(result);
-            candidates.push(...left);
+            // const left = await runVerifyConversation(result);
+            candidates.push(...result);
         }
 
         return candidates;
