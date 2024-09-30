@@ -103,7 +103,7 @@ async function getCandidates(indexList) {
         // const articleData = articles.map(article => article.get({plain: true}));
         // // console.log("query result: ", articleData);
         // return JSON.stringify(articleData, null, 2);
-        console.log("query result: ", articles);
+        // console.log("query result: ", articles);
         return JSON.stringify(articles, null, 2);
     } catch(err) {
         console.error("Error in getCandidates:", err);
@@ -126,7 +126,7 @@ async function getArticles(indexList) {
         // const plainArticles = articles.map(article => article.get({plain: true}));
         // console.log("query result: ", plainArticles);
         // return JSON.stringify(plainArticles, null, 2);
-        console.log("query result: ", articles);
+        // console.log("query result: ", articles);
         return JSON.stringify(articles, null, 2);
     } catch(err) {
         console.error("Error in getArticles:", err);
@@ -471,7 +471,6 @@ async function getRecentAnalyses() {
         const recentAnalyses = await Analysis.findAll({
             order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
             limit: 4,
-            raw: true
         });
         return JSON.stringify(recentAnalyses, null, 2);
     } catch(error) {
@@ -556,7 +555,8 @@ async function makeCandidates() {
 
     const recent = await Candidate.findAll({
         order: [['id', 'DESC']],
-        limit: 4
+        limit: 4,
+        raw: true
     });
 
     return recent.map(candidate => ({
@@ -1011,9 +1011,10 @@ async function runCreateConversation(candidates) {
         messages.push(responseMessage); //extend the conversation with assistant's reply
         for (const toolCall of toolCalls) {
             const functionName = toolCall.function.name;
-            console.log("functionName: ", functionName);
+            console.log("runCreateConversation functionName: ", functionName);
             const functionToCall = availableFunctions[functionName];
             const functionArgs = JSON.parse(toolCall.function.arguments);
+            console.log("runCreateConversation functionArgs", functionArgs);
             const functionResponse = await functionToCall(
                 functionArgs.indexList,
             );
@@ -1207,17 +1208,17 @@ async function performArticleAnalysis() {
         for (const analysis of analyses) { // Loop through each article
             try {
                 const [instance, created] = await Analysis.upsert({
-                    id: article.id,
-                    analysis: article.analysis,
-                    summary: article.summary,
+                    id: analysis.id,
+                    analysis: analysis.analysis,
+                    summary: analysis.summary,
                     createdAt: new Date(), // Consider managing this within Sequelize model definition
                     updatedAt: new Date()  // Sequelize can handle updatedAt automatically
                 });
 
                 if (created) {
-                    console.log(`Analysis with ID ${article.id} was created.`);
+                    console.log(`Analysis with ID ${analysis.id} was created.`);
                 } else {
-                    console.log(`Analysis with ID ${article.id} was updated.`);
+                    console.log(`Analysis with ID ${analysis.id} was updated.`);
                 }
             } catch (err) {
                 console.error('Error upserting article:', err);
