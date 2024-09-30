@@ -532,7 +532,6 @@ async function getRecentViewpoint() {
     try {
         const viewpoint = await Viewpoint.findOne({
             order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
-            raw: true
         });
         return viewpoint;
 
