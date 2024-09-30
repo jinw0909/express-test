@@ -40,7 +40,7 @@ const startCronJobs = () => {
     // 8:00 AM KST becomes 23:00 UTC (previous day)
     // 11:00 AM KST becomes 02:00 UTC
     // 14:00 PM KST becomes 05:00 UTC, and so on
-    cron.schedule('0 23-14/3 * * *', async () => {
+    cron.schedule('0 23-20/3 * * *', async () => {
         console.log(`Running performArticleCrawl at ${new Date().toLocaleString()}`);
         await performArticleCrawl(); // Call your function
     }, {
