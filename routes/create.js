@@ -56,16 +56,19 @@ async function getArticlesDay() {
                 }
             },
             attributes: ['id'],
-            order: [['id', 'DESC']]
+            order: [['id', 'DESC']],
+            raw: true
         });
         if (!articleIds.length) {
             console.log('No articles published in the last 12 hours');
             return null;
         }
 
-        const articleIdList = articleIds.map(article => article.get({plain: true}));
-        console.log("Article ids within 12 hours: ", articleIdList);
-        return articleIdList;
+        // const articleIdList = articleIds.map(article => article.get({plain: true}));
+        // console.log("Article ids within 12 hours: ", articleIdList);
+        // return articleIdList;
+        console.log("article ids within 12 hours: ", articleIds);
+        return articleIds;
     } catch(err) {
         console.error(err);
         return { error: err.message }
@@ -94,11 +97,14 @@ async function getCandidates(indexList) {
                     [Sequelize.Op.in]: indexList
                 }
             },
-            limit: 4
+            limit: 4,
+            raw: true
         })
-        const articleData = articles.map(article => article.get({plain: true}));
-        console.log("query result: ", articleData);
-        return JSON.stringify(articleData, null, 2);
+        // const articleData = articles.map(article => article.get({plain: true}));
+        // // console.log("query result: ", articleData);
+        // return JSON.stringify(articleData, null, 2);
+        console.log("query result: ", articles);
+        return JSON.stringify(articles, null, 2);
     } catch(err) {
         console.error("Error in getCandidates:", err);
         throw err;
@@ -112,13 +118,16 @@ async function getArticles(indexList) {
                     [Sequelize.Op.in]: indexList
                 }
             },
-            limit: 12
+            limit: 12,
+            raw: true
         });
-        console.log("articles: ", articles);
+        // console.log("articles: ", articles);
         //Convert each article to a plain object
-        const plainArticles = articles.map(article => article.get({plain: true}));
-        console.log("query result: ", plainArticles);
-        return JSON.stringify(plainArticles, null, 2);
+        // const plainArticles = articles.map(article => article.get({plain: true}));
+        // console.log("query result: ", plainArticles);
+        // return JSON.stringify(plainArticles, null, 2);
+        console.log("query result: ", articles);
+        return JSON.stringify(articles, null, 2);
     } catch(err) {
         console.error("Error in getArticles:", err);
         throw err;
@@ -151,7 +160,8 @@ async function getRecentAndUpdate() {
     try {
         const recentAnalyses = await Analysis.findAll({
             order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
-            limit: 4
+            limit: 4,
+            raw: true
         });
 
         console.log("recent analysis: ", recentAnalyses);
@@ -159,7 +169,8 @@ async function getRecentAndUpdate() {
         for (const analysis of recentAnalyses) {
             // Retrieve the matching entry from the Blockmedia table
             const blockmediaEntry = await Blockmedia.findOne({
-                where: { id: analysis.id }
+                where: { id: analysis.id },
+                raw: true
             });
 
             if (blockmediaEntry) {
@@ -234,11 +245,12 @@ async function getRecentAndUpdate() {
         // Optionally, return the updated analyses
         const recentTranslation = await Translation.findAll({
             order: [['createdAt', 'DESC']], // Optionally re-fetch to send updated data back
-            limit: 4
+            limit: 4,
+            raw: true
         });
 
-        return recentTranslation.map(a => a);
-
+        // return recentTranslation.map(a => a);
+        return recentTranslation;
     } catch (error) {
         console.error("Error fetching and updating recent analysis:", error);
         throw error;
@@ -458,7 +470,8 @@ async function getRecentAnalyses() {
     try {
         const recentAnalyses = await Analysis.findAll({
             order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
-            limit: 4
+            limit: 4,
+            raw: true
         });
         return JSON.stringify(recentAnalyses, null, 2);
     } catch(error) {
@@ -519,10 +532,8 @@ async function getRecentViewpoint() {
     try {
         const viewpoint = await Viewpoint.findOne({
             order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
-        })
-        // const viewpoint = recentAnalyses.map(analysis => {
-        //     return { id: analysis.id, analysis: analysis.analysis, summary: analysis.summary}
-        // });
+            raw: true
+        });
         return viewpoint;
 
     } catch (error) {
@@ -532,7 +543,7 @@ async function getRecentViewpoint() {
 
 async function makeCandidates() {
     const candidates = await createCandidates();
-    console.log("verified candidates: ", candidates);
+    console.log("candidates to recurse on: ", candidates);
     const finals = await recurseFinals(candidates);
     console.log("final candidates: ", finals);
 
@@ -743,11 +754,13 @@ async function runCandidateConversation(articleIds) {
     return parsed['candidates'];
 }
 async function runVerifyConversation(candidates) {
+    console.log("runVerifyConversation()");
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. Also you are capable to compare the summary of the article and the original article content, and check if the summary is correct."},
         { role: "user", content: "I will provide you the list of the candidates"},
         { role: "user", content: JSON.stringify(candidates)},
-        { role: "user", content: "The provided candidate's id point to its original article. The 'summary' is the summary of the article that it refers to. The 'reason' is why the article was selected as a candidate. Using the id of the provided candidate, look up the original article that it points to and check if the summary of the article is correctly made. If the summary is not correct, then drop that candidate from the provided list. After checking all the candidates in the list, return the list that dropped the candidates whose summary was not correct. Return the list in a json format as follows. {'candidates' : [{'id': 'INT', 'summary' : 'TEXT', 'reason' : 'TEXT'}...} The length of the list depends on how many candidates were dropped from the initially provided list." }
+        // { role: "user", content: "The provided candidate's id point to its original article. The 'summary' is the summary of the article that it refers to. The 'reason' is why the article was selected as a candidate. Using the id of the provided candidate, look up the original article that it points to and check if the summary of the article is correctly made. If the summary is not correct, then drop that candidate from the provided list. After checking all the candidates in the list, return the list that dropped the candidates whose summary was not correct. Return the list in a json format as follows. {'candidates' : [{'id': 'INT', 'summary' : 'TEXT', 'reason' : 'TEXT'}, ...] The length of the list depends on how many candidates were dropped from the initially provided list." },
+        { role: "user", content: "The provided candidate's id point to its original article. The 'summary' is the summary of the article that it refers to. The 'reason' is why the article was selected as a candidate. Using the id of the provided candidate, look up the original article that it points to and check if the summary of the article is correctly made. Unless the provided list has only a single element, drop one candidate element from the list that you think is the least relevant to the cryptocurrency market trend and return the rest in the next json format. {'candidates' : [{'id': 'INT', 'summary' : 'TEXT', 'reason' : 'TEXT'}, ...]}"}
     ];
     const tools = [
         {
@@ -869,20 +882,21 @@ async function runVerifyConversation(candidates) {
         });
         const finalResponse= secondResponse.choices[0].message;
         const parsed = JSON.parse(finalResponse.content);
-        console.log("left: ", parsed);
+        console.log("left after verification: ", parsed);
         return parsed['candidates'];
     }
 
     const parsed = JSON.parse(responseMessage.content);
-    console.log("left: ", parsed);
+    console.log("left after verification (when you see this code, check the function runVerifyConversation because did not call a function): ", parsed);
     return parsed['candidates'];
 }
-async function runFinalConversation(candidates) {
+async function runFinalConversation(candidates, limit) {
+    console.log("runFinalConversation()");
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles in relevance with the overall flow of the coin market, and understand the main points and significance of the articles in that context." },
         { role: "user", content: "Here is a list of candidates which is the summary and the reason why it was selected as a candidate : " },
         { role: "user" ,content: JSON.stringify(candidates)},
-        { role: "user", content: "From the provided candidates list , select four candidates that are the most relevant with the movement of the cryptocurrency market and that are helpful in predicting the cryptocurrency market movement. The final four candidates should not have duplicated or identical content. The given 'reason' is about why this candidate was selected among other articles, and the given 'summary' is the summary of the candidate's original content. The given 'id' is the value that points to the original article of the candidate. Return the final four candidates in a json format as follows: {'finals' : [{'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, {'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, {'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, {'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}]. Ensure the ID of each element exactly match the ID of the provided candidate list" },
+        { role: "user", content: `From the provided candidates list , select ${limit} candidates that are the most relevant with the the cryptocurrency market and that are the most helpful in predicting the cryptocurrency market trend. The final ${limit} candidates should not have duplicated or identical content. The given 'reason' is about why this candidate might be important, and the given 'summary' is the summary of the candidate's original content. The given 'id' is the value that points to the original article. Return the final ${limit} candidates in a json format as follows: {'finals' : [{'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, {'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, ...]. Ensure the ID of each element exactly match the ID of the initially provided list` },
     ];
     const response = await openai.chat.completions.create({
         model: "gpt-4o-2024-08-06",
@@ -1048,23 +1062,39 @@ async function runCreateConversation(candidates) {
     }
 
 }
-async function recurseFinals(candidates) {
+async function recurseFinals(candidates, limit = 4, results = []) {
     const finalists = [];
+    console.log("recurseFinals()");
+    console.log("candidates: ", candidates);
 
     // Process summaries in batches of 12
     for (let i = 0; i < candidates.length; i += 12) {
         const batch = candidates.slice(i, i + 12);
-        const finals = await runFinalConversation(batch);
+        const finals = await runFinalConversation(batch, limit);
         finalists.push(...finals);
     }
 
     // If we have more than 4 finalists, process them recursively
     if (finalists.length > 4) {
-        return recurseFinals(finalists);
+        return await recurseFinals(finalists);
     } else {
-        return finalists.slice(0, 4);
+        const verified = await runVerifyConversation(finalists);
+        console.log("limit: ", limit, "verified.length: ", verified.length);
+        if (verified.length < limit) {
+            // Filter finalists that match the verified list by their id
+            const filteredFinalists = candidates.filter(candidate =>
+                !verified.some(verifiedElement => verifiedElement.id === candidate.id)
+            );
+            results.push(...verified);
+            return await recurseFinals(filteredFinalists, limit - verified.length, results);
+        } else {
+            // return results.slice(0, 4);
+            results.push(...verified);
+            return results;
+        }
     }
 }
+
 async function getAllViewpointWithAnalysisIds() {
     try {
         return Viewpoint.findAll({
