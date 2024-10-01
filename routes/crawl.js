@@ -38,7 +38,6 @@ async function fetchContent(link) {
         return '';
     }
 }
-
 async function fetchArticle(link) {
     try {
         const response = await axios.get(link,{
@@ -203,69 +202,71 @@ const performArticleCrawl = async () => {
     }
 }
 router.post('/articles', async function(req, res, next) {
-    try {
-        const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
-        const latestNews = [];
-        for (let i = 0; i < 10 && i < feed.items.length; i++) {
-            const item = feed.items[i];
-            console.log("item: ", item);
-            const title = item.title;
-            const link = item.link;
-            // const imageUrl = item.enclosure && item.enclosure.url;
-            let imageUrl = '/defaultImg.png';
-            if (item.imageUrl) {
-                imageUrl = item.imageUrl['$'].url;
-            }
-            const date = item.isoDate;
-            const content = await fetchContent(link);
-            const index = i;
-            const publisher = 'blockmedia';
-            let id = 0;
-
-            let url = item.guid;
-            let match = url.match(/p=(\d+)/);
-            if (match) {
-                id = match[1];
-            } else {
-                console.log("No number found");
-            }
-
-            latestNews.push({
-                id,
-                title,
-                content,
-                imageUrl,
-                date,
-                publisher,
-            });
-
-        }
-
-        const reversedNews = [...latestNews].reverse();
-
-        for (const item of reversedNews) {
-            try {
-                const [blockmedia, created] = await Blockmedia.upsert({
-                    id: item.id,
-                    title: item.title,
-                    content: item.content,
-                    imageUrl: item.imageUrl,
-                    date: item.date,
-                    publisher: item.publisher
-                }, {
-                    conflictFields: ['id']
-                });
-
-                console.log(`Processed: ${item.id}, Created: ${created}`);
-            } catch (error) {
-                console.error(`Error processing: ${item.id}`, error);
-            }
-        }
-        res.json(reversedNews);
-
-    } catch (error) {
-        console.error(error);
-    }
+    // try {
+    //     const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
+    //     const latestNews = [];
+    //     for (let i = 0; i < 10 && i < feed.items.length; i++) {
+    //         const item = feed.items[i];
+    //         console.log("item: ", item);
+    //         const title = item.title;
+    //         const link = item.link;
+    //         // const imageUrl = item.enclosure && item.enclosure.url;
+    //         let imageUrl = '/defaultImg.png';
+    //         if (item.imageUrl) {
+    //             imageUrl = item.imageUrl['$'].url;
+    //         }
+    //         const date = item.isoDate;
+    //         const content = await fetchContent(link);
+    //         const index = i;
+    //         const publisher = 'blockmedia';
+    //         let id = 0;
+    //
+    //         let url = item.guid;
+    //         let match = url.match(/p=(\d+)/);
+    //         if (match) {
+    //             id = match[1];
+    //         } else {
+    //             console.log("No number found");
+    //         }
+    //
+    //         latestNews.push({
+    //             id,
+    //             title,
+    //             content,
+    //             imageUrl,
+    //             date,
+    //             publisher,
+    //         });
+    //
+    //     }
+    //
+    //     const reversedNews = [...latestNews].reverse();
+    //
+    //     for (const item of reversedNews) {
+    //         try {
+    //             const [blockmedia, created] = await Blockmedia.upsert({
+    //                 id: item.id,
+    //                 title: item.title,
+    //                 content: item.content,
+    //                 imageUrl: item.imageUrl,
+    //                 date: item.date,
+    //                 publisher: item.publisher
+    //             }, {
+    //                 conflictFields: ['id']
+    //             });
+    //
+    //             console.log(`Processed: ${item.id}, Created: ${created}`);
+    //         } catch (error) {
+    //             console.error(`Error processing: ${item.id}`, error);
+    //         }
+    //     }
+    //     res.json(reversedNews);
+    //
+    // } catch (error) {
+    //     console.error(error);
+    // }
+    await performArticleCrawl();
+    res.send('ok');
 })
 
 module.exports = { router, performArticleCrawl };
