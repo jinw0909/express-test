@@ -286,7 +286,8 @@ const capturePremium = async function(req, res) {
 
         // Launch the browser
         browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            headless: true
         });
 
         // Test Shot
