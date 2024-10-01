@@ -1025,6 +1025,42 @@ router.post('/save', async function(req, res) {
     }
 })
 router.post('/price-analysis', async function(req, res) {
+    let result = await performPriceAnalysis();
+    res.send(result);
+    // try {
+    //     const requestTime = new Date();
+    //     const [dayResponse, monthResponse] = await Promise.all([
+    //         getGoyaScoreDay(),
+    //         // getGoyaScoreWeek(),
+    //         getGoyaScoreMonth()
+    //     ]);
+    //     const dayData = JSON.parse(dayResponse);
+    //     // const weekData = JSON.parse(weekResponse);
+    //     const monthData = JSON.parse(monthResponse);
+    //
+    //     await savePriceToDb(requestTime, 'day', dayData);
+    //     // await savePriceToDb(requestTime, 'week', weekData);
+    //     await savePriceToDb(requestTime, 'month', monthData);
+    //
+    //     const result = await runAnalysisConversation();
+    //     const response = JSON.parse(result[0].message.content);
+    //
+    //     await saveAnalysisToDb(response.day, response.month, response.prediction, requestTime);
+    //
+    //     await getAnalysisAndUpdate();
+    //
+    //     res.send('ok');
+    // } catch (error) {
+    //     console.error(error);
+    //     throw error;
+    // }
+});
+router.get('/day', async function(req, res) {
+    let result = await getGoyaScoreDay();
+    res.json(result);
+});
+
+const performPriceAnalysis = async () => {
     try {
         const requestTime = new Date();
         const [dayResponse, monthResponse] = await Promise.all([
@@ -1047,41 +1083,7 @@ router.post('/price-analysis', async function(req, res) {
 
         await getAnalysisAndUpdate();
 
-        res.send('ok');
-    } catch (error) {
-        console.error(error);
-        throw error;
-    }
-});
-router.get('/day', async function(req, res) {
-    let result = await getGoyaScoreDay();
-    res.json(result);
-});
-
-const performPriceAnalysis = async () => {
-    try {
-        const requestTime = new Data();
-        const [dayResponse, monthResponse] = await Promise.all([
-            getGoyaScoreDay(),
-            // getGoyaScoreWeek(),
-            getGoyaScoreMonth()
-        ]);
-        const dayData = JSON.parse(dayResponse);
-        // const weekData = JSON.parse(weekResponse);
-        const monthData = JSON.parse(monthResponse);
-
-        await savePriceToDb(requestTime, 'day', dayData);
-        // await savePriceToDb(requestTime, 'week', weekData);
-        await savePriceToDb(requestTime, 'month', monthData);
-
-        const result = await runAnalysisConversation();
-        const response = JSON.parse(result[0].message.content);
-
-        await saveAnalysisToDb(response.day, response.week, response.month, response.prediction, requestTime);
-
-        await getAnalysisAndUpdate();
-
-        return 'Data and analysis saved successfully'
+        return 'Data and analysis saved successfully';
 
     } catch (error) {
         console.error(error);
