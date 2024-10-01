@@ -289,6 +289,25 @@ const capturePremium = async function(req, res) {
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
+        // Test Shot
+        const page = await browser.newPage();
+        await page.setViewport({
+            width: 800,
+            height: 600,
+            deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
+        });
+
+        await page.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
+        await page.waitForSelector('canvas', { timeout: 60000 });
+
+        const chartElem = await page.$('.tv-lightweight-charts');
+        if (!chartElem) {
+            await page.close();
+        }
+        await chartElem.screenshot();
+        await page.close();
+        // End of Test Shot
+
         // Process each row sequentially
         for (const row of recentRows) {
             const { id, symbol } = row;
