@@ -1102,7 +1102,7 @@ router.get('/draw', async function(req, res) {
            scoreDay: { score: day.score, price: day.price, datetime: day.datetime },
            scoreMonth: { score: month.score, price: month.price, datetime: month.datetime }
        }
-       console.log("data: ", data);
+       // console.log("data: ", data);
        const analysisRaw = await BitcoinAnalysis.findOne({
            order: [['requestTime', 'DESC']]
        })
@@ -1119,7 +1119,7 @@ router.get('/draw', async function(req, res) {
            // mp3: analysisRaw[`mp3${langSuffix}`]
        };
 
-       console.log("analysis: ", analysis);
+       // console.log("analysis: ", analysis);
        res.render('draw', {data: data, analysis: analysis})
    } catch (error) {
        console.error(error);

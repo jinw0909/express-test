@@ -15,7 +15,8 @@ async function getRecent() {
             order: [
                 ['createdAt', 'DESC'] // Orders by 'createdAt' in descending order
             ],
-            limit: 4
+            limit: 4,
+            raw: true
         });
         return recentAnalyses;
     } catch (error) {
@@ -28,7 +29,8 @@ async function getRecentVp() {
         const viewPoint = await Viewpoint.findOne({
             order: [
                 ['createdAt', 'DESC'] // Orders by 'createdAt' in descending order
-            ]
+            ],
+            raw: true
         });
         return viewPoint;
     } catch (error) {
@@ -60,8 +62,6 @@ router.get('/', async function(req, res, next) {
             imageUrl: recentViewpoint.imageUrl
         }
 
-        console.log("analyses: ", analyses);
-        console.log("viewpoint: ", viewpoint);
         res.render('run', { analyses: analyses, lang: language, viewpoint: viewpoint });
     } catch (error) {
         console.error(error);

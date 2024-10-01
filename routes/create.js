@@ -477,7 +477,6 @@ async function getRecentAnalyses() {
         console.error(error);
     }
 }
-
 async function getViewpointAndUpdate() {
     try {
         const viewpoint = await getRecentViewpoint();
@@ -538,7 +537,6 @@ async function getRecentViewpoint() {
         console.error(error);
     }
 }
-
 async function makeCandidates() {
     const candidates = await createCandidates();
     console.log("candidates to recurse on: ", candidates);
@@ -565,27 +563,6 @@ async function makeCandidates() {
         reason: candidate.reason
     }));
 }
-// async function createCandidates() {
-//     try {
-//         const articleIds = await getArticlesDay();
-//         // const articleIds = articles.map(article => article.id);
-//         console.log("article ids: ", articleIds);
-//         const candidates = [];
-//
-//         for (let i = 0; i < articleIds.length; i += 12) {
-//             const batch = articleIds.slice(i, i + 12);
-//             const result = await runCandidateConversation(batch);
-//             const left = await runVerifyConversation(result);
-//             candidates.push(...left);
-//         }
-//
-//         return candidates;
-//     } catch (error) {
-//         console.error(error);
-//         throw error;
-//     }
-//
-// }
 async function createCandidates() {
     try {
         const articleIds = await getArticlesDay();
@@ -611,7 +588,6 @@ async function createCandidates() {
         return []; // Optionally return an empty array to prevent system crashes
     }
 }
-
 async function runCandidateConversation(articleIds) {
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and summarize the main points and significance of the articles in that context. You are also capable to compare various articles and select the candidates that tend to have more significance than others. Since you are very accurate in your work, the candidate IDs you derive always match the original article IDs exactly."},
