@@ -4,14 +4,15 @@ const router = express.Router();
 
 // Route to get data from a table in schema2
 router.get('/', async (req, res) => {
-    try {
-        // Example query to select all rows from a table in schema2
-        const results = await plainDb.query('SELECT * FROM beuliping');
-        res.json(results);
-    } catch (error) {
-        console.error('Error querying schema2:', error);
-        res.status(500).send('Error querying schema2');
-    }
+    // try {
+    //     // Example query to select all rows from a table in schema2
+    //     const results = await plainDb.query('SELECT * FROM beuliping');
+    //     res.json(results);
+    // } catch (error) {
+    //     console.error('Error querying schema2:', error);
+    //     res.status(500).send('Error querying schema2');
+    // }
+    res.render('index');
 });
 
 router.get('/test', async (req, res) => {
