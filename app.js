@@ -11,7 +11,7 @@ const sequelize = require('./sequelize');
 var debug = require('debug')('express-app:app');
 var http = require('http');
 const axios = require('axios');
-// const { startCronJobs } = require('./cronJobs');
+const { startCronJobs } = require('./cronJobs');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 var indexRouter = require('./routes/index');
@@ -37,7 +37,7 @@ var deleteRouter = require('./routes/delete');
 const { getArticlesDay } = require('./routes/create');
 
 var app = express();
-startCronJobs();
+// startCronJobs();
 console.log('env port: ', process.env.PORT);
 
 (async () => {
