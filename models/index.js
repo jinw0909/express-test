@@ -9,7 +9,7 @@ db.Sequelize = Sequelize;
 
 db.Viewpoint = require('./viewpoint');
 db.Analysis = require('./analysis');
-
+db.Blockmedia = require('./blockmedia');
 db.Candidate = require('./candidate');
 db.Translation = require('./translation');
 
