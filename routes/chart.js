@@ -7,7 +7,7 @@ const openai = new OpenAi({
     apiKey : process.env.API_KEY
 });
 
-const {BitcoinAnalysis, BitcoinPrice} = require('../models');
+// const {BitcoinAnalysis, BitcoinPrice} = require('../models');
 const AWS = require("aws-sdk");
 
 async function translateText(content, lang) {

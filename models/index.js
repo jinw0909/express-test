@@ -9,18 +9,13 @@ db.Sequelize = Sequelize;
 
 db.Viewpoint = require('./viewpoint');
 db.Analysis = require('./analysis');
-db.Coinness = require('./coinness');
-db.Blockmedia = require('./blockmedia');
-db.BitcoinAnalysis = require('./bitcoinAnalysis');
-db.BitcoinPrice = require('./bitcoinPrice');
+
 db.Candidate = require('./candidate');
 db.Translation = require('./translation');
-db.Dominance = require('./dominance');
-db.DominanceAnalysis = require('./dominanceAnalysis');
+
 
 // Define the relationships
 db.Viewpoint.hasMany(db.Analysis, { foreignKey: 'ref' });
 db.Analysis.belongsTo(db.Viewpoint, { foreignKey: 'ref' });
-// db.BitcoinAnalysis.hasMany(db.BitcoinPrice, { foreignKey: 'ref'});
-// db.BitcoinPrice.belongsTo(db.BitcoinAnalysis, { foreignKey: 'ref' });
+
 module.exports = db;

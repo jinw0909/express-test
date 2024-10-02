@@ -215,7 +215,7 @@ async function getRecentAndUpdate() {
                     // content_cn : contentCn,
                     imageUrl: blockmediaEntry.imageUrl,
                     date: blockmediaEntry.date,
-                    publisher: blockmediaEntry.publisher,
+                    // publisher: blockmediaEntry.publisher,
                     analysis: analysis.analysis,
                     // analysis_jp: analysisJp,
                     // analysis_kr: analysisKr,
@@ -226,13 +226,13 @@ async function getRecentAndUpdate() {
                     // summary_kr: summaryKr,
                     // summary_vn: summaryVn,
                     // summary_cn: summaryCn,
-                    updatedAt: new Date(),
-                    createdAt: new Date(),
-                    mp3: "",
-                    mp3_jp: "",
-                    mp3_kr: "",
-                    mp3_vn: "",
-                    mp3_cn: ""
+                    // updatedAt: new Date(),
+                    // createdAt: new Date(),
+                    // mp3: "",
+                    // mp3_jp: "",
+                    // mp3_kr: "",
+                    // mp3_vn: "",
+                    // mp3_cn: ""
                     // mp3: mp3En, // Path or URL to the English MP3 file
                     // mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
                     // mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
@@ -1226,9 +1226,9 @@ async function performArticleAnalysis() {
             const [instance, created] = await Viewpoint.upsert({
                 id: id,
                 viewpoint: viewpoint,
-                imageUrl: '/defaultImg.png',
-                createdAt: new Date(),
-                updatedAt: new Date()
+                // imageUrl: '/defaultImg.png',
+                // createdAt: new Date(),
+                // updatedAt: new Date()
             });
             if (created) {
                 console.log('New Viewpoint instance created:', instance.toJSON());
@@ -1247,7 +1247,7 @@ async function performArticleAnalysis() {
             console.error(error);
         }
 
-        console.log("step 5: translate viewpoints and create viewpoint image");
+        // console.log("step 5: translate viewpoints and create viewpoint image");
         //
         // const updatedVp = await getViewpointAndUpdate();
         // await createViewpointImage();

@@ -7,42 +7,24 @@ const Analysis = sequelize.define('Analysis', {
         primaryKey: true
     },
     //Define model attributes
-    createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false
-    },
     summary: {
         type: DataTypes.TEXT,
         allowNull: false
     },
-    date: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    imageUrl : {
-        type:  DataTypes.STRING,
-        allowNull: true
-    },
-    publisher: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
     analysis: {
         type: DataTypes.TEXT,
-        allowNull: false
-    },
-    updatedAt: {
-        type: DataTypes.DATE,
         allowNull: false
     },
     ref: {
         type: DataTypes.STRING,
         allowNull: true,
         references: {
-            model: 'Viewpoints', // This is the table name of Viewpoint
+            model: 'viewpoints', // This is the table name of Viewpoint
             key: 'id'
         }
     }
+}, {
+    timestamps: true
 })
 
 module.exports = Analysis;
