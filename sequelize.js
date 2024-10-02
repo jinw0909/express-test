@@ -9,7 +9,8 @@ const sequelize = new Sequelize(database, user, password, {
     host: host,
     dialect: 'mysql',
     // logging: console.log
-    logging: false
+    logging: false,
+    timezone: '+09:00',
 });
 
 module.exports = sequelize;
