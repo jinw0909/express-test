@@ -12,10 +12,10 @@ const pool = mysql.createPool(dbConfig);
 async function checkConnection() {
     try {
         const connection = await pool.getConnection();
-        console.log('Successfully connected to the goya database');
+        console.log('Successfully connected to the maria database');
         connection.release();
     } catch (error) {
-        console.error('Error connecting to the goya database:', error);
+        console.error('Error connecting to the maria database:', error);
     }
 }
 async function query(sql, params) {

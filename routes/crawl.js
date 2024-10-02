@@ -248,7 +248,7 @@ const performArticleCrawl = async () => {
             try {
                 // SQL query for upsert (INSERT ON DUPLICATE KEY UPDATE)
                 const sql = `
-                    INSERT INTO Blockmedia (id, title, content, imageUrl, date, publisher, createdAt, updatedAt)
+                    INSERT INTO articles (id, title, content, imageUrl, date, publisher, createdAt, updatedAt)
                     VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
                     ON DUPLICATE KEY UPDATE
                         title = VALUES(title),
