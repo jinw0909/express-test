@@ -138,93 +138,26 @@ router.get('/coinness', async function(req, res) {
     // }
 });
 
-// const performArticleCrawl = async () => {
-//     try {
-//         const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
-//         const latestNews = [];
-//         for (let i = 0; i < 10 && i < feed.items.length; i++) {
-//             const item = feed.items[i];
-//             console.log("item: ", item);
-//             const title = item.title;
-//             const link = item.link;
-//             // const imageUrl = item.enclosure && item.enclosure.url;
-//             let imageUrl = '/defaultImg.png';
-//             if (item.imageUrl) {
-//                 imageUrl = item.imageUrl['$'].url;
-//             }
-//             const date = item.isoDate;
-//             const content = await fetchContent(link);
-//             const index = i;
-//             const publisher = 'blockmedia';
-//             let id = 0;
-//
-//             let url = item.guid;
-//             let match = url.match(/p=(\d+)/);
-//             if (match) {
-//                 id = match[1];
-//             } else {
-//                 console.log("No number found");
-//             }
-//
-//             latestNews.push({
-//                 id,
-//                 title,
-//                 content,
-//                 imageUrl,
-//                 date,
-//                 publisher,
-//             });
-//         }
-//         for (const item of latestNews) {
-//             try {
-//                 const [blockmedia, created] = await Blockmedia.upsert({
-//                     id: item.id,
-//                     title: item.title,
-//                     content: item.content,
-//                     imageUrl: item.imageUrl,
-//                     date: item.date,
-//                     publisher: item.publisher,
-//                     createdAt: new Date(),
-//                     updatedAt: new Date()
-//                 });
-//
-//                 if (created) {
-//                     console.log('Blockmedia entry created:', blockmedia.toJSON());
-//                 } else {
-//                     console.log('Blockmedia entry updated:', blockmedia.toJSON());
-//                 }
-//             } catch (error) {
-//                 console.error('Error upserting Blockmedia entry: ', error);
-//             }
-//         }
-//         return "crawl success";
-//     } catch (error) {
-//         console.error(error);
-//     }
-// }
 const performArticleCrawl = async () => {
     try {
         const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
         const latestNews = [];
-
         for (let i = 0; i < 10 && i < feed.items.length; i++) {
             const item = feed.items[i];
             console.log("item: ", item);
-
             const title = item.title;
             const link = item.link;
+            // const imageUrl = item.enclosure && item.enclosure.url;
             let imageUrl = '/defaultImg.png';
-
             if (item.imageUrl) {
                 imageUrl = item.imageUrl['$'].url;
             }
-
             const date = item.isoDate;
             const content = await fetchContent(link);
+            const index = i;
             const publisher = 'blockmedia';
             let id = 0;
 
-            // Extract ID from the guid URL
             let url = item.guid;
             let match = url.match(/p=(\d+)/);
             if (match) {
@@ -242,51 +175,118 @@ const performArticleCrawl = async () => {
                 publisher,
             });
         }
-
-        // Upsert each article using the `query` function from the db connection
         for (const item of latestNews) {
             try {
-                // SQL query for upsert (INSERT ON DUPLICATE KEY UPDATE)
-                const sql = `
-                    INSERT INTO articles (id, title, content, imageUrl, date, publisher, createdAt, updatedAt)
-                    VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
-                    ON DUPLICATE KEY UPDATE
-                        title = VALUES(title),
-                        content = VALUES(content),
-                        imageUrl = VALUES(imageUrl),
-                        date = VALUES(date),
-                        publisher = VALUES(publisher),
-                        updatedAt = NOW();
-                `;
+                const [blockmedia, created] = await Blockmedia.upsert({
+                    id: item.id,
+                    title: item.title,
+                    content: item.content,
+                    imageUrl: item.imageUrl,
+                    date: item.date,
+                    publisher: item.publisher,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                });
 
-                // Parameters for the query
-                const params = [
-                    item.id,
-                    item.title,
-                    item.content,
-                    item.imageUrl,
-                    item.date,
-                    item.publisher
-                ];
-
-                // Execute the query using the `query` function
-                const result = await mariadb.query(sql, params); // Use the `query` function you defined previously
-
-                if (result.affectedRows === 1) {
-                    console.log(`Blockmedia entry inserted: ID ${item.id}`);
-                } else if (result.affectedRows === 2) {
-                    console.log(`Blockmedia entry updated: ID ${item.id}`);
+                if (created) {
+                    console.log('Blockmedia entry created:', blockmedia.toJSON());
+                } else {
+                    console.log('Blockmedia entry updated:', blockmedia.toJSON());
                 }
             } catch (error) {
                 console.error('Error upserting Blockmedia entry: ', error);
             }
         }
-
         return "crawl success";
     } catch (error) {
         console.error(error);
     }
 }
+// const performArticleCrawl = async () => {
+//     try {
+//         const feed = await parser.parseURL('https://www.blockmedia.co.kr/feed');
+//         const latestNews = [];
+//
+//         for (let i = 0; i < 10 && i < feed.items.length; i++) {
+//             const item = feed.items[i];
+//             console.log("item: ", item);
+//
+//             const title = item.title;
+//             const link = item.link;
+//             let imageUrl = '/defaultImg.png';
+//
+//             if (item.imageUrl) {
+//                 imageUrl = item.imageUrl['$'].url;
+//             }
+//
+//             const date = item.isoDate;
+//             const content = await fetchContent(link);
+//             const publisher = 'blockmedia';
+//             let id = 0;
+//
+//             // Extract ID from the guid URL
+//             let url = item.guid;
+//             let match = url.match(/p=(\d+)/);
+//             if (match) {
+//                 id = match[1];
+//             } else {
+//                 console.log("No number found");
+//             }
+//
+//             latestNews.push({
+//                 id,
+//                 title,
+//                 content,
+//                 imageUrl,
+//                 date,
+//                 publisher,
+//             });
+//         }
+//
+//         // Upsert each article using the `query` function from the db connection
+//         for (const item of latestNews) {
+//             try {
+//                 // SQL query for upsert (INSERT ON DUPLICATE KEY UPDATE)
+//                 const sql = `
+//                     INSERT INTO articles (id, title, content, imageUrl, date, publisher, createdAt, updatedAt)
+//                     VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+//                     ON DUPLICATE KEY UPDATE
+//                         title = VALUES(title),
+//                         content = VALUES(content),
+//                         imageUrl = VALUES(imageUrl),
+//                         date = VALUES(date),
+//                         publisher = VALUES(publisher),
+//                         updatedAt = NOW();
+//                 `;
+//
+//                 // Parameters for the query
+//                 const params = [
+//                     item.id,
+//                     item.title,
+//                     item.content,
+//                     item.imageUrl,
+//                     item.date,
+//                     item.publisher
+//                 ];
+//
+//                 // Execute the query using the `query` function
+//                 const result = await mariadb.query(sql, params); // Use the `query` function you defined previously
+//
+//                 if (result.affectedRows === 1) {
+//                     console.log(`Blockmedia entry inserted: ID ${item.id}`);
+//                 } else if (result.affectedRows === 2) {
+//                     console.log(`Blockmedia entry updated: ID ${item.id}`);
+//                 }
+//             } catch (error) {
+//                 console.error('Error upserting Blockmedia entry: ', error);
+//             }
+//         }
+//
+//         return "crawl success";
+//     } catch (error) {
+//         console.error(error);
+//     }
+// }
 
 router.post('/articles', async function(req, res, next) {
     // try {

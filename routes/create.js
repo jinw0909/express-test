@@ -1260,6 +1260,9 @@ async function performArticleAnalysis() {
         throw new Error('Error creating articles analysis');
     }
 }
+async function performSimpleAnalysis() {
+
+}
 
 router.get('/', async function(req, res) {
     // const vpList = await getAllViewpointWithAnalysisIds();
@@ -1410,5 +1413,8 @@ router.post('/image', async function(req, res) {
 });
 router.get('/viewpoint', async function(req, res ){
     await runViewpointConversation();
+})
+router.get('/simple', async function(req, res) {
+
 })
 module.exports = { router, performArticleAnalysis, getArticlesDay };
