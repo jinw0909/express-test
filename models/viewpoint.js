@@ -33,7 +33,7 @@ const Viewpoint = sequelize.define('Viewpoint', {
     },
     mp3: {
         type: DataTypes.TEXT,
-        allowNull: false
+        allowNull: true
     },
     mp3_jp : {
         type: DataTypes.TEXT,

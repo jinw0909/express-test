@@ -176,24 +176,24 @@ async function getRecentAndUpdate() {
             if (blockmediaEntry) {
 
                 const title = await translateText(blockmediaEntry.title, 'English');
-                const titleJp = await translateText(blockmediaEntry.title, 'Japanese');
-                const titleVn = await translateText(blockmediaEntry.title, 'Vietnamese');
-                const titleCn = await translateText(blockmediaEntry.title, 'Chinese');
+                // const titleJp = await translateText(blockmediaEntry.title, 'Japanese');
+                // const titleVn = await translateText(blockmediaEntry.title, 'Vietnamese');
+                // const titleCn = await translateText(blockmediaEntry.title, 'Chinese');
 
-                const analysisJp = await translateText(analysis.analysis, 'Japanese');
-                const analysisKr = await translateText(analysis.analysis, 'Korean');
-                const analysisVn = await translateText(analysis.analysis, 'Vietnamese');
-                const analysisCn = await translateText(analysis.analysis, 'Chinese');
+                // const analysisJp = await translateText(analysis.analysis, 'Japanese');
+                // const analysisKr = await translateText(analysis.analysis, 'Korean');
+                // const analysisVn = await translateText(analysis.analysis, 'Vietnamese');
+                // const analysisCn = await translateText(analysis.analysis, 'Chinese');
 
-                const summaryJp = await translateText(analysis.summary, 'Japanese');
-                const summaryKr = await translateText(analysis.summary, 'Korean');
-                const summaryVn = await translateText(analysis.summary, 'Vietnamese');
-                const summaryCn = await translateText(analysis.summary, 'Chinese');
+                // const summaryJp = await translateText(analysis.summary, 'Japanese');
+                // const summaryKr = await translateText(analysis.summary, 'Korean');
+                // const summaryVn = await translateText(analysis.summary, 'Vietnamese');
+                // const summaryCn = await translateText(analysis.summary, 'Chinese');
 
                 const content = await translateText(blockmediaEntry.content, 'English');
-                const contentJp = await translateText(blockmediaEntry.content, 'Japanese');
-                const contentVn = await translateText(blockmediaEntry.content, 'Vietnamese');
-                const contentCn = await translateText(blockmediaEntry.content, 'Chinese');
+                // const contentJp = await translateText(blockmediaEntry.content, 'Japanese');
+                // const contentVn = await translateText(blockmediaEntry.content, 'Vietnamese');
+                // const contentCn = await translateText(blockmediaEntry.content, 'Chinese');
 
                 // const mp3En = await generateTTS(analysis.analysis, 'English', analysis.id);
                 // const mp3Jp = await generateTTS(analysisJp, 'Japanese', analysis.id);
@@ -204,28 +204,28 @@ async function getRecentAndUpdate() {
                 await Translation.upsert({
                     id: analysis.id,
                     title: title,
-                    title_jp: titleJp,
+                    // title_jp: titleJp,
                     title_kr: blockmediaEntry.title,
-                    title_vn: titleVn,
-                    title_cn: titleCn,
+                    // title_vn: titleVn,
+                    // title_cn: titleCn,
                     content: content,
-                    content_jp: contentJp,
+                    // content_jp: contentJp,
                     content_kr: blockmediaEntry.content,
-                    content_vn: contentVn,
-                    content_cn : contentCn,
+                    // content_vn: contentVn,
+                    // content_cn : contentCn,
                     imageUrl: blockmediaEntry.imageUrl,
                     date: blockmediaEntry.date,
                     publisher: blockmediaEntry.publisher,
                     analysis: analysis.analysis,
-                    analysis_jp: analysisJp,
-                    analysis_kr: analysisKr,
-                    analysis_vn: analysisVn,
-                    analysis_cn: analysisCn,
+                    // analysis_jp: analysisJp,
+                    // analysis_kr: analysisKr,
+                    // analysis_vn: analysisVn,
+                    // analysis_cn: analysisCn,
                     summary: analysis.summary,
-                    summary_jp: summaryJp,
-                    summary_kr: summaryKr,
-                    summary_vn: summaryVn,
-                    summary_cn: summaryCn,
+                    // summary_jp: summaryJp,
+                    // summary_kr: summaryKr,
+                    // summary_vn: summaryVn,
+                    // summary_cn: summaryCn,
                     updatedAt: new Date(),
                     createdAt: new Date(),
                     mp3: "",
@@ -470,7 +470,7 @@ async function getRecentAnalyses() {
     try {
         const recentAnalyses = await Analysis.findAll({
             order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
-            limit: 4,
+            limit: 2,
         });
         return JSON.stringify(recentAnalyses, null, 2);
     } catch(error) {
@@ -1180,7 +1180,6 @@ async function performArticleAnalysis() {
         const analyses = JSON.parse(createResult[0].message.content)['summaries_and_analyses'];
         console.log("created analyses: ", analyses);
 
-        console.log("step 3: translate analyses: ", analyses);
         for (const analysis of analyses) { // Loop through each article
             try {
                 const [instance, created] = await Analysis.upsert({
@@ -1200,6 +1199,8 @@ async function performArticleAnalysis() {
                 console.error('Error upserting article:', err);
             }
         }
+
+        console.log("step 3: translate analyses: ", analyses);
         const updated = await getRecentAndUpdate();
         console.log("translated analyses: ", updated);
 
@@ -1247,14 +1248,14 @@ async function performArticleAnalysis() {
         }
 
         console.log("step 5: translate viewpoints and create viewpoint image");
-
-        const updatedVp = await getViewpointAndUpdate();
-        await createViewpointImage();
-
-        console.log("translatedVp: ", updatedVp);
+        //
+        // const updatedVp = await getViewpointAndUpdate();
+        // await createViewpointImage();
+        //
+        // console.log("translatedVp: ", updatedVp);
 
         // res.status(200).send('ok');
-        return "Successfully created and saved article analysis"
+        return "Successfully created and saved article analysis and viewpoint"
     } catch (error) {
         console.error("Error during operations: ", error);
         throw new Error('Error creating articles analysis');
