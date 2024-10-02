@@ -5,7 +5,7 @@ const cheerio = require('cheerio');
 const Parser = require('rss-parser');
 const {Coinness, Blockmedia, Analysis, Viewpoint} = require("../models");
 /* GET home page. */
-const db = require('../plainConnection');
+const mariadb = require('../mariaConnection');
 
 async function fetchContent(link) {
     try {
@@ -270,7 +270,7 @@ const performArticleCrawl = async () => {
                 ];
 
                 // Execute the query using the `query` function
-                const result = await db.query(sql, params); // Use the `query` function you defined previously
+                const result = await mariadb.query(sql, params); // Use the `query` function you defined previously
 
                 if (result.affectedRows === 1) {
                     console.log(`Blockmedia entry inserted: ID ${item.id}`);
