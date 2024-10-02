@@ -11,6 +11,9 @@ const sequelize = new Sequelize(database, user, password, {
     // logging: console.log
     logging: false,
     timezone: '+09:00',
+    dialectOptions: {
+        timezone: '+09:00',  // This ensures KST is used for both storage and retrieval
+    },
 });
 
 module.exports = sequelize;

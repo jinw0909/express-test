@@ -221,9 +221,6 @@
             <p id="summary<%= index%>" class="main-summary">
                 <%= analysis.summary%>
             </p>
-            <audio src="
-                    <%= analysis.mp3%>
-            " id="audio<%= index %>"></audio>
             <div><button id="open<%= index %>" class="open-script buttons"><%= texts.openScript%></button></div>
             <p id="script<%= index %>" class="script-text">
                 <%= analysis.analysis%>
@@ -247,9 +244,6 @@
         <div>
             <%= viewpoint.viewpoint%>
         </div>
-        <audio src="
-                <%= viewpoint.mp3%>
-        " id="audio<%= analyses.length %>"></audio>
     </li>
 </ul>
 <div id="thumbnails">
@@ -270,7 +264,6 @@
         </div>
     <% }) %>
     <div class="thumbnail" data-index="<%= analyses.length %>">
-        <img src="<%= viewpoint.imageUrl %>" alt="Thumb Viewpoint">
         <span class="viewpoint-index">Viewpoint</span>
     </div>
     </div>
@@ -281,32 +274,32 @@
 <script>
     const listItems = document.querySelectorAll('li');
     let currentAudioIndex = 0;
-    let currentAudio = document.getElementById(`audio${currentAudioIndex}`);
-    currentAudio.hasStarted = false;
-    const delayBetweenAudios = 1000;
+    // let currentAudio = document.getElementById(`audio${currentAudioIndex}`);
+    // currentAudio.hasStarted = false;
+    // const delayBetweenAudios = 1000;
     const thumbnails = document.querySelectorAll('.thumbnail');
-
+    //
     thumbnails.forEach(thumb => {
         thumb.addEventListener('click', function() {
             currentAudioIndex = parseInt(this.getAttribute('data-index'));
             prepareAudio(currentAudioIndex);
         });
     });
-
-    document.getElementById('playButton').addEventListener('click', function() {
-        if (currentAudio.hasStarted && currentAudio.paused) {
-            currentAudio.play();
-        } else {
-            playAudio(currentAudioIndex);
-        }
-    });
-
-    document.getElementById('pauseButton').addEventListener('click', function() {
-        pauseAudio();
-    });
-
+    //
+    // document.getElementById('playButton').addEventListener('click', function() {
+    //     if (currentAudio.hasStarted && currentAudio.paused) {
+    //         currentAudio.play();
+    //     } else {
+    //         playAudio(currentAudioIndex);
+    //     }
+    // });
+    //
+    // document.getElementById('pauseButton').addEventListener('click', function() {
+    //     pauseAudio();
+    // });
+    //
     function prepareAudio(index) {
-        stopAllAudios();
+
         // Fade out all list items before fading in the selected one
         listItems.forEach((item, idx) => {
             if (idx !== index) {
@@ -320,48 +313,44 @@
         setTimeout(() => {
             fadeIn(listItems[index]); // Fade in the current list item
         }, 1000);
-        currentAudio = document.getElementById(`audio${index}`);
     }
-
-    function playAudio(index) {
-        stopAllAudios();
-        // console.log("idx: ", index);
-        listItems.forEach(item => {
-            item.style.display = 'none';
-            item.style.opacity = '0';
-        });
-        //listItems[index].style.display = 'block';
-        fadeIn(listItems[index]);
-
-        currentAudio = document.getElementById(`audio${index}`);
-        currentAudio.play();
-        currentAudio.hasStarted = true;
-        currentAudio.onended = function() {
-            fadeOut(listItems[currentAudioIndex], function() {
-                currentAudioIndex++;
-                if (currentAudioIndex < listItems.length) {
-                    setTimeout(function() {
-                        playAudio(currentAudioIndex);
-                    }, delayBetweenAudios);
-                }
-            });
-        };
-    }
-
-    function pauseAudio() {
-        if (currentAudio) {
-            currentAudio.pause();
-        }
-    }
-
-    function stopAllAudios() {
-        let audios = document.querySelectorAll('audio');
-        audios.forEach(audio => {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.hasStarted = false;
-        });
-    }
+    // function playAudio(index) {
+    //     stopAllAudios();
+    //     // console.log("idx: ", index);
+    //     listItems.forEach(item => {
+    //         item.style.display = 'none';
+    //         item.style.opacity = '0';
+    //     });
+    //     //listItems[index].style.display = 'block';
+    //     fadeIn(listItems[index]);
+    //
+    //     currentAudio = document.getElementById(`audio${index}`);
+    //     currentAudio.play();
+    //     currentAudio.hasStarted = true;
+    //     currentAudio.onended = function() {
+    //         fadeOut(listItems[currentAudioIndex], function() {
+    //             currentAudioIndex++;
+    //             if (currentAudioIndex < listItems.length) {
+    //                 setTimeout(function() {
+    //                     playAudio(currentAudioIndex);
+    //                 }, delayBetweenAudios);
+    //             }
+    //         });
+    //     };
+    // }
+    // function pauseAudio() {
+    //     if (currentAudio) {
+    //         currentAudio.pause();
+    //     }
+    // }
+    // function stopAllAudios() {
+    //     let audios = document.querySelectorAll('audio');
+    //     audios.forEach(audio => {
+    //         audio.pause();
+    //         audio.currentTime = 0;
+    //         audio.hasStarted = false;
+    //     });
+    // }
 
     function fadeIn(element) {
         element.style.display = 'block';

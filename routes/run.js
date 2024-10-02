@@ -7,11 +7,6 @@ const { Op } = require('sequelize');
 async function getRecent() {
     try {
         const recentAnalyses = await Translation.findAll({
-            where: {
-                mp3: {
-                    [Sequelize.Op.not]: null
-                }
-            },
             order: [
                 ['createdAt', 'DESC'] // Orders by 'createdAt' in descending order
             ],
