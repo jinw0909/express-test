@@ -69,60 +69,6 @@
         console.log("scoreMonth: ", scoreMonth);
         console.log("analysis: ", analysis);
 
-        // Function to create chart
-        // function createChart(ctx, labels, scoreData, priceData) {
-        //     return new Chart(ctx, {
-        //         type: 'line',
-        //         data: {
-        //             labels: labels,
-        //             datasets: [{
-        //                 label: 'Goya Score',
-        //                 data: scoreData,
-        //                 borderColor: 'rgba(54, 162, 235, 1)',
-        //                 borderWidth: 2,
-        //                 yAxisID: 'y',
-        //                 // cubicInterpolationMode: 'monotone',
-        //                 tension: 0.4,
-        //                 borderCapStyle: 'round',
-        //                 borderJoinStyle: 'round'
-        //             }, {
-        //                 label: 'Price',
-        //                 data: priceData,
-        //                 borderColor: 'rgba(255, 99, 132, 1)',
-        //                 borderWidth: 2,
-        //                 yAxisID: 'y1',
-        //                 // cubicInterpolationMode: 'monotone',
-        //                 tension: 0.4,
-        //                 borderCapStyle: 'round',
-        //                 borderJoinStyle: 'round'
-        //             }]
-        //         },
-        //         options: {
-        //             scales: {
-        //                 y: {
-        //                     type: 'linear',
-        //                     position: 'left',
-        //                     grid: {
-        //                         display: false
-        //                     }
-        //                 },
-        //                 y1: {
-        //                     type: 'linear',
-        //                     position: 'right',
-        //                     grid: {
-        //                         display: false
-        //                     }
-        //                 },
-        //                 x: {
-        //                     grid: {
-        //                         display: false
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     });
-        // }
-
         function createChart(ctx, labels, scoreData, priceData) {
 
             ctx.canvas.style.backgroundColor = '#1D1D2B';
@@ -141,7 +87,7 @@
                         borderCapStyle: 'round',
                         borderJoinStyle: 'round'
                     }, {
-                        label: 'Price',
+                        label: 'BTC Price',
                         data: priceData,
                         borderColor: 'rgba(255, 99, 132, 1)',
                         borderWidth: 2,
@@ -179,7 +125,7 @@
                             },
                             title: {
                                 display: false,
-                                text: 'Price',
+                                text: 'BTC Price',
                                 color: 'red'    // Change y1-axis label color
                             }
                         },

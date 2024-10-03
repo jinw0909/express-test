@@ -1,42 +1,27 @@
-var createError = require('http-errors');
-var express = require('express');
-var cors = require('cors');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-const multer = require('multer');
-const AWS = require('aws-sdk');
-const db = require('./database');
-const sequelize = require('./sequelize');
-var debug = require('debug')('express-app:app');
-var http = require('http');
-const axios = require('axios');
-const { startCronJobs } = require('./cronJobs');
+const createError = require('http-errors');
+const express = require('express');
+const app = express();
+const http = require('http');
+const path = require('path');
+const debug = require('debug')('express-app:app');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
-
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
-var fortuneTellRouter = require('./routes/fortuneTell');
-var crawlRouter = require('./routes/crawl').router;
-var functionRouter = require('./routes/function');
-// var puppetRouter = require('./routes/puppet');
-var voiceRouter = require('./routes/voice');
-var briefRouter = require('./routes/brief');
-var runRouter = require('./routes/run');
-var createRouter = require('./routes/create').router;
-var feedRouter = require('./routes/feed');
-var screenshotRouter = require('./routes/screenshot');
-var chartRouter = require('./routes/chart').router;
-var dominanceRouter = require('./routes/dominance').router;
-var handleimgRouter = require('./routes/handleimg');
-var healthcheckRouter = require('./routes/healthcheck');
-var captureRouter = require('./routes/capture').router;
-var plainRouter = require('./routes/plain');
-var selfRouter = require('./routes/self');
-var deleteRouter = require('./routes/delete');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
+const sequelize = require('./sequelize');
+const { startCronJobs } = require('./cronJobs');
 const { getArticlesDay } = require('./routes/create');
 
-var app = express();
+//import routers//
+var crawlRouter = require('./routes/crawl').router;
+// var puppetRouter = require('./routes/puppet');
+var runRouter = require('./routes/run');
+var createRouter = require('./routes/create').router;
+var chartRouter = require('./routes/chart').router;
+// var dominanceRouter = require('./routes/dominance').router;
+var captureRouter = require('./routes/capture').router;
+var deleteRouter = require('./routes/delete');
+
 startCronJobs();
 console.log('env port: ', process.env.PORT);
 
@@ -61,24 +46,13 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', createRouter);
-app.use('/users', usersRouter);
-app.use('/fortuneTell', fortuneTellRouter);
 app.use('/crawl', crawlRouter);
-app.use('/function', functionRouter);
 // app.use('/puppet', puppetRouter);
-app.use('/voice', voiceRouter);
-app.use('/brief', briefRouter);
 app.use('/run', runRouter);
 app.use('/create', createRouter);
-app.use('/feed', feedRouter);
-app.use('/screenshot', screenshotRouter);
 app.use('/chart', chartRouter);
-app.use('/dominance', dominanceRouter);
-app.use('/handleimg', handleimgRouter);
-app.use('/healthcheck', healthcheckRouter);
+// app.use('/dominance', dominanceRouter);
 app.use('/capture', captureRouter);
-app.use('/plain', plainRouter);
-app.use('/self', selfRouter);
 app.use('/delete', deleteRouter);
 
 app.post('/', (req, res) => {
@@ -119,6 +93,11 @@ app.post('/', (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+app.get('/articles', async (req, res) => {
+  let articles = await getArticlesDay();
+  console.log("articles: ", articles);
+  res.json(articles);
+})
 
 const functions = {
   processData: (params) => {
@@ -127,27 +106,10 @@ const functions = {
   },
   // Add other functions as needed
 };
-
-app.get('/createdb', (req, res) => {
-  let sql = 'CREATE DATABASE testdb';
-  db.query(sql, (err, result) => {
-    if (err) throw err;
-    res.send('Database created');
-    console.log(result);
-  });
-})
-
-app.get('/articles', async (req, res) => {
-  let articles = await getArticlesDay();
-  console.log("articles: ", articles);
-  res.json(articles);
-})
-
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
 });
-
 // error handler
 app.use(function(err, req, res, next) {
   // set locals, only providing error in development
@@ -174,7 +136,6 @@ function normalizePort(val) {
 
   return false;
 }
-
 function onError(error) {
   if (error.syscall !== 'listen') {
     throw error;

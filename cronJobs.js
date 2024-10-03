@@ -61,8 +61,6 @@ const startCronJobs = () => {
     }, {
         timezone: "UTC"  // Running based on UTC
     });
-
-
 };
 
 module.exports = { startCronJobs };
