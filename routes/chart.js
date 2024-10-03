@@ -38,7 +38,7 @@ const Polly = new AWS.Polly({
     region: 'us-east-1'
 });
 
-const goyaDb = require('../goyaConnection');
+// const goyaDb = require('../goyaConnection');
 
 async function generateTTS(content, lang, id) {
     if (lang === 'Vietnamese') {
@@ -229,13 +229,6 @@ async function runAnalysisConversation() {
                 description: "returns the list of the Goya score and Bitcoin price within the last 24 hours. Each score and price in the array represents the score and price of the hour. The provided price unit is USD."
             }
         },
-        // {
-        //     type: "function",
-        //     function: {
-        //         name: "get_goyascore_week",
-        //         description: "returns the list of the Goya score and Bitcoin price within last 7 days. Each score in the array represents the average score and price of each day. The provided price unit is in USD."
-        //     }
-        // },
         {
             type: "function",
             function: {
@@ -1124,6 +1117,7 @@ router.get('/draw', async function(req, res) {
    } catch (error) {
        console.error(error);
    }
+
 });
 router.get('/capture', async function(req, res) {
     try {

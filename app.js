@@ -1,48 +1,33 @@
-var createError = require('http-errors');
 var express = require('express');
-var cors = require('cors');
 var path = require('path');
+var http = require('http');
+var debug = require('debug')('express-app:app');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+var createError = require('http-errors');
+var cors = require('cors');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-const multer = require('multer');
-const AWS = require('aws-sdk');
-const db = require('./database');
 const sequelize = require('./sequelize');
-var debug = require('debug')('express-app:app');
-var http = require('http');
-const axios = require('axios');
-const { startCronJobs } = require('./cronJobs');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
-var fortuneTellRouter = require('./routes/fortuneTell');
-var crawlRouter = require('./routes/crawl').router;
-var functionRouter = require('./routes/function');
-// var puppetRouter = require('./routes/puppet');
-var voiceRouter = require('./routes/voice');
-var briefRouter = require('./routes/brief');
-var runRouter = require('./routes/run');
-var createRouter = require('./routes/create').router;
-var feedRouter = require('./routes/feed');
-var screenshotRouter = require('./routes/screenshot');
-var chartRouter = require('./routes/chart').router;
-var dominanceRouter = require('./routes/dominance').router;
-var handleimgRouter = require('./routes/handleimg');
-var healthcheckRouter = require('./routes/healthcheck');
-var captureRouter = require('./routes/capture').router;
-var plainRouter = require('./routes/plain');
-var selfRouter = require('./routes/self');
-var deleteRouter = require('./routes/delete');
+const { startCronJobs } = require('./cronJobs');
 const { getArticlesDay } = require('./routes/create');
 
+var crawlRouter = require('./routes/crawl').router;
+var runRouter = require('./routes/run');
+var createRouter = require('./routes/create').router;
+// var chartRouter = require('./routes/chart').router;
+var captureRouter = require('./routes/capture').router;
+var deleteRouter = require('./routes/delete');
+
 var app = express();
-// startCronJobs();
+
+startCronJobs();
+
 console.log('env port: ', process.env.PORT);
 
 (async () => {
   try {
-    await sequelize.sync({alter: true});
+    await sequelize.sync();
     console.log('Database synchronized successfully');
   } catch (error) {
     console.error('Error synchronizing database:', error);
@@ -61,25 +46,12 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', createRouter);
-app.use('/users', usersRouter);
-app.use('/fortuneTell', fortuneTellRouter);
 app.use('/crawl', crawlRouter);
-app.use('/function', functionRouter);
-// app.use('/puppet', puppetRouter);
-app.use('/voice', voiceRouter);
-app.use('/brief', briefRouter);
 app.use('/run', runRouter);
 app.use('/create', createRouter);
-app.use('/feed', feedRouter);
-app.use('/screenshot', screenshotRouter);
-app.use('/chart', chartRouter);
-app.use('/dominance', dominanceRouter);
-app.use('/handleimg', handleimgRouter);
-app.use('/healthcheck', healthcheckRouter);
+// app.use('/chart', chartRouter);
 app.use('/capture', captureRouter);
-app.use('/plain', plainRouter);
-app.use('/self', selfRouter);
-app.use('/delete', deleteRouter);
+// app.use('/delete', deleteRouter);
 
 app.post('/', (req, res) => {
   const payload = req.body;
@@ -119,7 +91,6 @@ app.post('/', (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 const functions = {
   processData: (params) => {
     console.log('Processing data with params:', params);
@@ -127,16 +98,6 @@ const functions = {
   },
   // Add other functions as needed
 };
-
-app.get('/createdb', (req, res) => {
-  let sql = 'CREATE DATABASE testdb';
-  db.query(sql, (err, result) => {
-    if (err) throw err;
-    res.send('Database created');
-    console.log(result);
-  });
-})
-
 app.get('/articles', async (req, res) => {
   let articles = await getArticlesDay();
   console.log("articles: ", articles);

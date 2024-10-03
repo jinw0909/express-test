@@ -4,7 +4,7 @@ const puppeteer = require('puppeteer');
 const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
 const { BitcoinAnalysis, DominanceAnalysis } = require('../models');  // Ensure this path is correct for your project
-const plainDb = require('../plainConnection'); // Import the plain DB connection
+// const plainDb = require('../plainConnection'); // Import the plain DB connection
 
 // Configure AWS S3
 const s3 = new AWS.S3({

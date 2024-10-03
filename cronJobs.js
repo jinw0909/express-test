@@ -3,38 +3,38 @@ const { capture, captureDominance, capturePremium } = require('./routes/capture'
 const { performPriceAnalysis } = require('./routes/chart');
 const { performArticleAnalysis } = require('./routes/create');
 const { performArticleCrawl } = require('./routes/crawl');
-const { performDominanceAnalysis, performDominanceCollect } = require('./routes/dominance');
+// const { performDominanceAnalysis, performDominanceCollect } = require('./routes/dominance');
 
 const startCronJobs = () => {
 
     // Task to run capturePremium at every hour at the 8th minute in KST (e.g., 1:08, 2:08)
     // 8th minute in KST becomes 8 - 9 = -1 => corresponds to 23:08 of the previous hour UTC
-    cron.schedule('8 * * * *', async () => {
-        console.log(`Running capturePremium at ${new Date().toLocaleString()}`);
-        await capturePremium(); // Call your function
-    }, {
-        timezone: "UTC"
-    });
+    // cron.schedule('8 * * * *', async () => {
+    //     console.log(`Running capturePremium at ${new Date().toLocaleString()}`);
+    //     await capturePremium(); // Call your function
+    // }, {
+    //     timezone: "UTC"
+    // });
 
     // Task to run capture at 8:55 AM and 8:55 PM every day in KST
     // 8:55 AM KST becomes 23:55 UTC (previous day)
     // 8:55 PM KST becomes 11:55 UTC
-    cron.schedule('55 23,11 * * *', async () => {
-        console.log(`Running capture at ${new Date().toLocaleString()}`);
-        await capture(); // Call your function
-    }, {
-        timezone: "UTC"
-    });
+    // cron.schedule('55 23,11 * * *', async () => {
+    //     console.log(`Running capture at ${new Date().toLocaleString()}`);
+    //     await capture(); // Call your function
+    // }, {
+    //     timezone: "UTC"
+    // });
 
     // Task to run performPriceAnalysis at 8:50 AM and 8:50 PM every day in KST
     // 8:50 AM KST becomes 23:50 UTC (previous day)
     // 8:50 PM KST becomes 11:50 UTC
-    cron.schedule('50 23,11 * * *', async () => {
-        console.log(`Running performPriceAnalysis at ${new Date().toLocaleString()}`);
-        await performPriceAnalysis(); // Call your function
-    }, {
-        timezone: "UTC"
-    });
+    // cron.schedule('50 23,11 * * *', async () => {
+    //     console.log(`Running performPriceAnalysis at ${new Date().toLocaleString()}`);
+    //     await performPriceAnalysis(); // Call your function
+    // }, {
+    //     timezone: "UTC"
+    // });
 
 
     cron.schedule('0 17,20,23,2,5,8,11,14 * * *', async () => {

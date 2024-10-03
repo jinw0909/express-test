@@ -285,19 +285,7 @@
             prepareAudio(currentAudioIndex);
         });
     });
-    //
-    // document.getElementById('playButton').addEventListener('click', function() {
-    //     if (currentAudio.hasStarted && currentAudio.paused) {
-    //         currentAudio.play();
-    //     } else {
-    //         playAudio(currentAudioIndex);
-    //     }
-    // });
-    //
-    // document.getElementById('pauseButton').addEventListener('click', function() {
-    //     pauseAudio();
-    // });
-    //
+
     function prepareAudio(index) {
 
         // Fade out all list items before fading in the selected one
@@ -314,43 +302,6 @@
             fadeIn(listItems[index]); // Fade in the current list item
         }, 1000);
     }
-    // function playAudio(index) {
-    //     stopAllAudios();
-    //     // console.log("idx: ", index);
-    //     listItems.forEach(item => {
-    //         item.style.display = 'none';
-    //         item.style.opacity = '0';
-    //     });
-    //     //listItems[index].style.display = 'block';
-    //     fadeIn(listItems[index]);
-    //
-    //     currentAudio = document.getElementById(`audio${index}`);
-    //     currentAudio.play();
-    //     currentAudio.hasStarted = true;
-    //     currentAudio.onended = function() {
-    //         fadeOut(listItems[currentAudioIndex], function() {
-    //             currentAudioIndex++;
-    //             if (currentAudioIndex < listItems.length) {
-    //                 setTimeout(function() {
-    //                     playAudio(currentAudioIndex);
-    //                 }, delayBetweenAudios);
-    //             }
-    //         });
-    //     };
-    // }
-    // function pauseAudio() {
-    //     if (currentAudio) {
-    //         currentAudio.pause();
-    //     }
-    // }
-    // function stopAllAudios() {
-    //     let audios = document.querySelectorAll('audio');
-    //     audios.forEach(audio => {
-    //         audio.pause();
-    //         audio.currentTime = 0;
-    //         audio.hasStarted = false;
-    //     });
-    // }
 
     function fadeIn(element) {
         element.style.display = 'block';
