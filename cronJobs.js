@@ -47,7 +47,7 @@ const startCronJobs = () => {
     // Task to run performArticleAnalysis at 8:30 AM and 8:30 PM every day in KST
     // 8:30 AM KST becomes 23:30 UTC (previous day)
     // 8:30 PM KST becomes 11:30 UTC
-    cron.schedule('30 23,11 * * *', async () => {
+    cron.schedule('30 23 * * *', async () => {
         console.log(`Running performArticleAnalysis at ${new Date().toLocaleString()}`);
         await performArticleAnalysis(); // Call your function
     }, {

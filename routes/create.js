@@ -316,7 +316,7 @@ async function runViewpointConversation() {
             type: "function",
             function: {
                 name: "get_recent_analyses",
-                description: "returns the list of the four most recent analyses created."
+                description: "returns the list of the two most recent analyses created."
             }
         },
         {
@@ -1167,7 +1167,7 @@ async function performArticleAnalysis() {
         const year = kstDate.getFullYear();
         const month = String(kstDate.getMonth() + 1).padStart(2, '0');
         const day = String(kstDate.getDate()).padStart(2, '0');
-        const id = `${year}${month}${day}_${period}`;
+        const id = `${year}${month}${day}`;
         console.log("id: ", id); // Logs the constructed ID based on KST date and period
 
         try {
@@ -1202,9 +1202,6 @@ async function performArticleAnalysis() {
         console.error("Error during operations: ", error);
         throw new Error('Error creating articles analysis');
     }
-}
-async function performSimpleAnalysis() {
-
 }
 
 router.get('/', async function(req, res) {
@@ -1357,7 +1354,5 @@ router.post('/image', async function(req, res) {
 router.get('/viewpoint', async function(req, res ){
     await runViewpointConversation();
 })
-router.get('/simple', async function(req, res) {
 
-})
 module.exports = { router, performArticleAnalysis, getArticlesDay };
