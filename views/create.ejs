@@ -93,17 +93,17 @@
     //             console.error("failure: ", err);
     //         })
     // });
-
-    document.querySelector('.send-btn-completedm').addEventListener('click', function() {
-        document.querySelector('#flag9').textContent = "sent";
-        axios.post('/dominance/create')
-            .then(response => {
-                console.log("success: ", response);
-            })
-            .catch(err => {
-                console.error("failure: ", err);
-            })
-    });
+    //
+    // document.querySelector('.send-btn-completedm').addEventListener('click', function() {
+    //     document.querySelector('#flag9').textContent = "sent";
+    //     axios.post('/dominance/create')
+    //         .then(response => {
+    //             console.log("success: ", response);
+    //         })
+    //         .catch(err => {
+    //             console.error("failure: ", err);
+    //         })
+    // });
 
     document.querySelector('#fetchBlockmedia').addEventListener('click', function() {
         document.querySelector('#fetchBlockmedia').classList.add('sent');

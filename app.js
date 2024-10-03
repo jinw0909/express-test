@@ -12,12 +12,12 @@ const sequelize = require('./sequelize');
 const { startCronJobs } = require('./cronJobs');
 const { getArticlesDay } = require('./routes/create');
 
-var crawlRouter = require('./routes/crawl').router;
-var runRouter = require('./routes/run');
-var createRouter = require('./routes/create').router;
+const crawlRouter = require('./routes/crawl').router;
+const runRouter = require('./routes/run');
+const createRouter = require('./routes/create').router;
 // var chartRouter = require('./routes/chart').router;
-var captureRouter = require('./routes/capture').router;
-var deleteRouter = require('./routes/delete');
+const captureRouter = require('./routes/capture').router;
+// const deleteRouter = require('./routes/delete');
 
 var app = express();
 
@@ -167,7 +167,7 @@ function onListening() {
       : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
-var port = normalizePort(process.env.PORT || 3000);
+let port = normalizePort(process.env.PORT || 3000);
 app.set('port', port);
 let server = http.createServer(app);
 
