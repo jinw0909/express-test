@@ -1,9 +1,9 @@
 const { Sequelize } = require('sequelize')
 
-let database = process.env.DB_DATABASE;
-let user = process.env.DB_USER;
-let password = process.env.DB_PASSWORD;
-let host = process.env.DB_HOST;
+let database = process.env.MARIA_DB_DATABASE;
+let user = process.env.MARIA_DB_USER;
+let password = process.env.MARIA_DB_PASSWORD;
+let host = process.env.MARIA_DB_HOST;
 
 const sequelize = new Sequelize(database, user, password, {
     host: host,

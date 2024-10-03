@@ -39,24 +39,24 @@
         <div class="result-div-complete"></div>
         <a href="/run">Go To Page</a>
     </div>
-    <div class="send-request-completevp">
-        <h4>Create Score Briefing</h4>
-        <span id="flag8"></span>
-        <button class="send-btn-completevp">Send Request</button>
-        <div class="result-div-completevp"></div>
-        <a href="/chart/draw">Go To Page</a>
-    </div>
-    <div class="send-request-completedm">
-        <h4>Create Dominance Briefing</h4>
-        <span id="flag9"></span>
-        <button class="send-btn-completedm">Send Request</button>
-        <div class="result-div-completedm"></div>
-        <a href="/dominance">Go To Page</a>
-    </div>
+<!--    <div class="send-request-completevp">-->
+<!--        <h4>Create Score Briefing</h4>-->
+<!--        <span id="flag8"></span>-->
+<!--        <button class="send-btn-completevp">Send Request</button>-->
+<!--        <div class="result-div-completevp"></div>-->
+<!--        <a href="/chart/draw">Go To Page</a>-->
+<!--    </div>-->
+<!--    <div class="send-request-completedm">-->
+<!--        <h4>Create Dominance Briefing</h4>-->
+<!--        <span id="flag9"></span>-->
+<!--        <button class="send-btn-completedm">Send Request</button>-->
+<!--        <div class="result-div-completedm"></div>-->
+<!--        <a href="/dominance">Go To Page</a>-->
+<!--    </div>-->
     <div>
         <span id="fetchBlockmedia" class="system">fetch blockmedia</span>
-        <span id="fetchPriceScore" class="system">fetch price/score</span>
-        <span id="fetchDominance" class="system">fetch dominance</span>
+<!--        <span id="fetchPriceScore" class="system">fetch price/score</span>-->
+<!--        <span id="fetchDominance" class="system">fetch dominance</span>-->
     </div>
     <div class="vp-list">
         <h4>Briefing List</h4>
@@ -83,16 +83,16 @@
             })
     });
 
-    document.querySelector('.send-btn-completevp').addEventListener('click', function() {
-        document.querySelector('#flag8').textContent = "sent";
-        axios.post('/chart/price-analysis')
-            .then(response => {
-                console.log("success: ", response);
-            })
-            .catch(err => {
-                console.error("failure: ", err);
-            })
-    });
+    // document.querySelector('.send-btn-completevp').addEventListener('click', function() {
+    //     document.querySelector('#flag8').textContent = "sent";
+    //     axios.post('/chart/price-analysis')
+    //         .then(response => {
+    //             console.log("success: ", response);
+    //         })
+    //         .catch(err => {
+    //             console.error("failure: ", err);
+    //         })
+    // });
 
     document.querySelector('.send-btn-completedm').addEventListener('click', function() {
         document.querySelector('#flag9').textContent = "sent";
@@ -116,27 +116,27 @@
             })
     })
 
-    document.querySelector('#fetchPriceScore').addEventListener('click', function() {
-        document.querySelector('#fetchPriceScore').classList.add('sent');
-        axios.post('/chart/save')
-            .then(response => {
-                console.log("success: ", response);
-            })
-            .catch(err => {
-                console.error("failure: ", err);
-            })
-    })
+    // document.querySelector('#fetchPriceScore').addEventListener('click', function() {
+    //     document.querySelector('#fetchPriceScore').classList.add('sent');
+    //     axios.post('/chart/save')
+    //         .then(response => {
+    //             console.log("success: ", response);
+    //         })
+    //         .catch(err => {
+    //             console.error("failure: ", err);
+    //         })
+    // })
 
-    document.querySelector('#fetchDominance').addEventListener('click', function() {
-        document.querySelector('#fetchDominance').classList.add('sent');
-        axios.post('/dominance/collect')
-            .then(response => {
-                console.log("success: ", response);
-            })
-            .catch(err => {
-                console.error("failure: ", err);
-            })
-    })
+    // document.querySelector('#fetchDominance').addEventListener('click', function() {
+    //     document.querySelector('#fetchDominance').classList.add('sent');
+    //     axios.post('/dominance/collect')
+    //         .then(response => {
+    //             console.log("success: ", response);
+    //         })
+    //         .catch(err => {
+    //             console.error("failure: ", err);
+    //         })
+    // })
 
     document.querySelector('#openList').addEventListener('click', function() {
         axios.get('/create/open')

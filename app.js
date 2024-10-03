@@ -1,12 +1,12 @@
-var express = require('express');
-var path = require('path');
-var http = require('http');
-var debug = require('debug')('express-app:app');
+const express = require('express');
+const path = require('path');
+const http = require('http');
+const debug = require('debug')('express-app:app');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
-var createError = require('http-errors');
-var cors = require('cors');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const createError = require('http-errors');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
 const sequelize = require('./sequelize');
 
 const { startCronJobs } = require('./cronJobs');

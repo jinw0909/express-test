@@ -3,9 +3,8 @@ var router = express.Router();
 const axios = require('axios');
 const cheerio = require('cheerio');
 const Parser = require('rss-parser');
-const {Coinness, Blockmedia, Analysis, Viewpoint} = require("../models");
+const { Blockmedia } = require("../models");
 /* GET home page. */
-const mariadb = require('../mariaConnection');
 
 async function fetchContent(link) {
     try {
