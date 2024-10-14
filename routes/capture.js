@@ -184,7 +184,6 @@ const captureDominance = async function(req, res) {
         }
     }
 };
-
 const captureDominanceS3 = async function(req, res) {
     let browser;
     const start = req.query.start;
@@ -254,7 +253,6 @@ const captureDominanceS3 = async function(req, res) {
         }
     }
 };
-
 const capturePremium = async function(req, res) {
     let browser;
     try {
@@ -310,51 +308,102 @@ const capturePremium = async function(req, res) {
         // End of Test Shot
 
         // Process each row sequentially
+        // for (const row of recentRows) {
+        //     const { id, symbol } = row;
+        //     if (symbol === '1000BONK') continue;
+        //
+        //     const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
+        //     const page = await browser.newPage();
+        //
+        //     // Set a higher-resolution viewport and device scale factor
+        //     await page.setViewport({
+        //         width: 800,
+        //         height: 600,
+        //         deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
+        //     });
+        //
+        //     await page.goto(url, { waitUntil: 'networkidle0' });
+        //     await sleep(1000);
+        //     console.log(`Waiting for #chart to load for symbol ${symbol}...`);
+        //     await page.waitForSelector('canvas', { timeout: 60000 });
+        //
+        //     // await page.waitForTimeout(1000);
+        //
+        //     const chartElement = await page.$('.tv-lightweight-charts');
+        //     if (!chartElement) {
+        //         console.error(`Chart element not found for symbol ${symbol}`);
+        //         await page.close();
+        //         continue;
+        //     }
+        //
+        //     // Capture a high-resolution screenshot
+        //     const chartBuffer = await chartElement.screenshot();
+        //
+        //     const chartS3Params = {
+        //         Bucket: process.env.S3_BUCKET,
+        //         Key: `premiumchart-${uuidv4()}.png`,
+        //         Body: chartBuffer,
+        //         ContentType: 'image/png'
+        //     };
+        //
+        //     const chartS3Response = await s3.upload(chartS3Params).promise();
+        //     const chartImageUrl = chartS3Response.Location;
+        //
+        //     await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
+        //     console.log(`Updated row ${id} with image URL ${chartImageUrl}`);
+        //
+        //     await page.close();
+        // }
+        // Process each row sequentially
         for (const row of recentRows) {
-            const { id, symbol } = row;
-            if (symbol === '1000BONK') continue;
+            try {
+                const { id, symbol } = row;
+                if (symbol === '1000BONK') continue;
 
-            const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
-            const page = await browser.newPage();
+                const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
+                const page = await browser.newPage();
 
-            // Set a higher-resolution viewport and device scale factor
-            await page.setViewport({
-                width: 800,
-                height: 600,
-                deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
-            });
+                // Set a higher-resolution viewport and device scale factor
+                await page.setViewport({
+                    width: 800,
+                    height: 600,
+                    deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
+                });
 
-            await page.goto(url, { waitUntil: 'networkidle0' });
+                await page.goto(url, { waitUntil: 'networkidle0' });
+                await sleep(1000);
+                console.log(`Waiting for #chart to load for symbol ${symbol}...`);
+                await page.waitForSelector('canvas', { timeout: 60000 });
 
-            console.log(`Waiting for #chart to load for symbol ${symbol}...`);
-            await page.waitForSelector('canvas', { timeout: 60000 });
+                const chartElement = await page.$('.tv-lightweight-charts');
+                if (!chartElement) {
+                    console.error(`Chart element not found for symbol ${symbol}`);
+                    await page.close();
+                    continue; // Skip to the next iteration
+                }
 
-            // await page.waitForTimeout(1000);
+                // Capture a high-resolution screenshot
+                const chartBuffer = await chartElement.screenshot();
 
-            const chartElement = await page.$('.tv-lightweight-charts');
-            if (!chartElement) {
-                console.error(`Chart element not found for symbol ${symbol}`);
+                const chartS3Params = {
+                    Bucket: process.env.S3_BUCKET,
+                    Key: `premiumchart-${uuidv4()}.png`,
+                    Body: chartBuffer,
+                    ContentType: 'image/png'
+                };
+
+                const chartS3Response = await s3.upload(chartS3Params).promise();
+                const chartImageUrl = chartS3Response.Location;
+
+                await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
+                console.log(`Updated row ${id} with image URL ${chartImageUrl}`);
+
                 await page.close();
-                continue;
+            } catch (error) {
+                console.error(`Error processing symbol ${row.symbol}:`, error);
+                // Catch and log the error, but continue with the next iteration
+                //continue;
             }
-
-            // Capture a high-resolution screenshot
-            const chartBuffer = await chartElement.screenshot();
-
-            const chartS3Params = {
-                Bucket: process.env.S3_BUCKET,
-                Key: `premiumchart-${uuidv4()}.png`,
-                Body: chartBuffer,
-                ContentType: 'image/png'
-            };
-
-            const chartS3Response = await s3.upload(chartS3Params).promise();
-            const chartImageUrl = chartS3Response.Location;
-
-            await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
-            console.log(`Updated row ${id} with image URL ${chartImageUrl}`);
-
-            await page.close();
         }
 
         if (res) res.send('Screenshots captured and updated successfully.');
@@ -367,7 +416,9 @@ const capturePremium = async function(req, res) {
         }
     }
 };
-
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 router.post('/', capture);
 router.post('/dominance', captureDominance);
 router.post('/premium', capturePremium);
@@ -399,7 +450,6 @@ router.get('/test', async (req, res) => {
         res.status(500).send('Error occurred while running Puppeteer');
     }
 })
-
 router.get('/dominanceS3', captureDominanceS3);
 
 module.exports = {
