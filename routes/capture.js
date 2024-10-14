@@ -329,7 +329,7 @@ const capturePremium = async function(req, res) {
             console.log(`Waiting for #chart to load for symbol ${symbol}...`);
             await page.waitForSelector('canvas', { timeout: 60000 });
 
-            await page.waitForTimeout(1000);
+            // await page.waitForTimeout(1000);
 
             const chartElement = await page.$('.tv-lightweight-charts');
             if (!chartElement) {
