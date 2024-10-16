@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
 const puppeteer = require('puppeteer');
 const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
@@ -305,56 +307,7 @@ const capturePremium = async function(req, res) {
         }
         await chartElem.screenshot();
         await page.close();
-        // End of Test Shot
 
-        // Process each row sequentially
-        // for (const row of recentRows) {
-        //     const { id, symbol } = row;
-        //     if (symbol === '1000BONK') continue;
-        //
-        //     const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
-        //     const page = await browser.newPage();
-        //
-        //     // Set a higher-resolution viewport and device scale factor
-        //     await page.setViewport({
-        //         width: 800,
-        //         height: 600,
-        //         deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
-        //     });
-        //
-        //     await page.goto(url, { waitUntil: 'networkidle0' });
-        //     await sleep(1000);
-        //     console.log(`Waiting for #chart to load for symbol ${symbol}...`);
-        //     await page.waitForSelector('canvas', { timeout: 60000 });
-        //
-        //     // await page.waitForTimeout(1000);
-        //
-        //     const chartElement = await page.$('.tv-lightweight-charts');
-        //     if (!chartElement) {
-        //         console.error(`Chart element not found for symbol ${symbol}`);
-        //         await page.close();
-        //         continue;
-        //     }
-        //
-        //     // Capture a high-resolution screenshot
-        //     const chartBuffer = await chartElement.screenshot();
-        //
-        //     const chartS3Params = {
-        //         Bucket: process.env.S3_BUCKET,
-        //         Key: `premiumchart-${uuidv4()}.png`,
-        //         Body: chartBuffer,
-        //         ContentType: 'image/png'
-        //     };
-        //
-        //     const chartS3Response = await s3.upload(chartS3Params).promise();
-        //     const chartImageUrl = chartS3Response.Location;
-        //
-        //     await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
-        //     console.log(`Updated row ${id} with image URL ${chartImageUrl}`);
-        //
-        //     await page.close();
-        // }
-        // Process each row sequentially
         for (const row of recentRows) {
             try {
                 const { id, symbol } = row;
@@ -416,6 +369,72 @@ const capturePremium = async function(req, res) {
         }
     }
 };
+const captureSymbol = async function(req, res) {
+    let browser;
+    try {
+        // Get the symbol from the query string
+        const { symbol } = req.query;
+        if (!symbol) {
+            return res.status(400).send('Symbol query parameter is required');
+        }
+
+        // Launch the browser
+        browser = await puppeteer.launch({
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            headless: true
+        });
+
+        const page = await browser.newPage();
+        await page.setViewport({
+            width: 800,
+            height: 600,
+            deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
+        });
+
+        // Generate the URL for the requested symbol
+        const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
+
+        // Navigate to the page and wait for the chart to load
+        await page.goto(url, { waitUntil: 'networkidle2' });
+        await page.waitForSelector('canvas', { timeout: 60000 });
+
+        const chartElement = await page.$('.tv-lightweight-charts');
+        if (!chartElement) {
+            await page.close();
+            return res.status(404).send(`Chart element not found for symbol ${symbol}`);
+        }
+
+        // Capture the screenshot and save it locally
+        const fileName = `premiumchart-${symbol}-${uuidv4()}.png`;
+        const filePath = path.join(__dirname, 'screenshots', fileName);
+
+        const chartBuffer = await chartElement.screenshot({ type: 'png'});
+        res.set('Content-Type', 'image/png');
+        res.set('Content-Length', chartBuffer.length);
+
+        res.send(chartBuffer);
+
+        // Ensure the directory exists
+        // if (!fs.existsSync(path.join(__dirname, 'screenshots'))) {
+        //     fs.mkdirSync(path.join(__dirname, 'screenshots'));
+        // }
+        //
+        // await chartElement.screenshot({ path: filePath });
+        // console.log(`Screenshot saved locally as ${filePath}`);
+        //
+        // // Return the path to the screenshot in the response
+        // res.sendFile(filePath);
+
+        await page.close();
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).send('Error processing request');
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+};
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -451,7 +470,7 @@ router.get('/test', async (req, res) => {
     }
 })
 router.get('/dominanceS3', captureDominanceS3);
-
+router.get('/symbol', captureSymbol);
 module.exports = {
     router,
     capture,
