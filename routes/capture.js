@@ -407,9 +407,12 @@ const captureSymbol = async function(req, res) {
             return res.status(404).send(`Chart element not found for symbol ${symbol}`);
         }
 
+
+
         // Capture the screenshot and save it locally
-        const fileName = `premiumchart-${symbol}-${uuidv4()}.png`;
-        const filePath = path.join(__dirname, 'screenshots', fileName);
+        // const fileName = `premiumchart-${symbol}-${uuidv4()}.png`;
+        // const filePath = path.join(__dirname, 'screenshots', fileName);
+
 
         const chartBuffer = await chartElement.screenshot({ type: 'png'});
         res.set('Content-Type', 'image/png');
