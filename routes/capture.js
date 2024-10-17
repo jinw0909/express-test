@@ -383,6 +383,8 @@ const captureSymbol = async function(req, res) {
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
             headless: true
         });
+        let version = await browser.version();
+        console.log("version: ", version);
 
         const page = await browser.newPage();
         await page.setViewport({
