@@ -255,7 +255,7 @@ const captureDominanceS3 = async function(req, res) {
         }
     }
 };
-const capturePremium = async function(req, res) {
+const capturePremiumLegacy = async function(req, res) {
     let browser;
     try {
         const [latestRow] = await plainDb.query('SELECT datetime FROM beuliping ORDER BY id DESC LIMIT 1');
@@ -358,7 +358,7 @@ const capturePremium = async function(req, res) {
         }
     }
 };
-const capturePremiumTest = async function(req, res) {
+const capturePremium = async function(req, res) {
     let browser;
     try {
         const [latestRow] = await plainDb.query('SELECT datetime FROM beuliping ORDER BY id DESC LIMIT 1');
@@ -538,8 +538,8 @@ function sleep(ms) {
 }
 router.post('/', capture);
 router.post('/dominance', captureDominance);
-router.post('/premium', capturePremiumTest);
-router.get('/test', capturePremiumTest);
+router.post('/premium', capturePremium);
+router.get('/test', capturePremium);
 router.get('/dominanceS3', captureDominanceS3);
 router.get('/symbol', captureSymbol);
 module.exports = {
