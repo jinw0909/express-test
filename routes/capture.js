@@ -416,10 +416,13 @@ const capturePremium = async function(req, res) {
                 // });
 
                 await page.goto(url, { waitUntil: 'networkidle0' });
-                await sleep(1000);
                 console.log(`Waiting for #chart to load for symbol ${symbol}...`);
-                await page.waitForSelector('canvas', { timeout: 60000 });
-
+                await page.waitForSelector('.tv-lightweight-charts', { timeout: 60000 });
+                // await page.waitForFunction(() => {
+                //     const chart = document.querySelector('.tv-lightweight-charts');
+                //     return chart && chart.width > 0 && chart.height > 0;
+                // }, { timeout: 60000 });
+                await sleep(1000);
                 const chartElement = await page.$('.tv-lightweight-charts');
                 if (!chartElement) {
                     console.error(`Chart element not found for symbol ${symbol}`);
