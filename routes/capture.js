@@ -381,9 +381,23 @@ const capturePremium = async function(req, res) {
             return;
         }
         // Launch the browser
+        // browser = await puppeteer.launch({
+        //     args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        //     headless: true
+        // });
         browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            headless: true
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--window-position=0,0',
+                '--window-size=1280,800',
+                '--disable-gpu',
+                '--hide-scrollbars',
+                '--disable-infobars',
+                '--disable-dev-shm-usage'
+            ],
+            defaultViewport: null
         });
         // Test Shot
         const page = await browser.newPage();
@@ -415,14 +429,15 @@ const capturePremium = async function(req, res) {
                 //     deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
                 // });
 
-                await page.goto(url, { waitUntil: 'networkidle0' });
+                await page.goto(url, { waitUntil: 'networkidle2' });
                 console.log(`Waiting for #chart to load for symbol ${symbol}...`);
+                await page.waitForSelector('canvas', { timeout: 60000 });
                 await page.waitForSelector('.tv-lightweight-charts', { timeout: 60000 });
                 // await page.waitForFunction(() => {
                 //     const chart = document.querySelector('.tv-lightweight-charts');
                 //     return chart && chart.width > 0 && chart.height > 0;
                 // }, { timeout: 60000 });
-                await sleep(1000);
+                await sleep(2000);
                 const chartElement = await page.$('.tv-lightweight-charts');
                 if (!chartElement) {
                     console.error(`Chart element not found for symbol ${symbol}`);
