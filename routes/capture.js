@@ -386,16 +386,16 @@ const capturePremium = async function(req, res) {
         //     headless: true
         // });
         browser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
-                '--window-position=0,0',
-                '--window-size=1280,800',
-                '--disable-gpu',
-                '--hide-scrollbars',
-                '--disable-infobars',
-                '--disable-dev-shm-usage'
+                // '--window-position=0,0',
+                // '--window-size=1280,800',
+                // '--disable-gpu',
+                // '--hide-scrollbars',
+                // '--disable-infobars',
+                // '--disable-dev-shm-usage'
             ],
             defaultViewport: null
         });
@@ -406,14 +406,17 @@ const capturePremium = async function(req, res) {
             height: 600,
             deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
         });
-        // await page.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
-        // await page.waitForSelector('canvas', { timeout: 60000 });
-        // const chartElem = await page.$('.tv-lightweight-charts');
-        // if (!chartElem) {
-        //     await page.close();
-        // }
-        // await chartElem.screenshot();
-        // await page.close();
+
+        // test screenshot
+        await page.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
+        await page.waitForSelector('canvas', { timeout: 60000 });
+        const chartElem = await page.$('.tv-lightweight-charts');
+        if (!chartElem) {
+            await page.close();
+        }
+        await chartElem.screenshot();
+        //end of test screenshot
+
         for (const row of recentRows) {
             try {
                 const { id, symbol } = row;
@@ -428,11 +431,10 @@ const capturePremium = async function(req, res) {
                 //     height: 600,
                 //     deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
                 // });
-
                 await page.goto(url, { waitUntil: 'networkidle2' });
                 console.log(`Waiting for #chart to load for symbol ${symbol}...`);
                 await page.waitForSelector('canvas', { timeout: 60000 });
-                await page.waitForSelector('.tv-lightweight-charts', { timeout: 60000 });
+                // await page.waitForSelector('.tv-lightweight-charts', { timeout: 60000 });
                 // await page.waitForFunction(() => {
                 //     const chart = document.querySelector('.tv-lightweight-charts');
                 //     return chart && chart.width > 0 && chart.height > 0;
