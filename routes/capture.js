@@ -394,7 +394,7 @@ const capturePremium = async function(req, res) {
                 '--disable-dev-shm-usage',
                 '--disable-accelerated-2d-canvas',
                 '--disable-gpu',
-                '--window-size=800x600'
+                // '--window-size=800x600'
                 // '--window-position=0,0',
                 // '--window-size=1280,800',
                 // '--disable-gpu',
