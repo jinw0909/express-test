@@ -387,7 +387,7 @@ const capturePremium = async function(req, res) {
         // });
         browser = await puppeteer.launch({
             headless: true,
-            slowMo: 30,
+            // slowMo: 30,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
