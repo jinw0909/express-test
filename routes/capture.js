@@ -387,9 +387,14 @@ const capturePremium = async function(req, res) {
         // });
         browser = await puppeteer.launch({
             headless: true,
+            slowMo: 30,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--disable-gpu',
+                '--window-size=800x600'
                 // '--window-position=0,0',
                 // '--window-size=1280,800',
                 // '--disable-gpu',
@@ -397,7 +402,6 @@ const capturePremium = async function(req, res) {
                 // '--disable-infobars',
                 // '--disable-dev-shm-usage'
             ],
-            defaultViewport: null
         });
         // Test Shot
         const page = await browser.newPage();
@@ -406,15 +410,16 @@ const capturePremium = async function(req, res) {
             height: 600,
             deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
         });
+        await page.setRequestInterception(false);
 
         // test screenshot
-        await page.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
-        await page.waitForSelector('canvas', { timeout: 60000 });
-        const chartElem = await page.$('.tv-lightweight-charts');
-        if (!chartElem) {
-            await page.close();
-        }
-        await chartElem.screenshot();
+        // await page.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
+        // await page.waitForSelector('canvas', { timeout: 60000 });
+        // const chartElem = await page.$('.tv-lightweight-charts');
+        // if (!chartElem) {
+        //     await page.close();
+        // }
+        // await chartElem.screenshot();
         //end of test screenshot
 
         for (const row of recentRows) {
@@ -431,15 +436,15 @@ const capturePremium = async function(req, res) {
                 //     height: 600,
                 //     deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
                 // });
-                await page.goto(url, { waitUntil: 'networkidle2' });
+                await page.goto(url, { waitUntil: 'networkidle2', timeout: 25000 });
                 console.log(`Waiting for #chart to load for symbol ${symbol}...`);
-                await page.waitForSelector('canvas', { timeout: 60000 });
+                await page.waitForSelector('canvas', { timeout: 25000 });
                 // await page.waitForSelector('.tv-lightweight-charts', { timeout: 60000 });
                 // await page.waitForFunction(() => {
                 //     const chart = document.querySelector('.tv-lightweight-charts');
                 //     return chart && chart.width > 0 && chart.height > 0;
                 // }, { timeout: 60000 });
-                await sleep(2000);
+                await sleep(1000);
                 const chartElement = await page.$('.tv-lightweight-charts');
                 if (!chartElement) {
                     console.error(`Chart element not found for symbol ${symbol}`);
