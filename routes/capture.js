@@ -436,9 +436,9 @@ const capturePremium = async function(req, res) {
                 //     height: 600,
                 //     deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
                 // });
-                await page.goto(url, { waitUntil: 'networkidle2', timeout: 25000 });
+                await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
                 console.log(`Waiting for #chart to load for symbol ${symbol}...`);
-                await page.waitForSelector('canvas', { timeout: 25000 });
+                await page.waitForSelector('canvas', { timeout: 60000 });
                 // await page.waitForSelector('.tv-lightweight-charts', { timeout: 60000 });
                 // await page.waitForFunction(() => {
                 //     const chart = document.querySelector('.tv-lightweight-charts');
