@@ -387,12 +387,11 @@ const capturePremium = async function(req, res) {
         // });
         browser = await puppeteer.launch({
             headless: true,
-            // slowMo: 30,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                // '--disable-accelerated-2d-canvas',
+                '--disable-accelerated-2d-canvas',
                 '--disable-gpu',
                 // '--window-size=800x600'
                 // '--window-position=0,0',
@@ -403,14 +402,6 @@ const capturePremium = async function(req, res) {
                 // '--disable-dev-shm-usage'
             ],
         });
-        //open browser page
-        const page = await browser.newPage();
-        await page.setViewport({
-            width: 800,
-            height: 600,
-            deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
-        });
-        // await page.setRequestInterception(false);
 
         // test screenshot
         // await page.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
@@ -428,6 +419,13 @@ const capturePremium = async function(req, res) {
                 if (symbol === '1000BONK') continue;
 
                 const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
+
+                const page = await browser.newPage();
+                await page.setViewport({
+                    width: 800,
+                    height: 600,
+                    deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
+                });
                 // const page = await browser.newPage();
                 //
                 // // Set a higher-resolution viewport and device scale factor
@@ -440,10 +438,10 @@ const capturePremium = async function(req, res) {
                 console.log(`Waiting for #chart to load for symbol ${symbol}...`);
                 await page.waitForSelector('canvas', { timeout: 60000 });
                 // await page.waitForSelector('.tv-lightweight-charts', { timeout: 60000 });
-                // await page.waitForFunction(() => {
-                //     const chart = document.querySelector('.tv-lightweight-charts');
-                //     return chart && chart.width > 0 && chart.height > 0;
-                // }, { timeout: 60000 });
+                await page.waitForFunction(() => {
+                    const canvas = document.querySelector('canvas');
+                    return canvas && canvas.width > 0 && canvas.height > 0;
+                }, { timeout: 60000 });
                 await sleep(1000);
                 const chartElement = await page.$('.tv-lightweight-charts');
                 if (!chartElement) {
@@ -468,13 +466,15 @@ const capturePremium = async function(req, res) {
                 await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
                 console.log(`Updated row ${id} with image URL ${chartImageUrl}`);
 
+                await page.close();
+
             } catch (error) {
                 console.error(`Error processing symbol ${row.symbol}:`, error);
                 // Catch and log the error, but continue with the next iteration
                 //continue;
             }
         }
-        await page.close();
+        // await page.close();
 
         if (res) res.send('Screenshots captured and updated successfully.');
     } catch (error) {
