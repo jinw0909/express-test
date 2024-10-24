@@ -403,14 +403,14 @@ const capturePremium = async function(req, res) {
                 // '--disable-dev-shm-usage'
             ],
         });
-        // Test Shot
+        //open browser page
         const page = await browser.newPage();
         await page.setViewport({
             width: 800,
             height: 600,
             deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
         });
-        await page.setRequestInterception(false);
+        // await page.setRequestInterception(false);
 
         // test screenshot
         // await page.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
