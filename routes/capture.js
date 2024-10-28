@@ -403,15 +403,21 @@ const capturePremium = async function(req, res) {
             ],
         });
 
+        let testPage = await browser.newPage();
+        await testPage.setViewport({
+            width: 800,
+            height: 600,
+            deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
+        });
         // test screenshot
-        // await page.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
-        // await page.waitForSelector('canvas', { timeout: 60000 });
-        // const chartElem = await page.$('.tv-lightweight-charts');
-        // if (!chartElem) {
-        //     await page.close();
-        // }
-        // await chartElem.screenshot();
-        //end of test screenshot
+        await testPage.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
+        await testPage.waitForSelector('canvas', { timeout: 60000 });
+        const chartElem = await testPage.$('.tv-lightweight-charts');
+        if (!chartElem) {
+            await testPage.close();
+        }
+        await chartElem.screenshot();
+        await testPage.close();
 
         for (const row of recentRows) {
             try {
@@ -420,7 +426,7 @@ const capturePremium = async function(req, res) {
 
                 const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
 
-                const page = await browser.newPage();
+                let page = await browser.newPage();
                 await page.setViewport({
                     width: 800,
                     height: 600,
@@ -434,7 +440,7 @@ const capturePremium = async function(req, res) {
                 //     height: 600,
                 //     deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
                 // });
-                await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+                await page.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
                 console.log(`Waiting for #chart to load for symbol ${symbol}...`);
                 await page.waitForSelector('canvas', { timeout: 60000 });
                 // await page.waitForSelector('.tv-lightweight-charts', { timeout: 60000 });
@@ -442,7 +448,7 @@ const capturePremium = async function(req, res) {
                     const canvas = document.querySelector('canvas');
                     return canvas && canvas.width > 0 && canvas.height > 0;
                 }, { timeout: 60000 });
-                await sleep(1000);
+                await sleep(2000);
                 const chartElement = await page.$('.tv-lightweight-charts');
                 if (!chartElement) {
                     console.error(`Chart element not found for symbol ${symbol}`);
