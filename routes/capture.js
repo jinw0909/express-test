@@ -544,8 +544,8 @@ const capturePremium = async function(req, res) {
                 const { id, symbol } = row;
                 console.log(`Processing symbol: ${symbol}, row ID: ${id}`);
 
-                if (symbol === '1000BONK') {
-                    console.log('Skipping symbol 1000BONK');
+                if (symbol === '1000BONK' || symbol === 'CVC') {
+                    console.log('Skipping unregistered symbol');
                     continue;
                 }
 
