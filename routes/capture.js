@@ -549,7 +549,7 @@ const capturePremium = async function(req, res) {
                     continue;
                 }
 
-                const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
+                const url = `https://tryex.xyz/capture_premium.php?kind=${symbol}USDT`;
 
                 let page = await browser.newPage();
                 await page.setViewport({
@@ -560,19 +560,48 @@ const capturePremium = async function(req, res) {
 
                 // Step 4: Navigate to the page
                 console.log(`Navigating to URL: ${url}`);
+
+                const consoleLogs = [];
+                page.on('console', (msg) => {
+                    consoleLogs.push(msg.text());
+                });
+
                 await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
-                console.log(`Waiting for #chart to load for symbol ${symbol}...`);
-                await page.waitForSelector('canvas', { timeout: 60000 });
+                await new Promise(async (resolve, reject) => {
 
-                // Step 5: Wait for the canvas to be fully rendered
-                await page.waitForFunction(() => {
-                    const canvas = document.querySelector('canvas');
-                    return canvas && canvas.width > 0 && canvas.height > 0;
-                }, { timeout: 60000 });
+                   page.on('console', (msg) => {
+                      if (msg.text() === 'success') {
+                          console.log("Chart is fully loaded.");
+                          resolve();
+                      }
+                   });
+                   const interval = setInterval(() => {
+                      if (consoleLogs.includes('success')) {
+                          console.log("Chart is fully loaded.");
+                          clearInterval(interval);
+                          resolve();
+                      }
+                   },1000);
 
-                await sleep(2000); // Give extra time for rendering
-                console.log(`Canvas loaded for ${symbol}, attempting screenshot.`);
+                   //optional: set a timeout to stop waiting after 60 seconds
+                    setTimeout(() => {
+                        clearInterval(interval);
+                        reject(new Error("Timeout: 'success' message was not received"));
+                    }, 60000);
+                });
+
+                // console.log(`Waiting for #chart to load for symbol ${symbol}...`);
+                // await page.waitForSelector('canvas', { timeout: 60000 });
+                //
+                // // Step 5: Wait for the canvas to be fully rendered
+                // await page.waitForFunction(() => {
+                //     const canvas = document.querySelector('canvas');
+                //     return canvas && canvas.width > 0 && canvas.height > 0;
+                // }, { timeout: 60000 });
+
+                await sleep(1000); // Give extra time for rendering
+                //console.log(`Canvas loaded for ${symbol}, attempting screenshot.`);
 
                 const chartElement = await page.$('.tv-lightweight-charts');
                 if (!chartElement) {
@@ -582,7 +611,7 @@ const capturePremium = async function(req, res) {
                 }
 
                 // Step 6: Take the screenshot
-                const chartBuffer = await chartElement.screenshot({type: "jpeg", quality: 80});
+                const chartBuffer = await chartElement.screenshot({type: "jpeg", quality: 100});
                 console.log(`Screenshot taken for ${symbol}`);
 
                 // Step 7: Upload screenshot to S3
@@ -592,6 +621,7 @@ const capturePremium = async function(req, res) {
                 //     Body: chartBuffer,
                 //     ContentType: 'image/png'
                 // };
+                await page.close();
 
                 const chartS3Params = {
                     Bucket: process.env.S3_BUCKET,
@@ -610,7 +640,7 @@ const capturePremium = async function(req, res) {
                 await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
                 console.log(`Database updated successfully for row ID: ${id}`);
 
-                await page.close();
+
 
             } catch (error) {
                 console.error(`Error processing symbol ${row.symbol} (ID ${row.id}):`, error);
