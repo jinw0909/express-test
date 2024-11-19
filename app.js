@@ -21,6 +21,7 @@ var chartRouter = require('./routes/chart').router;
 // var dominanceRouter = require('./routes/dominance').router;
 var captureRouter = require('./routes/capture').router;
 var deleteRouter = require('./routes/delete');
+var screenshotRouter = require('./routes/screenshot').router;
 
 startCronJobs();
 console.log('env port: ', process.env.PORT);
@@ -54,6 +55,7 @@ app.use('/chart', chartRouter);
 // app.use('/dominance', dominanceRouter);
 app.use('/capture', captureRouter);
 app.use('/delete', deleteRouter);
+app.use('/screenshot', screenshotRouter);
 
 app.post('/', (req, res) => {
   const payload = req.body;
