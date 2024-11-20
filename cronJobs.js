@@ -1,5 +1,6 @@
 const cron = require('node-cron');
-const { capture, captureDominance, capturePremium } = require('./routes/capture');
+// const { capture, captureDominance, capturePremium } = require('./routes/capture');
+const { capture, capturePremium } = require('./routes/screenshot');
 const { performPriceAnalysis } = require('./routes/chart');
 const { performArticleAnalysis } = require('./routes/create');
 const { performArticleCrawl } = require('./routes/crawl');
@@ -11,6 +12,7 @@ const startCronJobs = () => {
     // 8th minute in KST becomes 8 - 9 = -1 => corresponds to 23:08 of the previous hour UTC
     cron.schedule('8 * * * *', async () => {
         console.log(`Running capturePremium at ${new Date().toLocaleString()}`);
+        // await capturePremium(); // Call your function
         await capturePremium(); // Call your function
     }, {
         timezone: "UTC"

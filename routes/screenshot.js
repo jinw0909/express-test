@@ -3,6 +3,7 @@ const router = express.Router();
 const { chromium } = require('playwright');
 const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
+const { BitcoinAnalysis } = require('../models');
 const plainDb = require('../plainConnection');
 
 // Configure AWS S3
@@ -12,38 +13,98 @@ const s3 = new AWS.S3({
     region: process.env.S3_REGION
 });
 
-const premium = async function (req, res) {
+const capture = async function (req, res) {
     let browser;
-
     try {
-        // Launch Playwright browser
-        browser = await chromium.launch();
-        const page = await browser.newPage();
-
-        // Navigate to the page
-        await page.goto('https://google.com', {
-            waitUntil: 'networkidle'
+        browser = await chromium.launch({
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            headless: true
         });
 
-        // Capture screenshot as a buffer
-        const screenshotBuffer = await page.screenshot();
+        const page = await browser.newPage({deviceScaleFactor: 2});
 
-        // Convert to Base64 Data URI
-        const base64String = screenshotBuffer.toString('base64');
-        const imageUrl = `data:image/png;base64,${base64String}`;
+        // Set a high-resolution viewport
+        await page.setViewportSize({
+            width: 1920,
+            height: 1080
+        });
 
-        // Log and send response
-        // console.log('Image URL:', imageUrl);
-        res.json({ success: true, imageUrl });
+        // Navigate to the page
+        console.log('Navigating to the page...');
+        await page.goto('https://goya-regular-brief.com/chart/draw', { waitUntil: 'networkidle' });
+
+        // Wait for canvas elements to load
+        console.log('Waiting for #dayChart...');
+        const dayChart = page.locator('#dayChart');
+        await dayChart.waitFor({ timeout: 60000 });
+
+        console.log('Waiting for #monthChart...');
+        const monthChart = page.locator('#monthChart');
+        await monthChart.waitFor({ timeout: 60000 });
+
+        // Take screenshots of the elements
+        console.log('Capturing screenshots...');
+        const dayBuffer = await dayChart.screenshot();
+        const monthBuffer = await monthChart.screenshot();
+
+        // Close the browser
+        await browser.close();
+
+        // Prepare S3 upload parameters
+        const dayS3Params = {
+            Bucket: process.env.S3_BUCKET,
+            Key: `charts/day-chart-${uuidv4()}.png`,
+            Body: dayBuffer,
+            ContentType: 'image/png'
+        };
+
+        const monthS3Params = {
+            Bucket: process.env.S3_BUCKET,
+            Key: `charts/month-chart-${uuidv4()}.png`,
+            Body: monthBuffer,
+            ContentType: 'image/png'
+        };
+
+        // Upload screenshots to S3
+        console.log('Uploading screenshots to S3...');
+        const [dayS3Response, monthS3Response] = await Promise.all([
+            s3.upload(dayS3Params).promise(),
+            s3.upload(monthS3Params).promise()
+        ]);
+
+        // Get the URLs from the S3 responses
+        const dayImageUrl = dayS3Response.Location;
+        const monthImageUrl = monthS3Response.Location;
+
+        // Fetch the latest row's ID
+        const latestEntry = await BitcoinAnalysis.findOne({
+            order: [['id', 'DESC']]
+        });
+
+        if (!latestEntry) {
+            throw new Error('No entries found in the BitcoinAnalysis table');
+        }
+
+        // Update the latest row with the new URLs using the instance method
+        console.log('Updating database with image URLs...');
+        await latestEntry.update({
+            daychart_imgUrl: dayImageUrl,
+            monthchart_imgUrl: monthImageUrl
+        });
+
+        if (res) res.send(`Day chart screenshot saved to S3: ${dayImageUrl}, Month chart screenshot saved to S3: ${monthImageUrl}`);
+
+
     } catch (error) {
-        console.error('Error in premium function:', error);
-        res.status(500).json({ success: false, error: error.message });
+        console.error('Error: ', error);
+        if (res) res.status(500).send('Error processing request')
     } finally {
         if (browser) {
             await browser.close();
         }
     }
-};
+}
+
 const capturePremium = async function (req, res) {
     let browser;
 
@@ -86,6 +147,7 @@ const capturePremium = async function (req, res) {
         console.log('Launching Playwright browser');
         browser = await chromium.launch({
             headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
         });
 
         for (const row of recentRows) {
@@ -189,7 +251,10 @@ const capturePremium = async function (req, res) {
 };
 // Route Definition
 router.get('/test', capturePremium);
+router.get('/test2', capture);
 
 module.exports = {
     router,
+    capturePremium,
+    capture
 };
