@@ -31,7 +31,7 @@ const capture = async function (req, res) {
 
         // Navigate to the page
         console.log('Navigating to the page...');
-        await page.goto('https://goya-regular-brief.com/chart/draw', { waitUntil: 'networkidle' });
+        await page.goto('https://daily-news-generator.com/chart/draw', { waitUntil: 'networkidle' });
 
         // Wait for canvas elements to load
         console.log('Waiting for #dayChart...');
