@@ -677,7 +677,10 @@ const captureDolphin = async function (req, res) {
         }
 
         // Launch Puppeteer
-        const browser = await puppeteer.launch({ headless: true });
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
 
         // Utility function for sleeping
         const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
