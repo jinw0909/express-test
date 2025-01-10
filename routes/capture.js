@@ -2,11 +2,14 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+puppeteer.use(StealthPlugin());
 const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
 const { BitcoinAnalysis, DominanceAnalysis } = require('../models');  // Ensure this path is correct for your project
 const plainDb = require('../plainConnection'); // Import the plain DB connection
+const dolphinDb = require('../dolphinConnection')
 
 // Configure AWS S3
 const s3 = new AWS.S3({
@@ -661,7 +664,145 @@ const capturePremium = async function(req, res) {
         console.log('capturePremium function ended');
     }
 };
+const captureDolphin = async function (req, res) {
+    try {
+        // Step 1: Fetch rows from TopTraders table
+        const rows = await dolphinDb.query(
+            `SELECT id, address FROM dolai.Top_Trader WHERE target = 'Y'`
+        );
+        console.log('Rows fetched:', rows.length);
 
+        if (!rows.length) {
+            return res.status(404).json({ message: 'No rows found with target = Y' });
+        }
+
+        // Launch Puppeteer
+        const browser = await puppeteer.launch({ headless: true });
+
+        // Utility function for sleeping
+        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+        const parseFinancialValue = (value) => {
+            if (!value) {
+                console.warn("parseFinancialValue received a null or undefined value");
+                return null;
+            }
+
+            console.log('Raw value before parsing:', value);
+
+            // Remove `$` and `+`, retain `-`
+            value = value.replace(/^\+|\$/g, '');
+
+            // Handle cases with `K`, `M`, or `B`
+            if (value.includes('K')) {
+                const result = parseFloat(value.replace('K', '')) * 1000;
+                console.log(`Parsed value with K: Original: ${value}, Parsed: ${result}`);
+                return result;
+            }
+
+            if (value.includes('M')) {
+                const result = parseFloat(value.replace('M', '')) * 1000000;
+                console.log(`Parsed value with M: Original: ${value}, Parsed: ${result}`);
+                return result;
+            }
+
+            if (value.includes('B')) {
+                const result = parseFloat(value.replace('B', '')) * 1000000000;
+                console.log(`Parsed value with B: Original: ${value}, Parsed: ${result}`);
+                return result;
+            }
+
+            // Handle plain numeric values
+            const result = parseFloat(value);
+            console.log(`Parsed plain value: Original: ${value}, Parsed: ${result}`);
+            return result;
+        };
+
+
+        // Step 2: Process each row
+        for (const row of rows) {
+            const url = `https://gmgn.ai/sol/address/${row.address}`;
+            let page;
+
+            try {
+                // Open a new page for each address
+                page = await browser.newPage();
+                await page.setUserAgent(
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'
+                );
+                await page.setExtraHTTPHeaders({
+                    Referer: 'https://gmgn.ai',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                });
+
+                // Navigate to the URL
+                const response = await page.goto(url, { waitUntil: 'networkidle2' });
+                const status = response.status();
+
+                if (status !== 200) {
+                    console.error(`Failed to load page for address: ${row.address}, Status: ${status}`);
+                    continue;
+                }
+
+                console.log(`Page loaded successfully for address: ${row.address}`);
+                await sleep(2000); // Prevent rapid requests
+
+                // Scrape the text content of the target div
+                const pnlText = await page.evaluate(() => {
+                    const parentDiv = document.querySelector('div.css-1r6lea');
+                    if (parentDiv) {
+                        const targetDiv = parentDiv.children[1]; // Second child
+                        return targetDiv ? targetDiv.textContent.trim() : null;
+                    }
+                    return null; // Return null if parent div doesn't exist
+                });
+
+                if (!pnlText) {
+                    console.error(`Could not find data for address: ${row.address}`);
+                    continue;
+                }
+
+                // Log the raw pnlText for debugging
+                console.log(`Raw pnlText for address ${row.address}:`, pnlText);
+
+                // Extract totalPnl and totalPnlRate using regex
+                let [totalPnl, totalPnlRate] = pnlText.match(/([+\-]?\$[0-9.,KMB]+)|([+\-]?\d+\.?\d*%)/g) || [];
+                console.log(`Extracted totalPnl: ${totalPnl}, totalPnlRate: ${totalPnlRate}`);
+
+                totalPnl = totalPnl ? parseFinancialValue(totalPnl) : null;
+                totalPnlRate = totalPnlRate ? parseFloat(totalPnlRate.replace(/^\+|%/g, '')) : null;
+
+                // Log the parsed values
+                console.log(`Parsed totalPnl: ${totalPnl}, totalPnlRate: ${totalPnlRate}`);
+
+                // Update the database
+                if (totalPnl !== null && totalPnlRate !== null) {
+                    await dolphinDb.query(
+                        `UPDATE dolai.Top_Trader SET total_pnl = ?, total_pnl_rate = ? WHERE id = ?`,
+                        [totalPnl, totalPnlRate, row.id]
+                    );
+                    console.log(`Updated total_pnl and total_pnl_rate for address: ${row.address}`);
+                } else {
+                    console.error(`Invalid data format for address: ${row.address}`);
+                }
+            } catch (error) {
+                console.error(`Error processing address ${row.address}:`, error.message);
+            } finally {
+                // Close the page to free up resources
+                if (page) await page.close();
+            }
+        }
+
+        // Close Puppeteer
+        await browser.close();
+
+        // Respond with success
+        res.status(200).json({ message: 'Rows processed successfully' });
+    } catch (error) {
+        console.error('Error in captureDolphin:', error.message);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
 const captureSymbol = async function(req, res) {
     let browser;
     try {
@@ -734,6 +875,7 @@ const captureSymbol = async function(req, res) {
         }
     }
 };
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -743,9 +885,12 @@ router.post('/premium', capturePremium);
 router.get('/test', capturePremium);
 router.get('/dominanceS3', captureDominanceS3);
 router.get('/symbol', captureSymbol);
+router.get('/dolphin', captureDolphin);
+
 module.exports = {
     router,
     capture,
     captureDominance,
-    capturePremium
+    capturePremium,
+    captureDolphin
 };

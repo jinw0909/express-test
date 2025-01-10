@@ -23,7 +23,7 @@ var captureRouter = require('./routes/capture').router;
 var deleteRouter = require('./routes/delete');
 var screenshotRouter = require('./routes/screenshot').router;
 
-startCronJobs();
+// startCronJobs();
 console.log('env port: ', process.env.PORT);
 
 (async () => {

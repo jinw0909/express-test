@@ -29,6 +29,8 @@
     "pm2": "^5.4.2",
     "pug": "2.0.0-beta11",
     "puppeteer": "^22.11.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "rss-parser": "^3.13.0",
     "sequelize": "^6.37.3",
     "uuid": "^10.0.0",

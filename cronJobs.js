@@ -5,6 +5,7 @@ const { performPriceAnalysis } = require('./routes/chart');
 const { performArticleAnalysis } = require('./routes/create');
 const { performArticleCrawl } = require('./routes/crawl');
 const { performDominanceAnalysis, performDominanceCollect } = require('./routes/dominance');
+const { captureDolphin } = require('./routes/capture');
 
 const startCronJobs = () => {
 
@@ -60,6 +61,14 @@ const startCronJobs = () => {
     cron.schedule('25 4 * * *', async () => {
         console.log(`Test cron job running at ${new Date().toLocaleString()} (UTC time)`);
         // Place your test logic here
+    }, {
+        timezone: "UTC"  // Running based on UTC
+    });
+
+    // Task to run at 13:25 KST, which is 04:25 UTC
+    cron.schedule('40 * * * *', async () => {
+        console.log(`Running dolphinCapture at ${new Date().toLocaleString()} (UTC time)`);
+        await captureDolphin();
     }, {
         timezone: "UTC"  // Running based on UTC
     });
