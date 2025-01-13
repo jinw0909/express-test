@@ -160,7 +160,8 @@ const capturePremium = async function (req, res) {
                     continue;
                 }
 
-                const url = `https://tryex.xyz/capture_premium.php?kind=${symbol}USDT`;
+                // const url = `https://tryex.xyz/capture_premium.php?kind=${symbol}USDT&authKey=tryex013579`;
+                const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT`;
 
                 const page = await browser.newPage({deviceScaleFactor: 2});
                 await page.setViewportSize({
