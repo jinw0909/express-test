@@ -552,7 +552,8 @@ const capturePremium = async function(req, res) {
                     continue;
                 }
 
-                const url = `https://tryex.xyz/capture_premium.php?kind=${symbol}USDT`;
+                // const url = `https://tryex.xyz/capture_premium.php?kind=${symbol}USDT`;
+                const url = `https://tryex.xyz/capture_brief_chart.php?kind=${symbol}USDT&hour=50&authKey=tryex013579`;
 
                 let page = await browser.newPage();
                 await page.setViewport({
@@ -884,7 +885,7 @@ function sleep(ms) {
 }
 router.post('/', capture);
 router.post('/dominance', captureDominance);
-router.post('/premium', capturePremium);
+router.get('/premium', capturePremium);
 router.get('/test', capturePremium);
 router.get('/dominanceS3', captureDominanceS3);
 router.get('/symbol', captureSymbol);
