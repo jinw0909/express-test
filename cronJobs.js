@@ -66,12 +66,12 @@ const startCronJobs = () => {
     });
 
     // Task to run at 13:25 KST, which is 04:25 UTC
-    cron.schedule('40 * * * *', async () => {
-        console.log(`Running dolphinCapture at ${new Date().toLocaleString()} (UTC time)`);
-        await captureDolphin();
-    }, {
-        timezone: "UTC"  // Running based on UTC
-    });
+    // cron.schedule('40 * * * *', async () => {
+    //     console.log(`Running dolphinCapture at ${new Date().toLocaleString()} (UTC time)`);
+    //     await captureDolphin();
+    // }, {
+    //     timezone: "UTC"  // Running based on UTC
+    // });
 };
 
 module.exports = { startCronJobs };

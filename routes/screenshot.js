@@ -104,13 +104,10 @@ const capture = async function (req, res) {
         }
     }
 }
-
 const capturePremium = async function (req, res) {
     let browser;
-
     try {
         console.log('Starting capturePremium process');
-
         // Step 1: Fetch the latest datetime
         const [latestRow] = await plainDb.query(
             'SELECT datetime FROM beuliping ORDER BY id DESC LIMIT 1'
@@ -120,10 +117,8 @@ const capturePremium = async function (req, res) {
             if (res) return res.status(404).send('No rows found');
             return;
         }
-
         const latestDatetime = latestRow.datetime;
         console.log('Latest Datetime:', latestDatetime);
-
         // Step 2: Fetch recent rows with the latest datetime
         const recentRows = await plainDb.query(
             `
@@ -154,6 +149,28 @@ const capturePremium = async function (req, res) {
             try {
                 const { id, symbol } = row;
                 console.log(`Processing symbol: ${symbol}, row ID: ${id}`);
+
+                // Step 2.1: Check the view 'vm_beuliping_KR'
+                console.log(`Checking content for row ID: ${id} in vm_beuliping_KR`);
+                const [contentCheck] = await plainDb.query(
+                `
+                    SELECT content
+                    FROM vm_beuliping_KR
+                    WHERE m_id = ?
+                    `,
+            [id]
+                );
+
+                if (!contentCheck || contentCheck.length === 0) {
+                    console.log(`No matching row found in vm_beuliping_KR for row ID: ${id}`);
+                    continue;
+                }
+
+                const { content } = contentCheck;
+                if (content.includes("없습니다.")) {
+                    console.log(`Content contains "없습니다." for row ID: ${id}. Skipping symbol: ${symbol}`);
+                    continue;
+                }
 
                 if (symbol === '1000BONK' || symbol === 'CVC' || symbol === 'RAY') {
                     console.log('Skipping unregistered symbol');

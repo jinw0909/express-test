@@ -18,6 +18,7 @@ async function checkConnection() {
         console.error('Error connecting to the dophin database:', error);
     }
 }
+
 async function query(sql, params) {
     const [results, ] = await pool.execute(sql, params);
     return results;
