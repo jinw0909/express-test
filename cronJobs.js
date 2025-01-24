@@ -11,7 +11,7 @@ const startCronJobs = () => {
 
     // Task to run capturePremium at every hour at the 8th minute in KST (e.g., 1:08, 2:08)
     // 8th minute in KST becomes 8 - 9 = -1 => corresponds to 23:08 of the previous hour UTC
-    cron.schedule('8 * * * *', async () => {
+    cron.schedule('13 * * * *', async () => {
         console.log(`Running capturePremium at ${new Date().toLocaleString()}`);
         // await capturePremium(); // Call your function
         await capturePremium(); // Call your function

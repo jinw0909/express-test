@@ -752,13 +752,29 @@ const captureDolphin = async function (req, res) {
                 await sleep(2000); // Prevent rapid requests
 
                 // Scrape the text content of the target div
+                // const pnlText = await page.evaluate(() => {
+                //     const parentDiv = document.querySelector('div.css-1r6lea');
+                //     if (parentDiv) {
+                //         const targetDiv = parentDiv.children[1]; // Second child
+                //         return targetDiv ? targetDiv.textContent.trim() : null;
+                //     }
+                //     return null; // Return null if parent div doesn't exist
+                // });
+
                 const pnlText = await page.evaluate(() => {
-                    const parentDiv = document.querySelector('div.css-1r6lea');
+                    // Step 1: Locate the div with the class 'css-1ug9me3'
+                    const parentDiv = document.querySelector('div.css-1ug9me3');
                     if (parentDiv) {
-                        const targetDiv = parentDiv.children[1]; // Second child
-                        return targetDiv ? targetDiv.textContent.trim() : null;
+                        // Step 2: Get the second child of 'css-1ug9me3'
+                        const firstChildDiv = parentDiv.children[1];
+                        if (firstChildDiv) {
+                            // Step 3: Get the second child of the previous div
+                            const targetDiv = firstChildDiv.children[1];
+                            // Step 4: Return the text content of the target div
+                            return targetDiv ? targetDiv.textContent.trim() : null;
+                        }
                     }
-                    return null; // Return null if parent div doesn't exist
+                    return null; // Return null if any of the elements are not found
                 });
 
                 if (!pnlText) {
