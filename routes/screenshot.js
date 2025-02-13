@@ -104,136 +104,258 @@ const capture = async function (req, res) {
         }
     }
 }
+// const capturePremium = async function (req, res) {
+//     let browser;
+//     try {
+//         console.log('Starting capturePremium process');
+//         // Step 1: Fetch the latest datetime
+//         const [latestRow] = await plainDb.query(
+//             'SELECT datetime FROM beuliping ORDER BY id DESC LIMIT 1'
+//         );
+//         if (!latestRow || latestRow.length === 0) {
+//             console.log('No rows found in beuliping.');
+//             if (res) return res.status(404).send('No rows found');
+//             return;
+//         }
+//         const latestDatetime = latestRow.datetime;
+//         console.log('Latest Datetime:', latestDatetime);
+//         // Step 2: Fetch recent rows with the latest datetime
+//         const recentRows = await plainDb.query(
+//             `
+//             SELECT id, symbol
+//             FROM beuliping
+//             WHERE datetime = ?
+//             ORDER BY id DESC
+//         `,
+//             [latestDatetime]
+//         );
+//
+//         console.log('Fetched recent rows:', recentRows);
+//
+//         if (!recentRows || recentRows.length === 0) {
+//             console.log('No recent rows found for the latest datetime.');
+//             if (res) return res.status(404).send('No recent rows found');
+//             return;
+//         }
+//
+//         // Step 3: Launch Playwright browser
+//         console.log('Launching Playwright browser');
+//         browser = await chromium.launch({
+//             headless: true,
+//             args: ['--no-sandbox', '--disable-setuid-sandbox'],
+//         });
+//
+//         for (const row of recentRows) {
+//             try {
+//                 const { id, symbol } = row;
+//                 console.log(`Processing symbol: ${symbol}, row ID: ${id}`);
+//
+//                 // Step 2.1: Check the view 'vm_beuliping_KR'
+//                 console.log(`Checking content for row ID: ${id} in vm_beuliping_KR`);
+//                 const [contentCheck] = await plainDb.query(
+//                 `
+//                     SELECT content
+//                     FROM vm_beuliping_KR
+//                     WHERE m_id = ?
+//                     `,
+//             [id]
+//                 );
+//
+//                 if (!contentCheck || contentCheck.length === 0) {
+//                     console.log(`No matching row found in vm_beuliping_KR for row ID: ${id}`);
+//                     continue;
+//                 }
+//
+//                 const { content } = contentCheck;
+//                 if (content.includes("없습니다.")) {
+//                     console.log(`Content contains "없습니다." for row ID: ${id}. Skipping symbol: ${symbol}`);
+//                     continue;
+//                 }
+//
+//                 if (symbol === '1000BONK' || symbol === 'CVC' || symbol === 'RAY') {
+//                     console.log('Skipping unregistered symbol');
+//                     continue;
+//                 }
+//
+//                 // const url = `https://tryex.xyz/capture_premium.php?kind=${symbol}USDT&authKey=tryex013579`;
+//                 // const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT`;
+//                 const url = `https://tryex.xyz/capture_brief_chart.php?kind=${symbol}USDT&hour=50&authKey=tryex013579`;
+//
+//                 const page = await browser.newPage({deviceScaleFactor: 2});
+//                 await page.setViewportSize({
+//                     width: 800,
+//                     height: 600,
+//                 });
+//                 // Step 4: Navigate to the page
+//                 console.log(`Navigating to URL: ${url}`);
+//
+//                 // const consoleLogs = [];
+//                 // page.on('console', (msg) => {
+//                 //     consoleLogs.push(msg.text());
+//                 // });
+//
+//                 await page.goto(url, { waitUntil: 'networkidle' });
+//
+//                 // await new Promise(async (resolve, reject) => {
+//                 //     page.on('console', (msg) => {
+//                 //         if (msg.text() === 'success') {
+//                 //             console.log('Chart is fully loaded.');
+//                 //             resolve();
+//                 //         }
+//                 //     });
+//                 //     const interval = setInterval(() => {
+//                 //         if (consoleLogs.includes('success')) {
+//                 //             console.log('Chart is fully loaded.');
+//                 //             clearInterval(interval);
+//                 //             resolve();
+//                 //         }
+//                 //     }, 1000);
+//                 //
+//                 //     // Optional: set a timeout to stop waiting after 60 seconds
+//                 //     setTimeout(() => {
+//                 //         clearInterval(interval);
+//                 //         reject(new Error("Timeout: 'success' message was not received"));
+//                 //     }, 60000);
+//                 // });
+//                 //
+//                 // await page.waitForTimeout(1000); // Give extra time for rendering
+//
+//                 const chartElement = await page.locator('.tv-lightweight-charts');
+//                 if (!(await chartElement.isVisible())) {
+//                     console.error(`Chart element not found for symbol ${symbol}`);
+//                     await page.close();
+//                     continue;
+//                 }
+//
+//                 // Step 5: Take the screenshot
+//                 const chartBuffer = await chartElement.screenshot({ type: 'png' });
+//                 console.log(`Screenshot taken for ${symbol}`);
+//
+//                 await page.close();
+//
+//                 // Step 6: Upload screenshot to S3
+//                 const chartS3Params = {
+//                     Bucket: process.env.S3_BUCKET,
+//                     Key: `premiumchart-${uuidv4()}.png`,
+//                     Body: chartBuffer,
+//                     ContentType: 'image/png',
+//                 };
+//
+//                 console.log('Uploading screenshot to S3...');
+//                 const chartS3Response = await s3.upload(chartS3Params).promise();
+//                 const chartImageUrl = chartS3Response.Location;
+//                 console.log(`Screenshot uploaded to S3, URL: ${chartImageUrl}`);
+//
+//                 // Step 7: Update database with image URL
+//                 console.log(`Updating database for row ID: ${id}`);
+//                 await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
+//                 console.log(`Database updated successfully for row ID: ${id}`);
+//             } catch (error) {
+//                 console.error(`Error processing symbol ${row.symbol} (ID ${row.id}):`, error);
+//             }
+//         }
+//
+//         if (res) res.send('Screenshots captured and updated successfully.');
+//         console.log('CapturePremium process completed successfully.');
+//     } catch (error) {
+//         console.error('Error in capturePremium function:', error);
+//         if (res) res.status(500).send('Error processing request');
+//     } finally {
+//         if (browser) {
+//             console.log('Closing Playwright browser');
+//             await browser.close();
+//         }
+//         console.log('capturePremium function ended');
+//     }
+// };
+
 const capturePremium = async function (req, res) {
     let browser;
     try {
-        console.log('Starting capturePremium process');
-        // Step 1: Fetch the latest datetime
-        const [latestRow] = await plainDb.query(
-            'SELECT datetime FROM beuliping ORDER BY id DESC LIMIT 1'
-        );
-        if (!latestRow || latestRow.length === 0) {
-            console.log('No rows found in beuliping.');
-            if (res) return res.status(404).send('No rows found');
-            return;
-        }
-        const latestDatetime = latestRow.datetime;
-        console.log('Latest Datetime:', latestDatetime);
-        // Step 2: Fetch recent rows with the latest datetime
+        console.log('🔵 Starting capturePremium process');
+
+        // ✅ Step 1: Fetch recent rows in a single query
         const recentRows = await plainDb.query(
             `
-            SELECT id, symbol
+            SELECT id, symbol, datetime
             FROM beuliping
-            WHERE datetime = ?
+            WHERE datetime = (SELECT MAX(datetime) FROM beuliping)
             ORDER BY id DESC
-        `,
-            [latestDatetime]
+        `
         );
 
-        console.log('Fetched recent rows:', recentRows);
-
         if (!recentRows || recentRows.length === 0) {
-            console.log('No recent rows found for the latest datetime.');
+            console.log('⚠️ No recent rows found.');
             if (res) return res.status(404).send('No recent rows found');
             return;
         }
 
-        // Step 3: Launch Playwright browser
-        console.log('Launching Playwright browser');
+        console.log(`✅ Found ${recentRows.length} recent rows`);
+
+        // ✅ Step 2: Launch Playwright browser once for all captures
+        console.log('🚀 Launching Playwright browser...');
         browser = await chromium.launch({
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
         });
 
-        for (const row of recentRows) {
+        // ✅ Step 3: Process symbols in parallel with concurrency control
+        const maxConcurrentScreenshots = 3; // Adjust based on your server performance
+        const processRows = async (row) => {
             try {
                 const { id, symbol } = row;
-                console.log(`Processing symbol: ${symbol}, row ID: ${id}`);
+                console.log(`🔵 Processing symbol: ${symbol} (ID: ${id})`);
 
-                // Step 2.1: Check the view 'vm_beuliping_KR'
-                console.log(`Checking content for row ID: ${id} in vm_beuliping_KR`);
+                // ✅ Step 3.1: Check content in vm_beuliping_KR
                 const [contentCheck] = await plainDb.query(
-                `
-                    SELECT content
-                    FROM vm_beuliping_KR
-                    WHERE m_id = ?
-                    `,
-            [id]
+                    `SELECT content FROM vm_beuliping_KR WHERE m_id = ?`,
+                    [id]
                 );
 
-                if (!contentCheck || contentCheck.length === 0) {
-                    console.log(`No matching row found in vm_beuliping_KR for row ID: ${id}`);
-                    continue;
+                if (!contentCheck || contentCheck.length === 0 || contentCheck.content.includes("없습니다.")) {
+                    console.log(`⚠️ Skipping symbol: ${symbol} due to empty or invalid content.`);
+                    return;
                 }
 
-                const { content } = contentCheck;
-                if (content.includes("없습니다.")) {
-                    console.log(`Content contains "없습니다." for row ID: ${id}. Skipping symbol: ${symbol}`);
-                    continue;
+                // ✅ Skip known unregistered symbols
+                if (['1000BONK', 'CVC', 'RAY'].includes(symbol)) {
+                    console.log(`⚠️ Skipping unregistered symbol: ${symbol}`);
+                    return;
                 }
 
-                if (symbol === '1000BONK' || symbol === 'CVC' || symbol === 'RAY') {
-                    console.log('Skipping unregistered symbol');
-                    continue;
-                }
-
-                // const url = `https://tryex.xyz/capture_premium.php?kind=${symbol}USDT&authKey=tryex013579`;
-                // const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT`;
+                // ✅ Step 3.2: Prepare page & navigate
                 const url = `https://tryex.xyz/capture_brief_chart.php?kind=${symbol}USDT&hour=50&authKey=tryex013579`;
+                const page = await browser.newPage();
+                await page.setViewportSize({ width: 800, height: 600 });
 
-                const page = await browser.newPage({deviceScaleFactor: 2});
-                await page.setViewportSize({
-                    width: 800,
-                    height: 600,
-                });
-                // Step 4: Navigate to the page
-                console.log(`Navigating to URL: ${url}`);
+                // console.log(`🌍 Navigating to URL: ${url}`);
 
-                // const consoleLogs = [];
-                // page.on('console', (msg) => {
-                //     consoleLogs.push(msg.text());
-                // });
+                let retries = 3;
+                while (retries > 0) {
+                    try {
+                        await page.goto(url, { timeout: 60000, waitUntil: "networkidle" });
+                        break;
+                    } catch (navError) {
+                        console.warn(`⚠️ Navigation failed for ${symbol} (Retrying ${retries - 1} left)`, navError.message);
+                        retries--;
+                        if (retries === 0) throw navError;
+                    }
+                }
 
-                await page.goto(url, { waitUntil: 'networkidle' });
-
-                // await new Promise(async (resolve, reject) => {
-                //     page.on('console', (msg) => {
-                //         if (msg.text() === 'success') {
-                //             console.log('Chart is fully loaded.');
-                //             resolve();
-                //         }
-                //     });
-                //     const interval = setInterval(() => {
-                //         if (consoleLogs.includes('success')) {
-                //             console.log('Chart is fully loaded.');
-                //             clearInterval(interval);
-                //             resolve();
-                //         }
-                //     }, 1000);
-                //
-                //     // Optional: set a timeout to stop waiting after 60 seconds
-                //     setTimeout(() => {
-                //         clearInterval(interval);
-                //         reject(new Error("Timeout: 'success' message was not received"));
-                //     }, 60000);
-                // });
-                //
-                // await page.waitForTimeout(1000); // Give extra time for rendering
-
+                // ✅ Step 3.3: Capture Screenshot
                 const chartElement = await page.locator('.tv-lightweight-charts');
                 if (!(await chartElement.isVisible())) {
-                    console.error(`Chart element not found for symbol ${symbol}`);
+                    console.warn(`⚠️ Chart element not found for ${symbol}. Skipping.`);
                     await page.close();
-                    continue;
+                    return;
                 }
 
-                // Step 5: Take the screenshot
                 const chartBuffer = await chartElement.screenshot({ type: 'png' });
-                console.log(`Screenshot taken for ${symbol}`);
+                console.log(`📸 Screenshot taken for ${symbol}`);
 
                 await page.close();
 
-                // Step 6: Upload screenshot to S3
+                // ✅ Step 3.4: Upload to S3
                 const chartS3Params = {
                     Bucket: process.env.S3_BUCKET,
                     Key: `premiumchart-${uuidv4()}.png`,
@@ -241,33 +363,39 @@ const capturePremium = async function (req, res) {
                     ContentType: 'image/png',
                 };
 
-                console.log('Uploading screenshot to S3...');
+                console.log('☁️ Uploading screenshot to S3...');
                 const chartS3Response = await s3.upload(chartS3Params).promise();
                 const chartImageUrl = chartS3Response.Location;
-                console.log(`Screenshot uploaded to S3, URL: ${chartImageUrl}`);
+                console.log(`✅ Screenshot uploaded to S3: ${chartImageUrl}`);
 
-                // Step 7: Update database with image URL
-                console.log(`Updating database for row ID: ${id}`);
+                // ✅ Step 3.5: Update database
+                console.log(`📝 Updating database for row ID: ${id}`);
                 await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
-                console.log(`Database updated successfully for row ID: ${id}`);
+                console.log(`✅ Database updated for row ID: ${id}`);
             } catch (error) {
-                console.error(`Error processing symbol ${row.symbol} (ID ${row.id}):`, error);
+                console.error(`❌ Error processing symbol ${row.symbol} (ID ${row.id}):`, error.stack);
             }
+        };
+
+        // ✅ Process rows in parallel with limited concurrency
+        for (let i = 0; i < recentRows.length; i += maxConcurrentScreenshots) {
+            await Promise.all(recentRows.slice(i, i + maxConcurrentScreenshots).map(processRows));
         }
 
-        if (res) res.send('Screenshots captured and updated successfully.');
-        console.log('CapturePremium process completed successfully.');
+        if (res) res.send('✅ Screenshots captured and updated successfully.');
+        console.log('🎉 CapturePremium process completed successfully.');
     } catch (error) {
-        console.error('Error in capturePremium function:', error);
+        console.error('❌ Error in capturePremium function:', error.stack);
         if (res) res.status(500).send('Error processing request');
     } finally {
         if (browser) {
-            console.log('Closing Playwright browser');
+            console.log('🔴 Closing Playwright browser');
             await browser.close();
         }
-        console.log('capturePremium function ended');
+        console.log('✅ capturePremium function ended');
     }
 };
+
 // Route Definition
 router.get('/test', capturePremium);
 router.get('/test2', capture);
