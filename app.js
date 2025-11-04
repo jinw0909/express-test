@@ -1,3 +1,7 @@
+if (typeof globalThis.File === 'undefined') {
+    globalThis.File = class {};
+}
+
 const express = require('express');
 const path = require('path');
 const http = require('http');
