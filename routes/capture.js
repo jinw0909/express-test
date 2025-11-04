@@ -254,117 +254,117 @@ const captureDominanceS3 = async function(req, res) {
         }
     }
 };
-
-const capturePremium = async function(req, res) {
-    let browser;
-    try {
-
-        const [latestRow] = await plainDb.query('SELECT datetime FROM beuliping ORDER BY id DESC LIMIT 1');
-
-        if (!latestRow || latestRow.length === 0) {
-            if (res) return res.status(404).send('No rows found');
-            return;
-        }
-
-        const latestDatetime = latestRow.datetime;
-        console.log('Latest Datetime: ', latestDatetime);
-
-        const recentRows = await plainDb.query(`
-            SELECT id, symbol
-            FROM beuliping
-            WHERE datetime = ?
-            ORDER BY id DESC
-        `, [latestDatetime]);
-
-        // Log the recent rows for debugging
-        console.log('Recent Rows:', recentRows);
-
-        if (!recentRows || recentRows.length === 0) {
-            if (res) return res.status(404).send('No recent rows found');
-            return;
-        }
-
-        // Launch the browser
-        browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            headless: true
-        });
-
-        // Test Shot
-        const page = await browser.newPage();
-        await page.setViewport({
-            width: 800,
-            height: 600,
-            deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
-        });
-
-        await page.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
-        await page.waitForSelector('canvas', { timeout: 60000 });
-
-        const chartElem = await page.$('.tv-lightweight-charts');
-        if (!chartElem) {
-            await page.close();
-        }
-        await chartElem.screenshot();
-        await page.close();
-        // End of Test Shot
-
-        // Process each row sequentially
-        for (const row of recentRows) {
-            const { id, symbol } = row;
-            if (symbol === '1000BONK') continue;
-
-            const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
-            const page = await browser.newPage();
-
-            // Set a higher-resolution viewport and device scale factor
-            await page.setViewport({
-                width: 800,
-                height: 600,
-                deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
-            });
-
-            await page.goto(url, { waitUntil: 'networkidle0' });
-
-            console.log(`Waiting for #chart to load for symbol ${symbol}...`);
-            await page.waitForSelector('canvas', { timeout: 60000 });
-
-            const chartElement = await page.$('.tv-lightweight-charts');
-            if (!chartElement) {
-                console.error(`Chart element not found for symbol ${symbol}`);
-                await page.close();
-                continue;
-            }
-
-            // Capture a high-resolution screenshot
-            const chartBuffer = await chartElement.screenshot();
-
-            const chartS3Params = {
-                Bucket: process.env.S3_BUCKET,
-                Key: `premiumchart-${uuidv4()}.png`,
-                Body: chartBuffer,
-                ContentType: 'image/png'
-            };
-
-            const chartS3Response = await s3.upload(chartS3Params).promise();
-            const chartImageUrl = chartS3Response.Location;
-
-            await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
-            console.log(`Updated row ${id} with image URL ${chartImageUrl}`);
-
-            await page.close();
-        }
-
-        if (res) res.send('Screenshots captured and updated successfully.');
-    } catch (error) {
-        console.error('Error:', error);
-        if (res) res.status(500).send('Error processing request');
-    } finally {
-        if (browser) {
-            await browser.close();
-        }
-    }
-};
+//
+// const capturePremium = async function(req, res) {
+//     let browser;
+//     try {
+//
+//         const [latestRow] = await plainDb.query('SELECT datetime FROM beuliping ORDER BY id DESC LIMIT 1');
+//
+//         if (!latestRow || latestRow.length === 0) {
+//             if (res) return res.status(404).send('No rows found');
+//             return;
+//         }
+//
+//         const latestDatetime = latestRow.datetime;
+//         console.log('Latest Datetime: ', latestDatetime);
+//
+//         const recentRows = await plainDb.query(`
+//             SELECT id, symbol
+//             FROM beuliping
+//             WHERE datetime = ?
+//             ORDER BY id DESC
+//         `, [latestDatetime]);
+//
+//         // Log the recent rows for debugging
+//         console.log('Recent Rows:', recentRows);
+//
+//         if (!recentRows || recentRows.length === 0) {
+//             if (res) return res.status(404).send('No recent rows found');
+//             return;
+//         }
+//
+//         // Launch the browser
+//         browser = await puppeteer.launch({
+//             args: ['--no-sandbox', '--disable-setuid-sandbox'],
+//             headless: true
+//         });
+//
+//         // Test Shot
+//         const page = await browser.newPage();
+//         await page.setViewport({
+//             width: 800,
+//             height: 600,
+//             deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
+//         });
+//
+//         await page.goto('https://retri.xyz/capture_premium.php?kind=BTCUSDT&hour=120', { waitUntil: 'networkidle0' });
+//         await page.waitForSelector('canvas', { timeout: 60000 });
+//
+//         const chartElem = await page.$('.tv-lightweight-charts');
+//         if (!chartElem) {
+//             await page.close();
+//         }
+//         await chartElem.screenshot();
+//         await page.close();
+//         // End of Test Shot
+//
+//         // Process each row sequentially
+//         for (const row of recentRows) {
+//             const { id, symbol } = row;
+//             if (symbol === '1000BONK') continue;
+//
+//             const url = `https://retri.xyz/capture_premium.php?kind=${symbol}USDT&hour=120`;
+//             const page = await browser.newPage();
+//
+//             // Set a higher-resolution viewport and device scale factor
+//             await page.setViewport({
+//                 width: 800,
+//                 height: 600,
+//                 deviceScaleFactor: 2 // Set to 2 for higher resolution (simulating a retina display)
+//             });
+//
+//             await page.goto(url, { waitUntil: 'networkidle0' });
+//
+//             console.log(`Waiting for #chart to load for symbol ${symbol}...`);
+//             await page.waitForSelector('canvas', { timeout: 60000 });
+//
+//             const chartElement = await page.$('.tv-lightweight-charts');
+//             if (!chartElement) {
+//                 console.error(`Chart element not found for symbol ${symbol}`);
+//                 await page.close();
+//                 continue;
+//             }
+//
+//             // Capture a high-resolution screenshot
+//             const chartBuffer = await chartElement.screenshot();
+//
+//             const chartS3Params = {
+//                 Bucket: process.env.S3_BUCKET,
+//                 Key: `premiumchart-${uuidv4()}.png`,
+//                 Body: chartBuffer,
+//                 ContentType: 'image/png'
+//             };
+//
+//             const chartS3Response = await s3.upload(chartS3Params).promise();
+//             const chartImageUrl = chartS3Response.Location;
+//
+//             await plainDb.query('UPDATE beuliping SET images = ? WHERE id = ?', [chartImageUrl, id]);
+//             console.log(`Updated row ${id} with image URL ${chartImageUrl}`);
+//
+//             await page.close();
+//         }
+//
+//         if (res) res.send('Screenshots captured and updated successfully.');
+//     } catch (error) {
+//         console.error('Error:', error);
+//         if (res) res.status(500).send('Error processing request');
+//     } finally {
+//         if (browser) {
+//             await browser.close();
+//         }
+//     }
+// };
 
 router.post('/', capture);
 router.post('/dominance', captureDominance);

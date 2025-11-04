@@ -16,13 +16,12 @@ const crawlRouter = require('./routes/crawl').router;
 const runRouter = require('./routes/run');
 const createRouter = require('./routes/create').router;
 // var chartRouter = require('./routes/chart').router;
-const captureRouter = require('./routes/capture').router;
+// const captureRouter = require('./routes/capture').router;
 // const deleteRouter = require('./routes/delete');
 
 var app = express();
 
 startCronJobs();
-
 console.log('env port: ', process.env.PORT);
 
 (async () => {
@@ -50,7 +49,7 @@ app.use('/crawl', crawlRouter);
 app.use('/run', runRouter);
 app.use('/create', createRouter);
 // app.use('/chart', chartRouter);
-app.use('/capture', captureRouter);
+// app.use('/capture', captureRouter);
 // app.use('/delete', deleteRouter);
 
 app.post('/', (req, res) => {
@@ -91,6 +90,7 @@ app.post('/', (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 const functions = {
   processData: (params) => {
     console.log('Processing data with params:', params);
@@ -108,7 +108,6 @@ app.get('/articles', async (req, res) => {
 app.use(function(req, res, next) {
   next(createError(404));
 });
-
 // error handler
 app.use(function(err, req, res, next) {
   // set locals, only providing error in development
@@ -135,7 +134,6 @@ function normalizePort(val) {
 
   return false;
 }
-
 function onError(error) {
   if (error.syscall !== 'listen') {
     throw error;

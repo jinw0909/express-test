@@ -1,5 +1,6 @@
 const cron = require('node-cron');
-const { capture, captureDominance, capturePremium } = require('./routes/capture');
+// const { capture, captureDominance, capturePremium } = require('./routes/capture');
+const { capture, capturePremium } = require('./routes/screenshot');
 const { performPriceAnalysis } = require('./routes/chart');
 const { performArticleAnalysis } = require('./routes/create');
 const { performArticleCrawl } = require('./routes/crawl');
@@ -62,7 +63,13 @@ const startCronJobs = () => {
         timezone: "UTC"  // Running based on UTC
     });
 
-
+    // Task to run at 13:25 KST, which is 04:25 UTC
+    // cron.schedule('40 * * * *', async () => {
+    //     console.log(`Running dolphinCapture at ${new Date().toLocaleString()} (UTC time)`);
+    //     await captureDolphin();
+    // }, {
+    //     timezone: "UTC"  // Running based on UTC
+    // });
 };
 
 module.exports = { startCronJobs };

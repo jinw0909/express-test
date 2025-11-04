@@ -218,7 +218,7 @@ async function runAnalysisConversation() {
         },
         {
             role: "user",
-            content: "Analyze the Goya score and the Bitcoin price movement within 24 hours and 30 days. The analyses should not only mention the highest and the lowest prices but also mention the points when there was a significant change in the price and the score. For the 24 hours analysis, just mention the hours and minutes and do not mention the seconds. Also tell me what the bitcoin price would be like after one day, one week, and one month based on the Goya score data and your analysis. The prediction should include reasonable reasons for being made. The response should be in a JSON format {'day': 'text', 'month' : 'text', 'prediction' : 'text'} but the items marked as 'text' should be in a plain word for presentation."
+            content: "Analyze the Goya score and the Bitcoin price movement within 24 hours and 30 days. The analyses should not only mention the highest and the lowest prices but also mention the points when there was a significant change in the price and the score. For the 24 hours analysis, just mention the day, hours, and minutes and do not mention the seconds. Also tell me what the bitcoin price would be like after one day, one week, and one month based on the Goya score data and your analysis, with reasonable reasons. The response should be in a JSON format {'day': 'text', 'month' : 'text', 'prediction' : 'text'} but the response fields marked as 'text' should be in a plain text for presentation."
         },
     ]
     const tools = [
