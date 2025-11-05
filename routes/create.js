@@ -25,6 +25,8 @@ const Polly = new AWS.Polly({
     region: 'us-east-1'
 });
 
+const GPT_MODEL = 'gpt-4.1'
+
 async function getCoinPriceWeek() {
     try {
         const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
@@ -164,9 +166,10 @@ async function getRecentAndUpdate() {
             raw: true
         });
 
-        console.log("recent analysis: ", recentAnalyses);
+        // console.log("recent analysis: ", recentAnalyses);
 
-        for (const analysis of recentAnalyses) {
+        for (const [index, analysis] of recentAnalyses) {
+            console.log(`Processing article ${index + 1}/${recentAnalyses.length} (id: ${analysis.id}))`);
             // Retrieve the matching entry from the Blockmedia table
             const blockmediaEntry = await Blockmedia.findOne({
                 where: { id: analysis.id },
@@ -175,6 +178,7 @@ async function getRecentAndUpdate() {
 
             if (blockmediaEntry) {
 
+                console.log(`starting title translation for article #${index + 1}, DB id: ${blockmediaEntry.id}`);
                 const title = await translateText(blockmediaEntry.title, 'English');
                 const titleJp = await translateText(blockmediaEntry.title, 'Japanese');
                 const titleVn = await translateText(blockmediaEntry.title, 'Vietnamese');
@@ -190,10 +194,10 @@ async function getRecentAndUpdate() {
                 const summaryVn = await translateText(analysis.summary, 'Vietnamese');
                 const summaryCn = await translateText(analysis.summary, 'Chinese');
 
-                const content = await translateText(blockmediaEntry.content, 'English');
-                const contentJp = await translateText(blockmediaEntry.content, 'Japanese');
-                const contentVn = await translateText(blockmediaEntry.content, 'Vietnamese');
-                const contentCn = await translateText(blockmediaEntry.content, 'Chinese');
+                // const content = await translateText(blockmediaEntry.content, 'English');
+                // const contentJp = await translateText(blockmediaEntry.content, 'Japanese');
+                // const contentVn = await translateText(blockmediaEntry.content, 'Vietnamese');
+                // const contentCn = await translateText(blockmediaEntry.content, 'Chinese');
 
                 // const mp3En = await generateTTS(analysis.analysis, 'English', analysis.id);
                 // const mp3Jp = await generateTTS(analysisJp, 'Japanese', analysis.id);
@@ -267,7 +271,7 @@ async function translateText(content, lang) {
     ];
 
     const response  = await openai.chat.completions.create({
-        model: "gpt-4o-2024-08-06",
+        model: GPT_MODEL,
         messages: messages
     })
 
@@ -387,7 +391,8 @@ async function runViewpointConversation() {
         }
     ]
     const response = await openai.chat.completions.create({
-        model: "gpt-4o-2024-08-06",
+        model: GPT_MODEL,
+        // model: "gpt-5",
         messages: messages,
         tools: tools,
         tool_choice : "auto", //auto is default, but we'll be explicit
@@ -440,7 +445,8 @@ async function runViewpointConversation() {
         }
 
         const secondResponse = await openai.chat.completions.create({
-            model: "gpt-4o-2024-08-06",
+            model: GPT_MODEL,
+            // model: "gpt-5",
             messages: messages,
             response_format: {
                 type: "json_schema",
@@ -462,7 +468,7 @@ async function runViewpointConversation() {
                 }
             },
         });
-        console.log(secondResponse.choices);
+        // console.log(secondResponse.choices);
         return secondResponse.choices;
     }
 }
@@ -620,14 +626,15 @@ async function runCandidateConversation(articleIds) {
         }
     ]
     // const response = await openai.chat.completions.create({
-    //     model: "gpt-4o-2024-08-06",
+    //     model: GPT_MODEL,
     //     messages: messages,
     //     tools: tools,
     //     tool_choice: "auto",
     //     response_format: { type: "json_object" }
     // });
     const response = await openai.chat.completions.create({
-        model: "gpt-4o-2024-08-06",
+        model: GPT_MODEL,
+        // model: "gpt-5",
         messages: messages,
         tools: tools,
         tool_choice: {type: "function", function: {name: "get_articles_with_ids"}},
@@ -688,7 +695,8 @@ async function runCandidateConversation(articleIds) {
         }
 
         const secondResponse = await openai.chat.completions.create({
-            model: "gpt-4o-2024-08-06",
+            model: GPT_MODEL,
+            // model: "gpt-5",
             messages: messages,
             response_format: {
                 type: "json_schema",
@@ -720,12 +728,12 @@ async function runCandidateConversation(articleIds) {
         });
         const finalResponse= secondResponse.choices[0].message;
         const parsed = JSON.parse(finalResponse.content);
-        console.log("parsed: ", parsed);
+        // console.log("parsed: ", parsed);
         return parsed['candidates'];
     }
 
     const parsed = JSON.parse(responseMessage.content);
-    console.log("parsed: ", parsed);
+    // console.log("parsed: ", parsed);
     return parsed['candidates'];
 }
 async function runVerifyConversation(candidates) {
@@ -764,7 +772,8 @@ async function runVerifyConversation(candidates) {
     ]
 
     const response = await openai.chat.completions.create({
-        model: "gpt-4o-2024-08-06",
+        model: GPT_MODEL,
+        // model: "gpt-5",
         messages: messages,
         tools: tools,
         tool_choice: {type: "function", function: {name: "get_articles_with_ids"}},
@@ -825,7 +834,8 @@ async function runVerifyConversation(candidates) {
         }
 
         const secondResponse = await openai.chat.completions.create({
-            model: "gpt-4o-2024-08-06",
+            model: GPT_MODEL,
+            // model: "gpt-5",
             messages: messages,
             response_format: {
                 type: "json_schema",
@@ -857,12 +867,12 @@ async function runVerifyConversation(candidates) {
         });
         const finalResponse= secondResponse.choices[0].message;
         const parsed = JSON.parse(finalResponse.content);
-        console.log("left after verification: ", parsed);
+        // console.log("left after verification: ", parsed);
         return parsed['candidates'];
     }
 
     const parsed = JSON.parse(responseMessage.content);
-    console.log("left after verification (when you see this code, check the function runVerifyConversation because did not call a function): ", parsed);
+    // console.log("left after verification (when you see this code, check the function runVerifyConversation because did not call a function): ", parsed);
     return parsed['candidates'];
 }
 async function runFinalConversation(candidates, limit) {
@@ -874,7 +884,8 @@ async function runFinalConversation(candidates, limit) {
         { role: "user", content: `From the provided candidates list , select ${limit} candidates that are the most relevant with the the cryptocurrency market and that are the most helpful in predicting the cryptocurrency market trend. The final ${limit} candidates should not have duplicated or identical content. The given 'reason' is about why this candidate might be important, and the given 'summary' is the summary of the candidate's original content. The given 'id' is the value that points to the original article. Return the final ${limit} candidates in a json format as follows: {'finals' : [{'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, {'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, ...]. Ensure the ID of each element exactly match the ID of the initially provided list` },
     ];
     const response = await openai.chat.completions.create({
-        model: "gpt-4o-2024-08-06",
+        model: GPT_MODEL,
+        // model: "gpt-5",
         messages: messages,
         response_format: {
             type: "json_schema",
@@ -942,7 +953,8 @@ async function runCreateConversation(candidates) {
     ]
 
     const response = await openai.chat.completions.create({
-        model: "gpt-4o-2024-08-06",
+        model: GPT_MODEL,
+        // model: "gpt-5",
         messages: messages,
         tools: tools,
         tool_choice : { type: "function", function: { name: "get_candidate_articles"}}, //auto is default, but we'll be explicit
@@ -1003,7 +1015,8 @@ async function runCreateConversation(candidates) {
         }
 
         const secondResponse = await openai.chat.completions.create({
-            model: "gpt-4o-2024-08-06",
+            model: GPT_MODEL,
+            // model: "gpt-5",
             messages: messages,
             response_format: {
                 type: "json_schema",
@@ -1032,7 +1045,7 @@ async function runCreateConversation(candidates) {
                 }
             },
         });
-        console.log("secondResponse: ", secondResponse.choices);
+        // console.log("secondResponse: ", secondResponse.choices);
         return secondResponse.choices;
 
     }
@@ -1089,6 +1102,7 @@ async function getAllViewpointWithAnalysisIds() {
 }
 async function createViewpointImage() {
     try {
+        console.log("run createViewpointImage");
         // Fetch the most recent viewpoint from the database
         const recentViewpoint = await Viewpoint.findOne({
             attributes: ['id', 'createdAt', 'viewpoint'],
@@ -1201,13 +1215,13 @@ async function performArticleAnalysis() {
             }
         }
         const updated = await getRecentAndUpdate();
-        console.log("translated analyses: ", updated);
+        // console.log("translated analyses: ", updated);
 
         console.log("step 4: create viewpoint");
         const result = await runViewpointConversation();
         const content = result[0].message.content;
         const { viewpoint, refs } = JSON.parse(content);
-        console.log("viewpoint: ", viewpoint);
+        // console.log("viewpoint: ", viewpoint);
         console.log("refs: ", refs);
 
         const today = new Date();
@@ -1252,7 +1266,7 @@ async function performArticleAnalysis() {
         await createViewpointImage();
 
         console.log("translatedVp: ", updatedVp);
-
+        console.log("successfully created and saved article analysis")
         // res.status(200).send('ok');
         return "Successfully created and saved article analysis"
     } catch (error) {
