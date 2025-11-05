@@ -1,3 +1,6 @@
+if (typeof globalThis.File === 'undefined') {
+    globalThis.File = class {};
+}
 const createError = require('http-errors');
 const express = require('express');
 const app = express();
