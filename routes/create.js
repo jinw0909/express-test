@@ -168,7 +168,7 @@ async function getRecentAndUpdate() {
 
         // console.log("recent analysis: ", recentAnalyses);
 
-        for (const [index, analysis] of recentAnalyses) {
+        for (const [index, analysis] of recentAnalyses.entries()) {
             console.log(`Processing article ${index + 1}/${recentAnalyses.length} (id: ${analysis.id}))`);
             // Retrieve the matching entry from the Blockmedia table
             const blockmediaEntry = await Blockmedia.findOne({
@@ -212,11 +212,11 @@ async function getRecentAndUpdate() {
                     title_kr: blockmediaEntry.title,
                     title_vn: titleVn,
                     title_cn: titleCn,
-                    content: content,
-                    content_jp: contentJp,
-                    content_kr: blockmediaEntry.content,
-                    content_vn: contentVn,
-                    content_cn : contentCn,
+                    // content: content,
+                    // content_jp: contentJp,
+                    // content_kr: blockmediaEntry.content,
+                    // content_vn: contentVn,
+                    // content_cn : contentCn,
                     imageUrl: blockmediaEntry.imageUrl,
                     date: blockmediaEntry.date,
                     publisher: blockmediaEntry.publisher,
