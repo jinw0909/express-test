@@ -6,6 +6,8 @@ const dbConfig = {
     database: 'app_chart'
 }
 
+
+
 const pool = mysql.createPool(dbConfig);
 
 // Function to log the connection status

@@ -308,7 +308,7 @@ const capturePremium = async function (req, res) {
 
                 // ✅ Step 3.1: Check content in vm_beuliping_KR
                 const [contentCheck] = await plainDb.query(
-                    `SELECT content FROM vm_beuliping_KR WHERE m_id = ?`,
+                    `SELECT content FROM beuliping_KR WHERE m_id = ?`,
                     [id]
                 );
 
@@ -329,26 +329,29 @@ const capturePremium = async function (req, res) {
                 await page.setViewportSize({ width: 800, height: 600 });
 
                 // console.log(`🌍 Navigating to URL: ${url}`);
-
                 let retries = 3;
                 while (retries > 0) {
                     try {
                         await page.goto(url, { timeout: 60000, waitUntil: "networkidle" });
+                        // Wait explicitly for the chart to appear
+                        await page.waitForSelector('.tv-lightweight-charts', { timeout: 15000 });
+                        await page.waitForTimeout(500); // 렌더 버퍼
+
                         break;
                     } catch (navError) {
-                        console.warn(`⚠️ Navigation failed for ${symbol} (Retrying ${retries - 1} left)`, navError.message);
+                        console.warn(`⚠️ Navigation or selector failed for ${symbol} (Retrying ${retries - 1} left)`, navError.message);
                         retries--;
                         if (retries === 0) throw navError;
                     }
                 }
 
-                // ✅ Step 3.3: Capture Screenshot
-                const chartElement = await page.locator('.tv-lightweight-charts');
+                const chartElement = page.locator('.tv-lightweight-charts');
                 if (!(await chartElement.isVisible())) {
-                    console.warn(`⚠️ Chart element not found for ${symbol}. Skipping.`);
+                    console.warn(`⚠️ Chart element still not visible for ${symbol}. Skipping.`);
                     await page.close();
                     return;
                 }
+
 
                 const chartBuffer = await chartElement.screenshot({ type: 'png' });
                 console.log(`📸 Screenshot taken for ${symbol}`);
