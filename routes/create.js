@@ -61,7 +61,7 @@ async function getArticlesDay() {
             order: [['id', 'DESC']],
             raw: true
         });
-        if (!articleIds.length) {
+        if (!articles || !articleIds.length) {
             console.log('No articles published in the last 12 hours');
             return null;
         }
