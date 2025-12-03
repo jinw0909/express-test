@@ -61,7 +61,7 @@ async function getArticlesDay() {
             order: [['id', 'DESC']],
             raw: true
         });
-        if (!articles || !articleIds.length) {
+        if (!articleIds || !articleIds.length) {
             console.log('No articles published in the last 12 hours');
             return null;
         }
@@ -1051,10 +1051,48 @@ async function runCreateConversation(candidates) {
     }
 
 }
+// async function recurseFinals(candidates, limit = 4, results = []) {
+//     const finalists = [];
+//     console.log("recurseFinals()");
+//     console.log("candidates: ", candidates);
+//
+//     // Process summaries in batches of 12
+//     for (let i = 0; i < candidates.length; i += 12) {
+//         const batch = candidates.slice(i, i + 12);
+//         const finals = await runFinalConversation(batch, limit);
+//         finalists.push(...finals);
+//     }
+//
+//     // If we have more than 4 finalists, process them recursively
+//     if (finalists.length > 4) {
+//         return await recurseFinals(finalists);
+//     } else {
+//         const verified = await runVerifyConversation(finalists);
+//         console.log("limit: ", limit, "verified.length: ", verified.length);
+//         if (verified.length < limit) {
+//             // Filter finalists that match the verified list by their id
+//             const filteredFinalists = candidates.filter(candidate =>
+//                 !verified.some(verifiedElement => verifiedElement.id === candidate.id)
+//             );
+//             results.push(...verified);
+//             return await recurseFinals(filteredFinalists, limit - verified.length, results);
+//         } else {
+//             // return results.slice(0, 4);
+//             results.push(...verified);
+//             return results;
+//         }
+//     }
+// }
 async function recurseFinals(candidates, limit = 4, results = []) {
+    console.log("recurseFinals() candidates:", candidates.length, "limit:", limit);
+
+    // 🔹 1. 기본 종료 조건: 더 볼 후보가 없거나 채워야 할 개수가 없으면 종료
+    if (!candidates || candidates.length === 0 || limit <= 0) {
+        console.log("Base case: no candidates or limit <= 0, return results");
+        return results;
+    }
+
     const finalists = [];
-    console.log("recurseFinals()");
-    console.log("candidates: ", candidates);
 
     // Process summaries in batches of 12
     for (let i = 0; i < candidates.length; i += 12) {
@@ -1063,25 +1101,60 @@ async function recurseFinals(candidates, limit = 4, results = []) {
         finalists.push(...finals);
     }
 
-    // If we have more than 4 finalists, process them recursively
-    if (finalists.length > 4) {
-        return await recurseFinals(finalists);
-    } else {
-        const verified = await runVerifyConversation(finalists);
-        console.log("limit: ", limit, "verified.length: ", verified.length);
-        if (verified.length < limit) {
-            // Filter finalists that match the verified list by their id
-            const filteredFinalists = candidates.filter(candidate =>
-                !verified.some(verifiedElement => verifiedElement.id === candidate.id)
-            );
-            results.push(...verified);
-            return await recurseFinals(filteredFinalists, limit - verified.length, results);
-        } else {
-            // return results.slice(0, 4);
-            results.push(...verified);
-            return results;
-        }
+    // 🔹 2. runFinalConversation이 아무것도 못 뽑아냈다면 더 진행해봐야 의미 없음
+    if (!finalists.length) {
+        console.log("No finalists produced, stopping recursion.");
+        return results;
     }
+
+    // 🔹 3. finalists가 너무 많으면 다시 finalists만 대상으로 줄이는 단계
+    if (finalists.length > 4) {
+        // 여기서도 limit / results 그대로 넘겨야 논리가 유지됨
+        return await recurseFinals(finalists, limit, results);
+    }
+
+    // finalists가 4 이하인 경우 → 검증 단계
+    const verified = await runVerifyConversation(finalists);
+    console.log("limit:", limit, "verified.length:", verified.length);
+
+    // 🔹 4. verified가 0이면 더 이상 진전이 없으니 종료
+    if (!verified || verified.length === 0) {
+        console.log("No verified finalists, stopping recursion.");
+        return results;
+    }
+
+    // 현재까지 결과에 verified 추가
+    results.push(...verified);
+
+    // 🔹 5. 원하는 개수(limit)만큼 이미 모았다면 종료
+    if (results.length >= limit) {
+        // 필요하면 slice(limit)도 가능
+        return results;
+    }
+
+    // 🔹 6. 아직 더 필요하면, 이번에 뽑힌 verified를 제외하고 남은 candidates로 재귀
+    const remainingLimit = limit - results.length;
+    const verifiedIds = new Set(verified.map(v => v.id));
+
+    const filteredCandidates = candidates.filter(
+        candidate => !verifiedIds.has(candidate.id)
+    );
+
+    // 🔹 7. 필터링했더니 더 이상 남은 후보가 없으면 종료
+    if (!filteredCandidates.length) {
+        console.log("No remaining candidates after filtering, return results.");
+        return results;
+    }
+
+    // 🔹 8. 혹시라도 줄어들지 않았다면(논리 오류 or 검증이 항상 실패하는 상황) 무한루프 방지
+    if (filteredCandidates.length === candidates.length) {
+        console.warn(
+            "Filtered candidates did not shrink; stopping recursion to avoid infinite loop."
+        );
+        return results;
+    }
+
+    return await recurseFinals(filteredCandidates, remainingLimit, results);
 }
 
 async function getAllViewpointWithAnalysisIds() {
