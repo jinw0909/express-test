@@ -1051,38 +1051,6 @@ async function runCreateConversation(candidates) {
     }
 
 }
-// async function recurseFinals(candidates, limit = 4, results = []) {
-//     const finalists = [];
-//     console.log("recurseFinals()");
-//     console.log("candidates: ", candidates);
-//
-//     // Process summaries in batches of 12
-//     for (let i = 0; i < candidates.length; i += 12) {
-//         const batch = candidates.slice(i, i + 12);
-//         const finals = await runFinalConversation(batch, limit);
-//         finalists.push(...finals);
-//     }
-//
-//     // If we have more than 4 finalists, process them recursively
-//     if (finalists.length > 4) {
-//         return await recurseFinals(finalists);
-//     } else {
-//         const verified = await runVerifyConversation(finalists);
-//         console.log("limit: ", limit, "verified.length: ", verified.length);
-//         if (verified.length < limit) {
-//             // Filter finalists that match the verified list by their id
-//             const filteredFinalists = candidates.filter(candidate =>
-//                 !verified.some(verifiedElement => verifiedElement.id === candidate.id)
-//             );
-//             results.push(...verified);
-//             return await recurseFinals(filteredFinalists, limit - verified.length, results);
-//         } else {
-//             // return results.slice(0, 4);
-//             results.push(...verified);
-//             return results;
-//         }
-//     }
-// }
 async function recurseFinals(candidates, limit = 4, results = []) {
     console.log("recurseFinals() candidates:", candidates.length, "limit:", limit);
 
