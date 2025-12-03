@@ -1,9 +1,9 @@
 if (typeof globalThis.File === 'undefined') {
     globalThis.File = class {};
 }
-
 const express = require('express');
 const path = require('path');
+const app = express();
 const http = require('http');
 const debug = require('debug')('express-app:app');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -23,9 +23,12 @@ const createRouter = require('./routes/create').router;
 // const captureRouter = require('./routes/capture').router;
 // const deleteRouter = require('./routes/delete');
 
-var app = express();
 
-startCronJobs();
+const start_cron = process.env.START_CRON || false
+if (start_cron) {
+    startCronJobs();
+    console.log("cron jobs enabled");
+}
 console.log('env port: ', process.env.PORT);
 
 (async () => {

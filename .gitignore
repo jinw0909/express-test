@@ -9,3 +9,4 @@ Procfile
 Procfileecosystem.config.js
 ecosystem.config.js
 .archive.zip
+package-lock.json
