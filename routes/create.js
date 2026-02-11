@@ -25,7 +25,7 @@ const Polly = new AWS.Polly({
     region: 'us-east-1'
 });
 
-const GPT_MODEL = 'gpt-4.1'
+const GPT_MODEL = 'gpt-5.2'
 
 async function getCoinPriceWeek() {
     try {
@@ -340,7 +340,6 @@ async function runViewpointConversation() {
     ]
     const response = await openai.chat.completions.create({
         model: GPT_MODEL,
-        // model: "gpt-5",
         messages: messages,
         tools: tools,
         tool_choice : "auto", //auto is default, but we'll be explicit
