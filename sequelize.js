@@ -13,7 +13,7 @@ const sequelize = new Sequelize(database, user, password, {
     timezone: '+09:00',
     dialectOptions: {
         charset: 'utf8mb4',
-        timezone: '+09:00',  // This ensures KST is used for both storage and retrieval
+        // timezone: '+09:00',  // This ensures KST is used for both storage and retrieval
     },
     define: {
         charset: 'utf8mb4',
