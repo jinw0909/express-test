@@ -32,11 +32,12 @@ if (start_cron) {
 console.log('env port: ', process.env.PORT);
 
 (async () => {
+  console.log('[SYNC] starting sequelize.sync alter...');
   try {
-    await sequelize.sync({alter: true});
-    console.log('Database synchronized successfully');
+    await sequelize.sync();
+    console.log('[SYNC] Database synchronized successfully');
   } catch (error) {
-    console.error('Error synchronizing database:', error);
+    console.error('[SYNC] Error synchronizing database:', error);
   }
 })();
 
