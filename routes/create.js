@@ -161,8 +161,14 @@ async function getArticle(index) {
 async function getRecentAndUpdate() {
     try {
         const recentAnalyses = await Analysis.findAll({
+            where: {
+                ref: {
+                    [Op.ne]: null,
+                    [Op.ne]: ''
+                }
+            },
             order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
-            limit: 4,
+            limit: 2,
             raw: true
         });
 
@@ -181,6 +187,14 @@ async function getRecentAndUpdate() {
                 console.log(`starting title translation for article #${index + 1}, DB id: ${blockmediaEntry.id}`);
                 const title = await translateText(blockmediaEntry.title, 'English');
                 const content = await translateText(blockmediaEntry.content, 'English');
+                const title_jp = await translateText(blockmediaEntry.title, 'Japanese');
+                const content_jp = await translateText(blockmediaEntry.content, 'Japanese');
+                const title_cn = await translateText(blockmediaEntry.title, 'Simplified Chinese');
+                const content_cn = await translateText(blockmediaEntry.content, 'Simplified Chinese');
+                const title_tw = await translateText(blockmediaEntry.title, 'Traditional Chinese');
+                const content_tw = await translateText(blockmediaEntry.content, 'Traditional Chinese');
+                const title_vn = await translateText(blockmediaEntry.title, 'Vietnamese');
+                const content_vn = await translateText(blockmediaEntry.content, 'Vietnamese');
 
                 await Translation.upsert({
                     id: analysis.id,
@@ -190,6 +204,15 @@ async function getRecentAndUpdate() {
                     date: blockmediaEntry.date,
                     analysis: analysis.analysis,
                     summary: analysis.summary,
+                    title_jp: title_jp,
+                    title_cn: title_cn,
+                    title_tw: title_tw,
+                    title_vn: title_vn,
+                    content_jp: content_jp,
+                    content_cn: content_cn,
+                    content_tw: content_tw,
+                    content_vn: content_vn,
+
                 });
             }
         }
@@ -197,7 +220,7 @@ async function getRecentAndUpdate() {
         // Optionally, return the updated analyses
         const recentTranslation = await Translation.findAll({
             order: [['createdAt', 'DESC']], // Optionally re-fetch to send updated data back
-            limit: 4,
+            limit: 2,
             raw: true
         });
 
@@ -210,12 +233,14 @@ async function getRecentAndUpdate() {
 }
 async function translateText(content, lang) {
     let messages = [
-        { role: "system", content: "You are a professional translator capable of translating between English, Japanese, Korean, Vietnamese, and Chinese. You can understand the context of sentences and derive the meanings of words within that context, enabling you to translate accurately and appropriately for English, Japanese, Korean, Vietnamese and Chinese speakers. Additionally, you possess knowledge about cryptocurrencies, Bitcoin, stocks, and finance in general, allowing you to aptly translate articles and analyses related to these topics into the respective languages. You can also naturally translate article headlines or titles into other languages."},
+        { role: "system", content: "You are a professional translator capable of translating between English, Japanese, Korean, Vietnamese, Chinese, and traditional Chinese. You can understand the context of sentences and derive the meanings of words within that context, enabling you to translate accurately and appropriately for English, Japanese, Korean, Vietnamese and Chinese speakers. Additionally, you possess knowledge about cryptocurrencies, Bitcoin, stocks, and finance in general, allowing you to aptly translate articles and analyses related to these topics into the respective languages. You can also naturally translate article headlines or titles into other languages. Please ensure to apply honorifics when mentioning asian personality name when translating into Korean or Japanese."},
         { role: "user", content: "Please translate the following text into Japanese. I only need the translated output, without any additional comments or indicators. Please ensure to apply honorifics when translating into Korean or Japanese. Text: The report on national and corporate Bitcoin accumulations reveals significant crypto asset holdings by entities like MicroStrategy and various governments, including the U.S. and China. This trend underscores a substantial institutional and governmental embrace of Bitcoin, posing implications for market stability and pricing structures. Institutional holding can lead to lower market volatility and potentially higher price floors due to reduced circulatory supply. Understanding these dynamics is critical for evaluating Bitcoin's broader adoption and its perception as a store of value."},
         { role: "assistant", content: "国と企業のビットコイン蓄積に関するレポートは、MicroStrategyやアメリカ、中国などの政府を含む機関がかなりの暗号資産を保有していることを明らかにしています。この傾向は、ビットコインに対する大規模な機関および政府の受容を強調し、市場の安定性と価格構造に対する影響を示唆しています。機関の保有は、流通供給の減少により市場のボラティリティを低下させ、潜在的にはより高い価格の床を可能にするかもしれません。これらのダイナミクスを理解することは、ビットコインの広範な採用と価値の保存としての認識を評価する上で重要です。"},
-        { role: "user", content: "Please translate the following text into Japanese. I only need the translated output, without any additional comments or indicators.Please ensure to apply honorifics when translating into Korean or Japanese. Text: [마켓뷰] '금리 인하 이르다고?' 美 물가지표 지켜보자"},
-        { role: "assistant", content: "[マーケットビュー]「金利引き下げは早い？」米国の物価指標を注視しよう"},
-        { role: "user", content: `Please translate the following text into ${lang}. I only need the translated output, without any additional comments or indicators. Please ensure to apply honorifics when translating into Korean or Japanese. Text: ${content}`},
+        { role: "user", content: "Please translate the following text into simplified Chinese. I only need the translated output, without any additional comments or indicators. Text: [마켓뷰] '금리 인하 이르다고?' 美 물가지표 지켜보자"},
+        { role: "assistant", content: "【市场观察】“现在降息还太早？”先关注美国通胀数据"},
+        { role: "user", content: "Please translate the following text into traditional Chinese. I only need the translated output, without any additional comments or indicators. Text: [롱/숏] 비트코인 횡보 속 ‘종목별 베팅’ 뚜렷…SOL·XRP 숏 집중, BCH·BNB 롱 우위"},
+        { role: "assistant", content: "【多／空】比特幣橫盤之際「個別幣種押注」趨勢明顯……SOL・XRP 空頭集中，BCH・BNB 多頭占優"},
+        { role: "user", content: `Please translate the following text into ${lang}. I only need the translated output, without any additional comments or indicators.  Text: ${content}`},
     ];
 
     const response  = await openai.chat.completions.create({
@@ -313,7 +338,7 @@ async function generateTTS(content, lang, id) {
 async function runViewpointConversation() {
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. You are also capable of deriving the bitcoin market trend by analyzing the bitcoin price movement within a certain period, and capable of deriving the relationship between the trend and real-world events" },
-        { role: "user", content: "From the analysis conducted on the Blockmedia articles, provide your final viewpoint derived from the most recent four analyses regarding the Bitcoin and cryptocurrency markets. Also, relate your viewpoint to the price fluctuations in the Bitcoin market over the past 7 days and within the last 24 hours. Additionally, based on your final viewpoint, if possible, provide a rough estimate of the future changes in the price of Bitcoin. Don't mention 'Blockmedia' in your viewpoint response and don't mention the analysis' id or title too. I Also want you to return the id's of four analysis you used to create the viewpoint as refs. Please return the result in JSON format as {'viewpoint': 'text', 'refs': [number, number, number, number, number]}."},
+        { role: "user", content: "From the analysis conducted on the Blockmedia articles, provide your final viewpoint derived from the most recent two analyses regarding the Bitcoin and cryptocurrency markets. Also, relate your viewpoint to the price fluctuations in the Bitcoin market over the past 7 days and within the last 24 hours. Additionally, based on your final viewpoint, if possible, provide a rough estimate of the future changes in the price of Bitcoin. Don't mention 'Blockmedia' in your viewpoint response and don't mention the analysis' id or title too. I Also want you to return the id's of four analysis you used to create the viewpoint as refs. Please return the result in JSON format as {'viewpoint': 'text', 'refs': [number, number, number, number]}."},
     ]
     const tools = [
         {
@@ -437,9 +462,10 @@ async function getViewpointAndUpdate() {
         if (viewpoint) {
 
             const viewpointJp = await translateText(viewpoint.viewpoint, 'Japanese');
-            const viewpointKr = await translateText(viewpoint.viewpoint, 'Korean');
+            // const viewpointKr = await translateText(viewpoint.viewpoint, 'Korean');
+            const viewpointCn = await translateText(viewpoint.viewpoint, 'Simplified Chinese');
+            const viewpointTw = await translateText(viewpoint.viewpoint, 'Traditional Chinese');
             const viewpointVn = await translateText(viewpoint.viewpoint, 'Vietnamese');
-            const viewpointCn = await translateText(viewpoint.viewpoint, 'Chinese');
 
             // const mp3En = await generateTTS(viewpoint.viewpoint, 'English', viewpoint.id);
             // const mp3Jp = await generateTTS(viewpointJp, 'Japanese', viewpoint.id);
@@ -450,20 +476,11 @@ async function getViewpointAndUpdate() {
             // Update the Analysis entry with values from the Blockmedia entry
             await viewpoint.update({
                 viewpoint_jp: viewpointJp,
-                viewpoint_kr: viewpointKr,
-                viewpoint_vn: viewpointVn,
+                // viewpoint_kr: viewpointKr,
                 viewpoint_cn: viewpointCn,
+                viewpoint_tw: viewpointTw,
+                viewpoint_vn: viewpointVn,
                 updatedAt: new Date(),
-                mp3: "", // Path or URL to the English MP3 file
-                mp3_jp: "", // Path or URL to the Japanese MP3 file
-                mp3_kr: "", // Path or URL to the Korean MP3 file
-                mp3_vn: "", // Path or URL to the Vietnamese MP3 file
-                mp3_cn: "", // Path or URL to the Chinese MP3 file
-                // mp3: mp3En, // Path or URL to the English MP3 file
-                // mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
-                // mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
-                // mp3_vn: mp3Vn, // Path or URL to the Vietnamese MP3 file
-                // mp3_cn: mp3Cn // Path or URL to the Chinese MP3 file
             });
         }
 
@@ -1171,7 +1188,6 @@ async function createViewpointImage() {
 }
 async function performArticleAnalysis() {
     try {
-        // console.log("step 1: candidates: ", candidates);
         console.log("step 1: select final candidates");
         const candidates = await makeCandidates();
         console.log("candidates: ", candidates);
@@ -1202,11 +1218,7 @@ async function performArticleAnalysis() {
             }
         }
 
-        console.log("step 3: translate analyses: ", analyses);
-        const updated = await getRecentAndUpdate();
-        // console.log("translated analyses: ", updated);
-
-        console.log("step 4: create viewpoint");
+        console.log("step 3: create viewpoint");
         const result = await runViewpointConversation();
         const content = result[0].message.content;
         const { viewpoint, refs } = JSON.parse(content);
@@ -1249,6 +1261,14 @@ async function performArticleAnalysis() {
             console.error(error);
         }
 
+        console.log("step 4: translate analyses");
+        const translatedAnalyses = await getRecentAndUpdate();
+        // console.log("translated analyses: ", translatedAnalyses);
+
+        console.log("step 5: translate viewpoint");
+        const translatedViewpoint = await getViewpointAndUpdate();
+        // console.log("translated viewpoint: ", translatedViewpoint);
+
         console.log("complete.");
         return "Successfully created and saved article analysis and viewpoint"
 
@@ -1268,101 +1288,6 @@ router.get('/open', async function(req, res) {
 });
 router.post('/complete', async function(req, res) {
     await performArticleAnalysis();
-    // try {
-    //     // console.log("step 1: candidates: ", candidates);
-    //     const candidates = await makeCandidates();
-    //     console.log("candidates: ", candidates);
-    //     // Then, pass these indexes to runCreateConveration
-    //     const createResult = await runCreateConversation(candidates);
-    //
-    //     const articles = JSON.parse(createResult[0].message.content)['summaries_and_analyses'];
-    //     console.log("step 2: articles: ", articles);
-    //
-    //     for (const article of articles) { // Loop through each article
-    //         try {
-    //             const [instance, created] = await Analysis.upsert({
-    //                 id: article.id,
-    //                 analysis: article.analysis,
-    //                 summary: article.summary,
-    //                 createdAt: new Date(), // Consider managing this within Sequelize model definition
-    //                 updatedAt: new Date()  // Sequelize can handle updatedAt automatically
-    //             });
-    //
-    //             if (created) {
-    //                 console.log(`Analysis with ID ${article.id} was created.`);
-    //             } else {
-    //                 console.log(`Analysis with ID ${article.id} was updated.`);
-    //             }
-    //         } catch (err) {
-    //             console.error('Error upserting article:', err);
-    //         }
-    //     }
-    //
-    //     const updated = await getRecentAndUpdate();
-    //     console.log("updated: ", updated);
-    //
-    //     const result = await runViewpointConversation();
-    //     const content = result[0].message.content;
-    //     const { viewpoint, refs } = JSON.parse(content);
-    //     console.log("viewpoint: ", viewpoint);
-    //     console.log("refs: ", refs);
-    //
-    //     const today = new Date();
-    //     console.log("today: ", today); // Logs current date and time in UTC
-    //
-    //     // Convert to KST using toLocaleString
-    //     const kstDate = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-    //     console.log("kstDate: ", kstDate); // Logs the adjusted date and time for KST
-    //
-    //     // Get the KST hours using local time
-    //     const kstHours = kstDate.getHours();
-    //     console.log("kstHours: ", kstHours); // Logs the KST hours correctly
-    //
-    //     // Determine AM/PM suffix
-    //     const period = kstHours >= 12 ? 'PM' : 'AM';
-    //
-    //     // Construct the ID using the KST date and period
-    //     const year = kstDate.getFullYear();
-    //     const month = String(kstDate.getMonth() + 1).padStart(2, '0');
-    //     const day = String(kstDate.getDate()).padStart(2, '0');
-    //     const id = `${year}${month}${day}_${period}`;
-    //     console.log("id: ", id); // Logs the constructed ID based on KST date and period
-    //
-    //     try {
-    //         const [instance, created] = await Viewpoint.upsert({
-    //             id: id,
-    //             viewpoint: viewpoint,
-    //             imageUrl: '/defaultImg.png',
-    //             createdAt: new Date(),
-    //             updatedAt: new Date()
-    //         });
-    //         if (created) {
-    //             console.log('New Viewpoint instance created:', instance.toJSON());
-    //         } else {
-    //             console.log('Viewpoint updated:', instance.toJSON());
-    //         }
-    //         // Update ref column in analysis table
-    //         if (refs && refs.length > 0) {
-    //             await Analysis.update({ ref: id }, {
-    //                 where: {
-    //                     id: refs  // Assuming `refs` is an array of IDs
-    //                 }
-    //             });
-    //         }
-    //     } catch (error) {
-    //         console.error(error);
-    //     }
-    //
-    //     const updatedVp = await getViewpointAndUpdate();
-    //     console.log("updatedVp: ", updatedVp);
-    //     const imageUrl = await createViewpointImage();
-    //
-    //     // res.status(200).send('ok');
-    //     res.send('ok');
-    // } catch (error) {
-    //     console.error("Error during operations: ", error);
-    //     res.status(500).send("An error occurred");
-    // }
 });
 router.get('/recent', async function(req, res) {
     try {
