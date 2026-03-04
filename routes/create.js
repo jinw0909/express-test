@@ -25,7 +25,16 @@ const Polly = new AWS.Polly({
     region: 'us-east-1'
 });
 
-const GPT_MODEL = 'gpt-5.2'
+const GPT_MODEL = 'gpt-5.2';
+
+function extractJson(text) {
+    const first = text.indexOf("{");
+    const last = text.lastIndexOf("}");
+    if (first !== -1 && last !== -1) {
+        return text.slice(first, last + 1);
+    }
+    return text;
+}
 
 async function getCoinPriceWeek() {
     try {
@@ -1195,7 +1204,27 @@ async function performArticleAnalysis() {
         console.log("step 2: analyze final candidates");
         // Then, pass these indexes to runCreateConveration
         const createResult = await runCreateConversation(candidates);
-        const analyses = JSON.parse(createResult[0].message.content)['summaries_and_analyses'];
+        const rawCreateContent = createResult?.[0]?.message?.content;
+
+        let analyses;
+
+        try {
+            const parsed = JSON.parse(extractJson(rawCreateContent));
+            analyses = parsed['summaries_and_analyses'];
+        } catch (err) {
+            console.error("JSON parse error (analysis)");
+            console.error("error:", err.message);
+
+            if (typeof rawCreateContent === "string") {
+                console.error("raw length:", rawCreateContent.length);
+                console.error("raw head:", rawCreateContent.slice(0, 300));
+                console.error("raw tail:", rawCreateContent.slice(-300));
+            } else {
+                console.error("raw content not string:", rawCreateContent);
+            }
+
+            throw err;
+        }
         console.log("created analyses: ", analyses);
 
         for (const analysis of analyses) { // Loop through each article
@@ -1221,8 +1250,27 @@ async function performArticleAnalysis() {
         console.log("step 3: create viewpoint");
         const result = await runViewpointConversation();
         const content = result[0].message.content;
-        const { viewpoint, refs } = JSON.parse(content);
-        // console.log("viewpoint: ", viewpoint);
+        let viewpoint;
+        let refs;
+
+        try {
+            const parsed = JSON.parse(extractJson(content));
+            viewpoint = parsed.viewpoint;
+            refs = parsed.refs;
+        } catch (err) {
+            console.error("JSON parse error (viewpoint)");
+            console.error("error:", err.message);
+
+            if (typeof content === "string") {
+                console.error("raw length:", content.length);
+                console.error("raw head:", content.slice(0, 300));
+                console.error("raw tail:", content.slice(-300));
+            } else {
+                console.error("raw content not string:", content);
+            }
+
+            throw err;
+        }
         console.log("refs: ", refs);
 
         const today = new Date();
@@ -1333,5 +1381,7 @@ router.post('/image', async function(req, res) {
 router.get('/viewpoint', async function(req, res ){
     await runViewpointConversation();
 })
+
+
 
 module.exports = { router, performArticleAnalysis, getArticlesDay };
