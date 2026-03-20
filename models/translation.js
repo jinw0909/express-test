@@ -37,6 +37,11 @@ const Translation = sequelize.define('Translation', {
         allowNull: true,
         comment: '기사 발행 시간'
     },
+    title_kr : {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: '분석한 기사의 제목 한국어 번역'
+    },
     title_jp : {
         type: DataTypes.STRING,
         allowNull: true,
@@ -56,6 +61,11 @@ const Translation = sequelize.define('Translation', {
         type: DataTypes.STRING,
         allowNull: true,
         comment: '분석한 기사의 제목 베트남어 번역'
+    },
+    content_kr : {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: '기사 본문 한국어 번역'
     },
     content_jp : {
         type: DataTypes.TEXT,

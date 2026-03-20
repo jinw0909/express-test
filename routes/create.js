@@ -196,6 +196,8 @@ async function getRecentAndUpdate() {
                 console.log(`starting title translation for article #${index + 1}, DB id: ${blockmediaEntry.id}`);
                 const title = await translateText(blockmediaEntry.title, 'English');
                 const content = await translateText(blockmediaEntry.content, 'English');
+                const title_kr = await translateText(blockmediaEntry.title, 'Korean');
+                const content_kr = await translateText(blockmediaEntry.content, 'Korean');
                 const title_jp = await translateText(blockmediaEntry.title, 'Japanese');
                 const content_jp = await translateText(blockmediaEntry.content, 'Japanese');
                 const title_cn = await translateText(blockmediaEntry.title, 'Simplified Chinese');
@@ -213,10 +215,12 @@ async function getRecentAndUpdate() {
                     date: blockmediaEntry.date,
                     analysis: analysis.analysis,
                     summary: analysis.summary,
+                    title_kr: title_kr,
                     title_jp: title_jp,
                     title_cn: title_cn,
                     title_tw: title_tw,
                     title_vn: title_vn,
+                    content_kr: content_kr,
                     content_jp: content_jp,
                     content_cn: content_cn,
                     content_tw: content_tw,
@@ -471,7 +475,7 @@ async function getViewpointAndUpdate() {
         if (viewpoint) {
 
             const viewpointJp = await translateText(viewpoint.viewpoint, 'Japanese');
-            // const viewpointKr = await translateText(viewpoint.viewpoint, 'Korean');
+            const viewpointKr = await translateText(viewpoint.viewpoint, 'Korean');
             const viewpointCn = await translateText(viewpoint.viewpoint, 'Simplified Chinese');
             const viewpointTw = await translateText(viewpoint.viewpoint, 'Traditional Chinese');
             const viewpointVn = await translateText(viewpoint.viewpoint, 'Vietnamese');
@@ -485,7 +489,7 @@ async function getViewpointAndUpdate() {
             // Update the Analysis entry with values from the Blockmedia entry
             await viewpoint.update({
                 viewpoint_jp: viewpointJp,
-                // viewpoint_kr: viewpointKr,
+                viewpoint_kr: viewpointKr,
                 viewpoint_cn: viewpointCn,
                 viewpoint_tw: viewpointTw,
                 viewpoint_vn: viewpointVn,
@@ -1380,7 +1384,7 @@ router.post('/image', async function(req, res) {
 });
 router.get('/viewpoint', async function(req, res ){
     await runViewpointConversation();
-})
+});
 
 
 

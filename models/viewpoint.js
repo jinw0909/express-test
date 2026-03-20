@@ -10,6 +10,10 @@ const Viewpoint = sequelize.define('Viewpoint', {
         type: DataTypes.TEXT,
         allowNull: true
     },
+    viewpoint_kr: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
     viewpoint_jp: {
         type: DataTypes.TEXT,
         allowNull: true
