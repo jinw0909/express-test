@@ -75,9 +75,6 @@ async function getArticlesDay() {
             return null;
         }
 
-        // const articleIdList = articleIds.map(article => article.get({plain: true}));
-        // console.log("Article ids within 12 hours: ", articleIdList);
-        // return articleIdList;
         console.log("article ids within 12 hours: ", articleIds);
         return articleIds;
     } catch(err) {
@@ -1329,6 +1326,7 @@ async function performArticleAnalysis() {
         throw new Error('Error creating articles analysis');
     }
 }
+
 
 router.get('/', async function(req, res) {
     // const vpList = await getAllViewpointWithAnalysisIds();

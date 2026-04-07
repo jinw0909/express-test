@@ -22,6 +22,7 @@ const createRouter = require('./routes/create').router;
 // var chartRouter = require('./routes/chart').router;
 // const captureRouter = require('./routes/capture').router;
 // const deleteRouter = require('./routes/delete');
+const createRangeRouter = require('./routes/create_range').router;
 
 
 const start_cron = process.env.START_CRON || false
@@ -59,6 +60,7 @@ app.use('/create', createRouter);
 // app.use('/chart', chartRouter);
 // app.use('/capture', captureRouter);
 // app.use('/delete', deleteRouter);
+app.use('/create-range', createRangeRouter);
 
 app.post('/', (req, res) => {
   const payload = req.body;
