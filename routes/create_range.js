@@ -999,6 +999,69 @@ async function runViewpointConversationByIds(analysisIds) {
     return response.choices;
 }
 
+// async function updateTranslationsForAnalysisIds(analysisIds, forcedCreatedAt) {
+//     try {
+//         const analyses = await Analysis.findAll({
+//             where: {
+//                 id: {
+//                     [Op.in]: analysisIds
+//                 }
+//             },
+//             raw: true
+//         });
+//
+//         for (const analysis of analyses) {
+//             const blockmediaEntry = await Blockmedia.findOne({
+//                 where: { id: analysis.id },
+//                 raw: true
+//             });
+//
+//             if (!blockmediaEntry) {
+//                 continue;
+//             }
+//
+//             console.log(`starting title translation for article DB id: ${blockmediaEntry.id}`);
+//
+//             const title = await translateText(blockmediaEntry.title, 'English');
+//             const content = await translateText(blockmediaEntry.content, 'English');
+//             const title_kr = await translateText(blockmediaEntry.title, 'Korean');
+//             const content_kr = await translateText(blockmediaEntry.content, 'Korean');
+//             const title_jp = await translateText(blockmediaEntry.title, 'Japanese');
+//             const content_jp = await translateText(blockmediaEntry.content, 'Japanese');
+//             const title_cn = await translateText(blockmediaEntry.title, 'Simplified Chinese');
+//             const content_cn = await translateText(blockmediaEntry.content, 'Simplified Chinese');
+//             const title_tw = await translateText(blockmediaEntry.title, 'Traditional Chinese');
+//             const content_tw = await translateText(blockmediaEntry.content, 'Traditional Chinese');
+//             const title_vn = await translateText(blockmediaEntry.title, 'Vietnamese');
+//             const content_vn = await translateText(blockmediaEntry.content, 'Vietnamese');
+//
+//             await Translation.upsert({
+//                 id: analysis.id,
+//                 title: title,
+//                 content: content,
+//                 imageUrl: blockmediaEntry.imageUrl,
+//                 date: blockmediaEntry.date,
+//                 analysis: analysis.analysis,
+//                 summary: analysis.summary,
+//                 title_kr: title_kr,
+//                 title_jp: title_jp,
+//                 title_cn: title_cn,
+//                 title_tw: title_tw,
+//                 title_vn: title_vn,
+//                 content_kr: content_kr,
+//                 content_jp: content_jp,
+//                 content_cn: content_cn,
+//                 content_tw: content_tw,
+//                 content_vn: content_vn,
+//                 createdAt: forcedCreatedAt,
+//                 updatedAt: forcedCreatedAt
+//             });
+//         }
+//     } catch (error) {
+//         console.error("Error updating translations:", error);
+//         throw error;
+//     }
+// }
 async function updateTranslationsForAnalysisIds(analysisIds, forcedCreatedAt) {
     try {
         const analyses = await Analysis.findAll({
@@ -1016,45 +1079,66 @@ async function updateTranslationsForAnalysisIds(analysisIds, forcedCreatedAt) {
                 raw: true
             });
 
-            if (!blockmediaEntry) {
-                continue;
-            }
+            if (!blockmediaEntry) continue;
 
-            console.log(`starting title translation for article DB id: ${blockmediaEntry.id}`);
+            console.log(`Processing id: ${analysis.id}`);
 
-            const title = await translateText(blockmediaEntry.title, 'English');
-            const content = await translateText(blockmediaEntry.content, 'English');
-            const title_kr = await translateText(blockmediaEntry.title, 'Korean');
-            const content_kr = await translateText(blockmediaEntry.content, 'Korean');
+            // 🔹 title 번역
+            const title_en = await translateText(blockmediaEntry.title, 'English');
             const title_jp = await translateText(blockmediaEntry.title, 'Japanese');
-            const content_jp = await translateText(blockmediaEntry.content, 'Japanese');
-            const title_cn = await translateText(blockmediaEntry.title, 'Simplified Chinese');
-            const content_cn = await translateText(blockmediaEntry.content, 'Simplified Chinese');
-            const title_tw = await translateText(blockmediaEntry.title, 'Traditional Chinese');
-            const content_tw = await translateText(blockmediaEntry.content, 'Traditional Chinese');
+            const title_kr = await translateText(blockmediaEntry.title, 'Korean');
             const title_vn = await translateText(blockmediaEntry.title, 'Vietnamese');
-            const content_vn = await translateText(blockmediaEntry.content, 'Vietnamese');
+            const title_cn = await translateText(blockmediaEntry.title, 'Simplified Chinese');
+
+            // 🔹 analysis 번역
+            const analysis_jp = await translateText(analysis.analysis, 'Japanese');
+            const analysis_kr = await translateText(analysis.analysis, 'Korean');
+            const analysis_vn = await translateText(analysis.analysis, 'Vietnamese');
+            const analysis_cn = await translateText(analysis.analysis, 'Simplified Chinese');
+
+            // 🔹 summary 번역
+            const summary_jp = await translateText(analysis.summary, 'Japanese');
+            const summary_kr = await translateText(analysis.summary, 'Korean');
+            const summary_vn = await translateText(analysis.summary, 'Vietnamese');
+            const summary_cn = await translateText(analysis.summary, 'Simplified Chinese');
 
             await Translation.upsert({
                 id: analysis.id,
-                title: title,
-                content: content,
+
+                // ✅ title 계열
+                title: title_en,
+                title_jp,
+                title_kr,
+                title_vn,
+                title_cn,
+
+                // ✅ 원본 데이터
                 imageUrl: blockmediaEntry.imageUrl,
                 date: blockmediaEntry.date,
+
+                // ✅ analysis 계열
                 analysis: analysis.analysis,
+                analysis_jp,
+                analysis_kr,
+                analysis_vn,
+                analysis_cn,
+
+                // ✅ summary 계열
                 summary: analysis.summary,
-                title_kr: title_kr,
-                title_jp: title_jp,
-                title_cn: title_cn,
-                title_tw: title_tw,
-                title_vn: title_vn,
-                content_kr: content_kr,
-                content_jp: content_jp,
-                content_cn: content_cn,
-                content_tw: content_tw,
-                content_vn: content_vn,
+                summary_jp,
+                summary_kr,
+                summary_vn,
+                summary_cn,
+
                 createdAt: forcedCreatedAt,
-                updatedAt: forcedCreatedAt
+                updatedAt: forcedCreatedAt,
+
+                // 필요하면 유지
+                mp3: "",
+                mp3_jp: "",
+                mp3_kr: "",
+                mp3_vn: "",
+                mp3_cn: ""
             });
         }
     } catch (error) {
@@ -1062,7 +1146,6 @@ async function updateTranslationsForAnalysisIds(analysisIds, forcedCreatedAt) {
         throw error;
     }
 }
-
 async function updateViewpointTranslationsById(viewpointId, forcedUpdatedAt) {
     try {
         const viewpoint = await Viewpoint.findByPk(viewpointId);
