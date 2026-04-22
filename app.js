@@ -26,6 +26,7 @@ var captureRouter = require('./routes/capture').router;
 var deleteRouter = require('./routes/delete');
 var screenshotRouter = require('./routes/screenshot').router;
 
+
 const start_cron = process.env.START_CRON || false
 if (start_cron) {
     startCronJobs();
