@@ -6,8 +6,7 @@ const openai = new OpenAi({
     apiKey: process.env.API_KEY
 });
 
-const { Sequelize } = require("sequelize");
-const { Op } = require('sequelize');
+const { Sequelize, Op, literal } = require("sequelize");
 const AWS = require("aws-sdk");
 const { Blockmedia, Viewpoint, Analysis, Candidate, Translation } = require('../models');
 
@@ -41,23 +40,57 @@ function validateTargetDate(targetDate) {
     }
 }
 
-function buildDateInfo(targetDate) {
-    validateTargetDate(targetDate);
+function validatePeriod(period) {
+    if (!['AM', 'PM'].includes(period)) {
+        throw new Error("period must be 'AM' or 'PM'");
+    }
+}
 
-    const startAtKst = new Date(`${targetDate}T00:00:00+09:00`);
-    const endAtKst = new Date(`${targetDate}T23:59:59.999+09:00`);
-    const fixedCreatedAt = new Date(`${targetDate}T11:00:00+09:00`);
-    const viewpointId = targetDate.replace(/-/g, '');
+function buildSessionInfo(targetDate, period) {
+    validateTargetDate(targetDate);
+    validatePeriod(period);
+
+    const [year, month, day] = targetDate.split('-');
+    const viewpointId = `${year}${month}${day}_${period}`;
+
+    // targetDate 기준 전날 문자열 만들기
+    const baseDate = new Date(`${targetDate}T00:00:00+09:00`);
+    const prevDate = new Date(baseDate);
+    prevDate.setDate(prevDate.getDate() - 1);
+
+    const prevYear = prevDate.getFullYear();
+    const prevMonth = String(prevDate.getMonth() + 1).padStart(2, '0');
+    const prevDay = String(prevDate.getDate()).padStart(2, '0');
+    const prevDateStr = `${prevYear}-${prevMonth}-${prevDay}`;
+
+    let startAtKst;
+    let endAtKst;
+    let fixedCreatedAt;
+
+    if (period === 'AM') {
+        // 전날 21:00 ~ 당일 08:59:59
+        startAtKst = `${prevDateStr} 21:00:00`;
+        endAtKst = `${targetDate} 08:59:59`;
+
+        fixedCreatedAt = new Date(Date.UTC(year, month - 1, day, 23, 30, 0));
+        fixedCreatedAt.setUTCDate(fixedCreatedAt.getUTCDate() - 1);
+    } else {
+        // 당일 09:00 ~ 당일 20:59:59
+        startAtKst = `${targetDate} 09:00:00`;
+        endAtKst = `${targetDate} 20:59:59`;
+
+        fixedCreatedAt = new Date(Date.UTC(year, month - 1, day, 11, 30, 0));
+    }
 
     return {
         targetDate,
+        period,
         startAtKst,
         endAtKst,
         fixedCreatedAt,
         viewpointId
     };
 }
-
 async function getCoinPriceWeek() {
     try {
         const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
@@ -80,16 +113,26 @@ async function getCoinPriceDay() {
     }
 }
 
-async function getArticlesByDate(targetDate) {
+async function getArticlesBySession(targetDate, period) {
     try {
-        const { startAtKst, endAtKst } = buildDateInfo(targetDate);
+        const { startAtKst, endAtKst } = buildSessionInfo(targetDate, period);
+
+        console.log(`[getArticlesBySession] ${targetDate}_${period}`);
+        console.log("startAtKst:", startAtKst);
+        console.log("endAtKst:", endAtKst);
 
         const articleIds = await Blockmedia.findAll({
+            // where: {
+            //     date: {
+            //         [Op.gte]: startAtKst,
+            //         [Op.lte]: endAtKst
+            //     }
+            // },
             where: {
-                date: {
-                    [Op.gte]: startAtKst,
-                    [Op.lte]: endAtKst
-                }
+                [Op.and]: [
+                    literal(`date >= '${startAtKst}'`),
+                    literal(`date <= '${endAtKst}'`)
+                ]
             },
             attributes: ['id'],
             order: [['id', 'DESC']],
@@ -97,15 +140,15 @@ async function getArticlesByDate(targetDate) {
         });
 
         if (!articleIds || !articleIds.length) {
-            console.log(`No articles published on ${targetDate} (KST)`);
+            console.log(`No articles found for ${targetDate}_${period} (KST)`);
             return [];
         }
 
-        console.log(`article ids on ${targetDate}: `, articleIds);
+        console.log(`article ids on ${targetDate}_${period}: `, articleIds);
         return articleIds;
     } catch (err) {
-        console.error("Error in getArticlesByDate:", err);
-        return { error: err.message };
+        console.error("Error in getArticlesBySession:", err);
+        throw err;
     }
 }
 
@@ -673,12 +716,12 @@ async function recurseFinals(candidates, limit = 4, results = []) {
     return await recurseFinals(filteredCandidates, remainingLimit, results);
 }
 
-async function createCandidatesByDate(targetDate) {
+async function createCandidatesBySession(targetDate, period) {
     try {
-        const articleIds = await getArticlesByDate(targetDate);
+        const articleIds = await getArticlesBySession(targetDate, period);
 
         if (!articleIds || articleIds.length === 0) {
-            console.log(`No articles found for ${targetDate}.`);
+            console.log(`No articles found for ${targetDate}_${period}.`);
             return [];
         }
 
@@ -692,16 +735,16 @@ async function createCandidatesByDate(targetDate) {
 
         return candidates;
     } catch (error) {
-        console.error("Error in createCandidatesByDate:", error);
+        console.error("Error in createCandidatesBySession:", error);
         return [];
     }
 }
 
-async function makeCandidatesByDate(targetDate) {
-    const candidates = await createCandidatesByDate(targetDate);
+async function makeCandidatesBySession(targetDate, period) {
+    const candidates = await createCandidatesBySession(targetDate, period);
     console.log("candidates to recurse on: ", candidates);
 
-    const finals = await recurseFinals(candidates);
+    const finals = await recurseFinals(candidates, 4);
     console.log("final candidates: ", finals);
 
     for (const candidate of finals) {
@@ -1070,6 +1113,7 @@ async function updateTranslationsForAnalysisIds(analysisIds, forcedCreatedAt) {
                     [Op.in]: analysisIds
                 }
             },
+            order: [['createdAt', 'DESC']],
             raw: true
         });
 
@@ -1176,18 +1220,20 @@ async function updateViewpointTranslationsById(viewpointId, forcedUpdatedAt) {
     }
 }
 
-async function performTimeRangeAnalysis(targetDate) {
+async function performSessionAnalysis(targetDate, period) {
     try {
-        const { fixedCreatedAt, viewpointId } = buildDateInfo(targetDate);
+        const { fixedCreatedAt, viewpointId } = buildSessionInfo(targetDate, period);
 
-        console.log(`[performTimeRangeAnalysis] targetDate = ${targetDate}`);
+        console.log(`[performSessionAnalysis] targetDate=${targetDate}, period=${period}`);
+        console.log("fixedCreatedAt:", fixedCreatedAt);
+        console.log("viewpointId:", viewpointId);
 
         console.log("step 1: select final candidates");
-        const candidates = await makeCandidatesByDate(targetDate);
+        const candidates = await makeCandidatesBySession(targetDate, period);
         console.log("candidates: ", candidates);
 
         if (!candidates || candidates.length === 0) {
-            return `No articles found for ${targetDate}`;
+            return `No articles found for ${targetDate}_${period}`;
         }
 
         console.log("step 2: analyze final candidates");
@@ -1200,17 +1246,7 @@ async function performTimeRangeAnalysis(targetDate) {
             const parsed = JSON.parse(extractJson(rawCreateContent));
             analyses = parsed['summaries_and_analyses'];
         } catch (err) {
-            console.error("JSON parse error (analysis)");
-            console.error("error:", err.message);
-
-            if (typeof rawCreateContent === "string") {
-                console.error("raw length:", rawCreateContent.length);
-                console.error("raw head:", rawCreateContent.slice(0, 300));
-                console.error("raw tail:", rawCreateContent.slice(-300));
-            } else {
-                console.error("raw content not string:", rawCreateContent);
-            }
-
+            console.error("JSON parse error (analysis)", err);
             throw err;
         }
 
@@ -1219,24 +1255,19 @@ async function performTimeRangeAnalysis(targetDate) {
         const analysisIds = [];
 
         for (const analysis of analyses) {
-            try {
-                analysisIds.push(analysis.id);
+            analysisIds.push(analysis.id);
 
-                await Analysis.upsert({
-                    id: analysis.id,
-                    analysis: analysis.analysis,
-                    summary: analysis.summary,
-                    createdAt: fixedCreatedAt,
-                    updatedAt: fixedCreatedAt
-                });
-            } catch (err) {
-                console.error('Error upserting article:', err);
-            }
+            await Analysis.upsert({
+                id: analysis.id,
+                analysis: analysis.analysis,
+                summary: analysis.summary,
+                createdAt: fixedCreatedAt,
+                updatedAt: fixedCreatedAt
+            });
         }
 
         console.log("step 3: create viewpoint");
-        const limitedIds = analysisIds.slice(0, 4);
-        const result = await runViewpointConversationByIds(limitedIds);
+        const result = await runViewpointConversationByIds(analysisIds);
         const content = result?.[0]?.message?.content;
 
         let viewpoint;
@@ -1248,16 +1279,6 @@ async function performTimeRangeAnalysis(targetDate) {
             refs = parsed.refs;
         } catch (err) {
             console.error("JSON parse error (viewpoint)");
-            console.error("error:", err.message);
-
-            if (typeof content === "string") {
-                console.error("raw length:", content.length);
-                console.error("raw head:", content.slice(0, 300));
-                console.error("raw tail:", content.slice(-300));
-            } else {
-                console.error("raw content not string:", content);
-            }
-
             throw err;
         }
 
@@ -1285,26 +1306,25 @@ async function performTimeRangeAnalysis(targetDate) {
         }
 
         console.log("step 4: translate analyses");
-        await updateTranslationsForAnalysisIds(limitedIds, fixedCreatedAt);
+        await updateTranslationsForAnalysisIds(analysisIds, fixedCreatedAt);
 
         console.log("step 5: translate viewpoint");
         await updateViewpointTranslationsById(viewpointId, fixedCreatedAt);
 
         console.log("complete.");
-        return `Successfully created and saved article analysis and viewpoint for ${targetDate}`;
+        return `Successfully created and saved article analysis and viewpoint for ${targetDate}_${period}`;
     } catch (error) {
         console.error("Error during operations: ", error);
-        throw new Error(`Error creating articles analysis for ${targetDate}`);
+        throw new Error(`Error creating articles analysis for ${targetDate}_${period}`);
     }
 }
-
 router.get('/', async function(req, res) {
     res.render('create');
 });
 
 router.post('/complete', async function(req, res) {
     try {
-        const { date } = req.body;
+        const { date, period } = req.body;
 
         if (!date) {
             return res.status(400).json({
@@ -1313,7 +1333,14 @@ router.post('/complete', async function(req, res) {
             });
         }
 
-        const result = await performTimeRangeAnalysis(date);
+        if (!period) {
+            return res.status(400).json({
+                ok: false,
+                error: "period is required. format: AM or PM"
+            });
+        }
+
+        const result = await performSessionAnalysis(date, period);
 
         return res.json({
             ok: true,
@@ -1330,22 +1357,18 @@ router.post('/complete', async function(req, res) {
 
 router.get('/articles', async function(req, res) {
     try {
-        const { date } = req.query;
+        const { date, period } = req.query;
 
-        if (!date) {
+        if (!date || !period) {
             return res.status(400).json({
                 ok: false,
-                error: "date is required. format: YYYY-MM-DD"
+                error: "date and period are required. format: YYYY-MM-DD, period=AM|PM"
             });
         }
 
-        const result = await getArticlesByDate(date);
+        const result = await getArticlesBySession(date, period);
 
-        if (!result || result.length === 0) {
-            return res.json([]);
-        }
-
-        return res.json(result);
+        return res.json(result || []);
     } catch (error) {
         console.error(error);
         return res.status(500).json({
@@ -1357,6 +1380,6 @@ router.get('/articles', async function(req, res) {
 
 module.exports = {
     router,
-    performTimeRangeAnalysis,
-    getArticlesByDate
+    performTimeRangeAnalysis: performSessionAnalysis,
+    getArticlesByDate: getArticlesBySession
 };

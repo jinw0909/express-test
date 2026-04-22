@@ -39,10 +39,18 @@
         <div class="result-div-complete"></div>
         <a href="/run">Go To Page</a>
     </div>
+
     <div class="send-request-range">
         <h4>Create Range Briefing</h4>
         <span id="flag-range"></span>
         <input type="date" id="rangeDate">
+
+        <select id="rangePeriod">
+            <option value="">Select Period</option>
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+        </select>
+
         <button class="send-btn-range">Send Range Request</button>
         <div class="result-div-range"></div>
     </div>
@@ -182,15 +190,21 @@
 <script>
     document.querySelector('.send-btn-range').addEventListener('click', function() {
         const date = document.querySelector('#rangeDate').value;
+        const period = document.querySelector('#rangePeriod').value;
 
         if (!date) {
             alert('날짜를 선택하세요.');
             return;
         }
 
+        if (!period) {
+            alert('AM 또는 PM을 선택하세요.');
+            return;
+        }
+
         document.querySelector('#flag-range').textContent = "sent";
 
-        axios.post('/create-range/complete', { date })
+        axios.post('/create-range/complete', { date, period })
             .then((response) => {
                 console.log("range success: ", response);
                 document.querySelector('.result-div-range').textContent =

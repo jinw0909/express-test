@@ -104,6 +104,7 @@ app.post('/', (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 app.get('/articles', async (req, res) => {
   let articles = await getArticlesDay();
   console.log("articles: ", articles);
