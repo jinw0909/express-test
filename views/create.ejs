@@ -39,6 +39,14 @@
         <div class="result-div-complete"></div>
         <a href="/run">Go To Page</a>
     </div>
+    <div class="send-request-range">
+        <h4>Create Range Briefing</h4>
+        <span id="flag-range"></span>
+        <input type="date" id="rangeDate">
+        <button class="send-btn-range">Send Range Request</button>
+        <div class="result-div-range"></div>
+    </div>
+
     <div class="send-request-completevp">
         <h4>Create Score Briefing</h4>
         <span id="flag8"></span>
@@ -168,6 +176,32 @@
     })
 
 
+</script>
+
+
+<script>
+    document.querySelector('.send-btn-range').addEventListener('click', function() {
+        const date = document.querySelector('#rangeDate').value;
+
+        if (!date) {
+            alert('날짜를 선택하세요.');
+            return;
+        }
+
+        document.querySelector('#flag-range').textContent = "sent";
+
+        axios.post('/create-range/complete', { date })
+            .then((response) => {
+                console.log("range success: ", response);
+                document.querySelector('.result-div-range').textContent =
+                    response.data?.result || 'success';
+            })
+            .catch(err => {
+                console.error("range failure ", err);
+                document.querySelector('.result-div-range').textContent =
+                    err.response?.data?.error || 'request failed';
+            });
+    });
 </script>
 </body>
 </html>

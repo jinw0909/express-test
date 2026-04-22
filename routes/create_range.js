@@ -1235,7 +1235,7 @@ async function performTimeRangeAnalysis(targetDate) {
         }
 
         console.log("step 3: create viewpoint");
-        const limitedIds = analysisIds.slice(0, 2);
+        const limitedIds = analysisIds.slice(0, 4);
         const result = await runViewpointConversationByIds(limitedIds);
         const content = result?.[0]?.message?.content;
 

@@ -64,7 +64,7 @@ app.use('/chart', chartRouter);
 // app.use('/capture', captureRouter);
 app.use('/delete', deleteRouter);
 app.use('/screenshot', screenshotRouter);
-app.use('/create_range', createRangeRouter);
+app.use('/create-range', createRangeRouter);
 
 app.post('/', (req, res) => {
   const payload = req.body;
