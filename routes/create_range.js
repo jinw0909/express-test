@@ -50,18 +50,23 @@ function buildSessionInfo(targetDate, period) {
     validateTargetDate(targetDate);
     validatePeriod(period);
 
-    const [year, month, day] = targetDate.split('-');
-    const viewpointId = `${year}${month}${day}_${period}`;
+    const [year, month, day] = targetDate.split('-').map(Number);
 
-    // targetDate 기준 전날 문자열 만들기
-    const baseDate = new Date(`${targetDate}T00:00:00+09:00`);
-    const prevDate = new Date(baseDate);
-    prevDate.setDate(prevDate.getDate() - 1);
+    const viewpointId = `${year}${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}_${period}`;
 
-    const prevYear = prevDate.getFullYear();
-    const prevMonth = String(prevDate.getMonth() + 1).padStart(2, '0');
-    const prevDay = String(prevDate.getDate()).padStart(2, '0');
-    const prevDateStr = `${prevYear}-${prevMonth}-${prevDay}`;
+    // --- KST 기준 전날 계산 (UTC 혼용 없음)
+    function getPrevDateStr(y, m, d) {
+        const date = new Date(Date.UTC(y, m - 1, d)); // UTC 기준 안전 생성
+        date.setUTCDate(date.getUTCDate() - 1);
+
+        const py = date.getUTCFullYear();
+        const pm = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const pd = String(date.getUTCDate()).padStart(2, '0');
+
+        return `${py}-${pm}-${pd}`;
+    }
+
+    const prevDateStr = getPrevDateStr(year, month, day);
 
     let startAtKst;
     let endAtKst;
@@ -72,13 +77,15 @@ function buildSessionInfo(targetDate, period) {
         startAtKst = `${prevDateStr} 21:00:00`;
         endAtKst = `${targetDate} 08:59:59`;
 
-        fixedCreatedAt = new Date(Date.UTC(year, month - 1, day, 23, 30, 0));
-        fixedCreatedAt.setUTCDate(fixedCreatedAt.getUTCDate() - 1);
+        // 👉 KST 08:30 기준 → UTC로 변환 (전날 23:30 UTC)
+        fixedCreatedAt = new Date(Date.UTC(year, month - 1, day - 1, 23, 30, 0));
+
     } else {
         // 당일 09:00 ~ 당일 20:59:59
         startAtKst = `${targetDate} 09:00:00`;
         endAtKst = `${targetDate} 20:59:59`;
 
+        // 👉 KST 20:30 기준 → UTC 11:30
         fixedCreatedAt = new Date(Date.UTC(year, month - 1, day, 11, 30, 0));
     }
 
@@ -91,6 +98,7 @@ function buildSessionInfo(targetDate, period) {
         viewpointId
     };
 }
+
 async function getCoinPriceWeek() {
     try {
         const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=7');
