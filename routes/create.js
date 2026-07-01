@@ -189,10 +189,10 @@ async function getRecentAndUpdate() {
                 const analysisVn = await translateText(analysis.analysis, 'Vietnamese');
                 const analysisCn = await translateText(analysis.analysis, 'Chinese');
 
-                const summaryJp = await translateText(analysis.summary, 'Japanese');
-                const summaryKr = await translateText(analysis.summary, 'Korean');
-                const summaryVn = await translateText(analysis.summary, 'Vietnamese');
-                const summaryCn = await translateText(analysis.summary, 'Chinese');
+                // const summaryJp = await translateText(analysis.summary, 'Japanese');
+                // const summaryKr = await translateText(analysis.summary, 'Korean');
+                // const summaryVn = await translateText(analysis.summary, 'Vietnamese');
+                // const summaryCn = await translateText(analysis.summary, 'Chinese');
 
                 // const content = await translateText(blockmediaEntry.content, 'English');
                 // const contentJp = await translateText(blockmediaEntry.content, 'Japanese');
@@ -220,18 +220,34 @@ async function getRecentAndUpdate() {
                     imageUrl: blockmediaEntry.imageUrl,
                     date: blockmediaEntry.date,
                     publisher: blockmediaEntry.publisher,
-                    analysis: analysis.analysis,
-                    analysis_jp: analysisJp,
-                    analysis_kr: analysisKr,
-                    analysis_vn: analysisVn,
-                    analysis_cn: analysisCn,
-                    summary: analysis.summary,
-                    summary_jp: summaryJp,
-                    summary_kr: summaryKr,
-                    summary_vn: summaryVn,
-                    summary_cn: summaryCn,
+
+                    analysis: "",
+                    analysis_jp: "",
+                    analysis_kr: "",
+                    analysis_vn: "",
+                    analysis_cn: "",
+
+                    // analysis: analysis.summary,
+                    // analysis_jp: summaryJp,
+                    // analysis_kr: summaryKr,
+                    // analysis_vn: summaryVn,
+                    // analysis_cn: summaryCn,
+
+                    // summary: analysis.summary,
+                    // summary_jp: summaryJp,
+                    // summary_kr: summaryKr,
+                    // summary_vn: summaryVn,
+                    // summary_cn: summaryCn,
+
+                    summary: analysis.analysis,
+                    summary_jp: analysisJp,
+                    summary_kr: analysisKr,
+                    summary_vn: analysisVn,
+                    summary_cn: analysisCn,
+
                     updatedAt: new Date(),
                     createdAt: new Date(),
+
                     mp3: "",
                     mp3_jp: "",
                     mp3_kr: "",
@@ -925,7 +941,40 @@ async function runCreateConversation(candidates) {
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
         { role: "user", content: "Here is a list of four final candidates that are selected from articles published within 12 hours: "},
         { role: "user", content: JSON.stringify(candidates)},
-        { role: "user", content: `Give me a detailed and profound summary and analysis for each article, on the context with the reason for its selection. The analysis has to be at least ten sentences in english and the summary has to be at least six sentences in english. The response should be formatted as a JSON [{id : INT, analysis: TEXT, summary: TEXT}, ...] with a key named "summaries_and_analyses" so I can save each summary and analysis in a local database with ease. Don't improvise the id of the created analysis place it with a id that matches the original article. Utilize a function call to retrieve the original article of each candidate`},
+        { role: "user", content:
+                `
+                For each final candidate, create two fields: "summary" and "analysis".
+                
+                Definitions:
+                - "summary" is an internal factual summary of the original article. It may directly summarize what the article reports.
+                - "analysis" is the user-facing text that will be displayed together with only the article title and image. Therefore, it must stand alone without assuming the user has read the article.
+                
+                User-facing analysis requirements:
+                1. Do NOT start with phrases such as "This article matters", "The article reports", "According to the article", or "This piece is important".
+                2. Start by briefly explaining the real-world event or market development itself.
+                3. Then explain why the event matters for Bitcoin, crypto markets, stablecoins, liquidity, regulation, investor sentiment, or market structure.
+                4. The analysis should read like an event-based market commentary, not a critique of an article.
+                5. Mention concrete actors, mechanisms, and market implications when available from the original article.
+                6. If the event has direct market impact, explain the likely short-term and medium-term effects separately.
+                7. Avoid assuming information not present in the original article.
+                8. The analysis must be at least ten sentences in English.
+                9. The summary must be at least six sentences in English.
+                10. Return valid JSON only.
+                
+                Return format:
+                {
+                  "summaries_and_analyses": [
+                    {
+                      "id": INT,
+                      "analysis": "TEXT",
+                      "summary": "TEXT"
+                    }
+                  ]
+                }
+                
+                The id must exactly match the original article id. Use the function call to retrieve the original article of each candidate.
+                `
+        },
     ];
     const tools = [
         {
@@ -1332,10 +1381,10 @@ async function performArticleAnalysis() {
             console.error(error);
         }
 
-        console.log("step 5: translate viewpoints and create viewpoint image");
+        console.log("step 5: translate viewpoints and create viewpoint image (viewpoint image temporary disabled)");
 
         const updatedVp = await getViewpointAndUpdate();
-        await createViewpointImage();
+        // await createViewpointImage();
 
         console.log("translatedVp: ", updatedVp);
         console.log("successfully created and saved article analysis")
