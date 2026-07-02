@@ -941,40 +941,124 @@ async function runCreateConversation(candidates) {
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
         { role: "user", content: "Here is a list of four final candidates that are selected from articles published within 12 hours: "},
         { role: "user", content: JSON.stringify(candidates)},
-        { role: "user", content:
-                `
-                For each final candidate, create two fields: "summary" and "analysis".
-                
-                Definitions:
-                - "summary" is an internal factual summary of the original article. It may directly summarize what the article reports.
-                - "analysis" is the user-facing text that will be displayed together with only the article title and image. Therefore, it must stand alone without assuming the user has read the article.
-                
-                User-facing analysis requirements:
-                1. Do NOT start with phrases such as "This article matters", "The article reports", "According to the article", or "This piece is important".
-                2. Start by briefly explaining the real-world event or market development itself.
-                3. Then explain why the event matters for Bitcoin, crypto markets, stablecoins, liquidity, regulation, investor sentiment, or market structure.
-                4. The analysis should read like an event-based market commentary, not a critique of an article.
-                5. Mention concrete actors, mechanisms, and market implications when available from the original article.
-                6. If the event has direct market impact, explain the likely short-term and medium-term effects separately.
-                7. Avoid assuming information not present in the original article.
-                8. The analysis must be at least ten sentences in English.
-                9. The summary must be at least six sentences in English.
-                10. Return valid JSON only.
-                
-                Return format:
+        // { role: "user", content: `
+        //     For each final candidate, create two fields: "summary" and "analysis".
+        //
+        //     Definitions:
+        //     - "summary" is a factual summary of the article.
+        //     - "analysis" is a market interpretation for crypto readers.
+        //     - The final user will see only the article title, image, and this text, so it must be understandable without reading the full article.
+        //
+        //     Writing style:
+        //     - Write in clear, natural English.
+        //     - Keep the tone professional but easy to read.
+        //     - Avoid overly technical or academic language.
+        //     - If a financial or crypto term is necessary, explain it in simple words.
+        //     - Do not sound like a long institutional research report.
+        //     - Avoid exaggerated bullish or bearish claims.
+        //     - Avoid repeating the same idea.
+        //     - Prefer concrete language: what happened, who is involved, why it matters, and what to watch next.
+        //
+        //     Length rules:
+        //     - "summary" should be 4 to 5 sentences.
+        //     - "analysis" should be 3 to 4 sentences.
+        //     - Each sentence should be short or medium length.
+        //     - The full text should feel readable on mobile.
+        //     - Do not make the text too short or too shallow.
+        //     - Do not make the text long, dense, or complicated.
+        //
+        //     Content rules for summary:
+        //     1. Explain the main event or claim in the article.
+        //     2. Mention the key actor, company, government, data point, or market move.
+        //     3. Explain what changed or why the issue matters now.
+        //     4. Include enough context so the reader understands the article without opening it.
+        //     5. Keep it factual. Do not add your own opinion in the summary.
+        //
+        //     Content rules for analysis:
+        //     1. Explain why this matters for Bitcoin, crypto markets, stablecoins, regulation, liquidity, or investor sentiment.
+        //     2. Explain the likely short-term impact if there is one.
+        //     3. Explain what readers should watch next.
+        //     4. If the connection to crypto is indirect, say so clearly and explain the indirect link.
+        //     5. Keep the analysis useful but concise.
+        //
+        //     Output rules:
+        //     - Return valid JSON only.
+        //     - Do not include markdown.
+        //     - Do not include bullet points inside the text.
+        //     - Do not include labels like "Summary:" or "Analysis:" inside the values.
+        //     - Do not mention the article id inside the text.
+        //
+        //     Return format:
+        //     {
+        //       "summaries_and_analyses": [
+        //         {
+        //           "id": INT,
+        //           "analysis": "TEXT",
+        //           "summary": "TEXT"
+        //         }
+        //       ]
+        //     }
+        //
+        //     The id must exactly match the original article id.
+        //     Use the function call to retrieve the original article of each candidate.
+        // `},
+        { role: "user", content: `
+            For each final candidate, create two fields: "summary" and "analysis".
+
+            Definitions:
+            - "summary" is an internal factual summary of the article.
+            - "analysis" is the final user-facing text that will be displayed with the article title and image.
+            - Since users will only see "analysis", it must include both a short article summary and a short market interpretation.
+            
+            Length rules:
+            - "summary" should be 4 to 5 sentences.
+            - "analysis" should be 6 to 8 sentences total.
+            - In "analysis", the first 4 to 5 sentences should summarize the article.
+            - In "analysis", the last 2 to 3 sentences should explain why it matters for Bitcoin or crypto markets.
+            - Keep each sentence short or medium length.
+            - The text should feel readable on mobile.
+            
+            Writing style:
+            - Use clear, natural English.
+            - Keep the tone professional but easy to read.
+            - Avoid overly technical or academic language.
+            - If a financial or crypto term is necessary, explain it in simple words.
+            - Do not sound like a long institutional research report.
+            - Avoid exaggerated bullish or bearish claims.
+            - Avoid repeating the same idea.
+            - Prefer concrete language: what happened, who is involved, why it matters, and what to watch next.
+            
+            Content rules:
+                1. Do not assume the user has read the original article.
+                2. Start with the actual event, market move, statement, data point, company action, policy change, or on-chain development.
+                3. Do not start with or include phrases like "the article reports", "the article notes", "according to the article", "the piece says", or "the report explains".
+                4. Do not describe the article itself. Describe the event covered by the article.
+                5. Convert article-based wording into event-based wording.
+                   - Bad: "The article reports that Bitcoin reclaimed $60,000."
+                   - Good: "Bitcoin reclaimed the $60,000 area."
+                   - Bad: "The article notes traders are watching US jobs data."
+                   - Good: "Traders are watching US jobs data."
+                   - Bad: "The article says Circle CEO Jeremy Allaire criticized OpenUSD."
+                   - Good: "Circle CEO Jeremy Allaire pushed back against the hype around OpenUSD."
+                6. Then explain why the event matters for Bitcoin, crypto markets, stablecoins, regulation, liquidity, or investor sentiment.
+                7. If the crypto connection is indirect, say so clearly and explain the indirect link.
+                8. Keep the analysis balanced and avoid overstating the impact.
+            
+            Output rules:
+            - Return valid JSON only.
+            - The id must exactly match the original article id.
+            
+            Return format:
+            {
+              "summaries_and_analyses": [
                 {
-                  "summaries_and_analyses": [
-                    {
-                      "id": INT,
-                      "analysis": "TEXT",
-                      "summary": "TEXT"
-                    }
-                  ]
+                  "id": INT,
+                  "analysis": "TEXT",
+                  "summary": "TEXT"
                 }
-                
-                The id must exactly match the original article id. Use the function call to retrieve the original article of each candidate.
-                `
-        },
+              ]
+            }
+        `},
     ];
     const tools = [
         {
