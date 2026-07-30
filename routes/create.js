@@ -378,6 +378,54 @@ async function generateTTS(content, lang, id) {
         });
     }
 }
+
+async function logInvalidPromptArticles({
+                                            error,
+                                            stage,
+                                            articleIds = []
+                                        }) {
+    if (
+        error?.status !== 400 ||
+        error?.code !== 'invalid_prompt'
+    ) {
+        return;
+    }
+
+    try {
+        const ids = [...new Set(
+            articleIds
+                .map(id => Number(id))
+                .filter(Number.isFinite)
+        )];
+
+        const articles = ids.length
+            ? await Blockmedia.findAll({
+                where: {
+                    id: {
+                        [Sequelize.Op.in]: ids
+                    }
+                },
+                attributes: ['id', 'title', 'date'],
+                raw: true
+            })
+            : [];
+
+        console.error('=== OPENAI INVALID PROMPT ===');
+        console.error('stage:', stage);
+        console.error('requestID:', error.requestID);
+        console.error('articleIds:', ids);
+
+        console.table(
+            articles.map(article => ({
+                id: article.id,
+                title: article.title,
+                date: article.date
+            }))
+        );
+    } catch (logError) {
+        console.error('Failed to log invalid-prompt articles:', logError);
+    }
+}
 async function runViewpointConversation() {
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. You are also capable of deriving the bitcoin market trend by analyzing the bitcoin price movement within a certain period, and capable of deriving the relationship between the trend and real-world events" },
@@ -683,6 +731,8 @@ async function runCandidateConversation(articleIds) {
         parallel_tool_calls: false
     });
 
+    let requestedArticleIds = [];
+
     const responseMessage = response.choices[0].message;
 
     const toolCalls = responseMessage.tool_calls;
@@ -697,6 +747,7 @@ async function runCandidateConversation(articleIds) {
             console.log("runCandidateConversation functionName: ", functionName);
             const functionToCall = availableFunctions[functionName];
             const functionArgs = JSON.parse(toolCall.function.arguments);
+            requestedArticleIds = functionArgs.indexList;
             console.log("runCandidateConversation functionArgs: ", functionArgs);
             const functionResponse = await functionToCall(
                 functionArgs.indexList,
@@ -709,38 +760,49 @@ async function runCandidateConversation(articleIds) {
             }); //extend the conversation with function response
         }
 
-        const secondResponse = await openai.chat.completions.create({
-            model: GPT_MODEL,
-            // model: "gpt-5",
-            messages: messages,
-            response_format: {
-                type: "json_schema",
-                json_schema: {
-                    name: "Candidates",
-                    strict: true,
-                    schema: {
-                        type: "object",
-                        properties: {
-                            candidates: {
-                                type: "array",
-                                items: {
-                                    type: "object",
-                                    properties: {
-                                        id: { type: "number"},
-                                        summary: { type: "string" },
-                                        reason: { type: "string" }
-                                    },
-                                    required: ["id", "summary", "reason"],
-                                    additionalProperties: false
+        let secondResponse;
+
+        try {
+            secondResponse = await openai.chat.completions.create({
+                model: GPT_MODEL,
+                messages: messages,
+                response_format: {
+                    type: "json_schema",
+                    json_schema: {
+                        name: "Candidates",
+                        strict: true,
+                        schema: {
+                            type: "object",
+                            properties: {
+                                candidates: {
+                                    type: "array",
+                                    items: {
+                                        type: "object",
+                                        properties: {
+                                            id: { type: "number" },
+                                            summary: { type: "string" },
+                                            reason: { type: "string" }
+                                        },
+                                        required: ["id", "summary", "reason"],
+                                        additionalProperties: false
+                                    }
                                 }
-                            }
-                        },
-                        required: ["candidates"],
-                        additionalProperties: false
+                            },
+                            required: ["candidates"],
+                            additionalProperties: false
+                        }
                     }
                 }
-            },
-        });
+            });
+        } catch (error) {
+            await logInvalidPromptArticles({
+                error,
+                stage: 'runCandidateConversation.secondResponse',
+                articleIds: requestedArticleIds
+            });
+
+            throw error;
+        }
         const finalResponse= secondResponse.choices[0].message;
         const parsed = JSON.parse(finalResponse.content);
         // console.log("parsed: ", parsed);
@@ -941,67 +1003,6 @@ async function runCreateConversation(candidates) {
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context."},
         { role: "user", content: "Here is a list of four final candidates that are selected from articles published within 12 hours: "},
         { role: "user", content: JSON.stringify(candidates)},
-        // { role: "user", content: `
-        //     For each final candidate, create two fields: "summary" and "analysis".
-        //
-        //     Definitions:
-        //     - "summary" is a factual summary of the article.
-        //     - "analysis" is a market interpretation for crypto readers.
-        //     - The final user will see only the article title, image, and this text, so it must be understandable without reading the full article.
-        //
-        //     Writing style:
-        //     - Write in clear, natural English.
-        //     - Keep the tone professional but easy to read.
-        //     - Avoid overly technical or academic language.
-        //     - If a financial or crypto term is necessary, explain it in simple words.
-        //     - Do not sound like a long institutional research report.
-        //     - Avoid exaggerated bullish or bearish claims.
-        //     - Avoid repeating the same idea.
-        //     - Prefer concrete language: what happened, who is involved, why it matters, and what to watch next.
-        //
-        //     Length rules:
-        //     - "summary" should be 4 to 5 sentences.
-        //     - "analysis" should be 3 to 4 sentences.
-        //     - Each sentence should be short or medium length.
-        //     - The full text should feel readable on mobile.
-        //     - Do not make the text too short or too shallow.
-        //     - Do not make the text long, dense, or complicated.
-        //
-        //     Content rules for summary:
-        //     1. Explain the main event or claim in the article.
-        //     2. Mention the key actor, company, government, data point, or market move.
-        //     3. Explain what changed or why the issue matters now.
-        //     4. Include enough context so the reader understands the article without opening it.
-        //     5. Keep it factual. Do not add your own opinion in the summary.
-        //
-        //     Content rules for analysis:
-        //     1. Explain why this matters for Bitcoin, crypto markets, stablecoins, regulation, liquidity, or investor sentiment.
-        //     2. Explain the likely short-term impact if there is one.
-        //     3. Explain what readers should watch next.
-        //     4. If the connection to crypto is indirect, say so clearly and explain the indirect link.
-        //     5. Keep the analysis useful but concise.
-        //
-        //     Output rules:
-        //     - Return valid JSON only.
-        //     - Do not include markdown.
-        //     - Do not include bullet points inside the text.
-        //     - Do not include labels like "Summary:" or "Analysis:" inside the values.
-        //     - Do not mention the article id inside the text.
-        //
-        //     Return format:
-        //     {
-        //       "summaries_and_analyses": [
-        //         {
-        //           "id": INT,
-        //           "analysis": "TEXT",
-        //           "summary": "TEXT"
-        //         }
-        //       ]
-        //     }
-        //
-        //     The id must exactly match the original article id.
-        //     Use the function call to retrieve the original article of each candidate.
-        // `},
         { role: "user", content: `
             For each final candidate, create two fields: "summary" and "analysis".
 
@@ -1120,6 +1121,8 @@ async function runCreateConversation(candidates) {
     });
     const responseMessage = response.choices[0].message;
 
+    let requestedArticleIds = [];
+
     // Step 2: check if the model wanted to call a function
     const toolCalls = responseMessage.tool_calls;
     if (responseMessage.tool_calls) {
@@ -1135,6 +1138,8 @@ async function runCreateConversation(candidates) {
             const functionToCall = availableFunctions[functionName];
             const functionArgs = JSON.parse(toolCall.function.arguments);
             console.log("runCreateConversation functionArgs", functionArgs);
+            requestedArticleIds = functionArgs.indexList;
+
             const functionResponse = await functionToCall(
                 functionArgs.indexList,
             );
@@ -1146,37 +1151,50 @@ async function runCreateConversation(candidates) {
             }); //extend the conversation with function response
         }
 
-        const secondResponse = await openai.chat.completions.create({
-            model: GPT_MODEL,
-            // model: "gpt-5",
-            messages: messages,
-            response_format: {
-                type: "json_schema",
-                json_schema: {
-                    name: "Analysis",
-                    schema: {
-                        type: "object",
-                        properties: {
-                            summaries_and_analyses : {
-                                type: "array",
-                                items: {
-                                    type: "object",
-                                    properties: {
-                                        id : { type: "number"},
-                                        analysis: { type: "string"},
-                                        summary: {type: "string"}
-                                    },
-                                    required: ["id", "analysis", "summary"],
-                                    additionalProperties: false
+        let secondResponse;
+
+        try {
+            secondResponse = await openai.chat.completions.create({
+                model: GPT_MODEL,
+                messages: messages,
+                response_format: {
+                    type: "json_schema",
+                    json_schema: {
+                        name: "Analysis",
+                        schema: {
+                            type: "object",
+                            properties: {
+                                summaries_and_analyses: {
+                                    type: "array",
+                                    items: {
+                                        type: "object",
+                                        properties: {
+                                            id: { type: "number" },
+                                            analysis: { type: "string" },
+                                            summary: { type: "string" }
+                                        },
+                                        required: ["id", "analysis", "summary"],
+                                        additionalProperties: false
+                                    }
                                 }
-                            }
-                        },
-                        required: ["summaries_and_analyses"],
-                        additionalProperties: false
+                            },
+                            required: ["summaries_and_analyses"],
+                            additionalProperties: false
+                        }
                     }
                 }
-            },
-        });
+            });
+        } catch (error) {
+            await logInvalidPromptArticles({
+                error,
+                stage: 'runCreateConversation.secondResponse',
+                articleIds: requestedArticleIds.length
+                    ? requestedArticleIds
+                    : candidates.map(candidate => candidate.id)
+            });
+
+            throw error;
+        }
         // console.log("secondResponse: ", secondResponse.choices);
         return secondResponse.choices;
 
@@ -1392,6 +1410,12 @@ async function performArticleAnalysis() {
         console.log("step 1: select final candidates");
         const candidates = await makeCandidates();
         console.log("candidates: ", candidates);
+        if (!candidates || candidates.length === 0) {
+            console.warn(
+                'No candidates were created. Skipping article analysis.'
+            );
+            return 'Skipped because no candidates were created';
+        }
 
         console.log("step 2: analyze final candidates");
         // Then, pass these indexes to runCreateConveration
