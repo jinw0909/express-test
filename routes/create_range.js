@@ -6,7 +6,7 @@ const openai = new OpenAi({
     apiKey: process.env.API_KEY
 });
 
-const { Sequelize, Op, literal } = require("sequelize");
+const { Sequelize, Op} = require("sequelize");
 const AWS = require("aws-sdk");
 const { Blockmedia, Viewpoint, Analysis, Candidate, Translation } = require('../models');
 
@@ -45,55 +45,39 @@ function validatePeriod(period) {
         throw new Error("period must be 'AM' or 'PM'");
     }
 }
-
 function buildSessionInfo(targetDate, period) {
     validateTargetDate(targetDate);
     validatePeriod(period);
 
     const [year, month, day] = targetDate.split('-').map(Number);
 
-    const viewpointId = `${year}${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}_${period}`;
+    const viewpointId =
+        `${year}${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}_${period}`;
 
-    // --- KST 기준 전날 계산 (UTC 혼용 없음)
-    function getPrevDateStr(y, m, d) {
-        const date = new Date(Date.UTC(y, m - 1, d)); // UTC 기준 안전 생성
-        date.setUTCDate(date.getUTCDate() - 1);
+    // 실제 create.js cron 실행 시각
+    // AM: KST 08:30
+    // PM: KST 20:30
+    const sessionTime = period === 'AM'
+        ? '08:30:00'
+        : '20:30:00';
 
-        const py = date.getUTCFullYear();
-        const pm = String(date.getUTCMonth() + 1).padStart(2, '0');
-        const pd = String(date.getUTCDate()).padStart(2, '0');
+    // +09:00을 명시하여 KST 시각을 정확한 UTC instant로 변환
+    const fixedCreatedAt = new Date(
+        `${targetDate}T${sessionTime}+09:00`
+    );
 
-        return `${py}-${pm}-${pd}`;
-    }
+    // create.js와 동일하게 실행 시각 기준 최근 12시간
+    const endAt = fixedCreatedAt;
 
-    const prevDateStr = getPrevDateStr(year, month, day);
-
-    let startAtKst;
-    let endAtKst;
-    let fixedCreatedAt;
-
-    if (period === 'AM') {
-        // 전날 21:00 ~ 당일 08:59:59
-        startAtKst = `${prevDateStr} 21:00:00`;
-        endAtKst = `${targetDate} 08:59:59`;
-
-        // 👉 KST 08:30 기준 → UTC로 변환 (전날 23:30 UTC)
-        fixedCreatedAt = new Date(Date.UTC(year, month - 1, day - 1, 23, 30, 0));
-
-    } else {
-        // 당일 09:00 ~ 당일 20:59:59
-        startAtKst = `${targetDate} 09:00:00`;
-        endAtKst = `${targetDate} 20:59:59`;
-
-        // 👉 KST 20:30 기준 → UTC 11:30
-        fixedCreatedAt = new Date(Date.UTC(year, month - 1, day, 11, 30, 0));
-    }
+    const startAt = new Date(
+        endAt.getTime() - 12 * 60 * 60 * 1000
+    );
 
     return {
         targetDate,
         period,
-        startAtKst,
-        endAtKst,
+        startAt,
+        endAt,
         fixedCreatedAt,
         viewpointId
     };
@@ -123,24 +107,18 @@ async function getCoinPriceDay() {
 
 async function getArticlesBySession(targetDate, period) {
     try {
-        const { startAtKst, endAtKst } = buildSessionInfo(targetDate, period);
+        const { startAt, endAt } = buildSessionInfo(targetDate, period);
 
         console.log(`[getArticlesBySession] ${targetDate}_${period}`);
-        console.log("startAtKst:", startAtKst);
-        console.log("endAtKst:", endAtKst);
+        console.log("startAt UTC:", startAt.toISOString());
+        console.log("endAt UTC:", endAt.toISOString());
 
         const articleIds = await Blockmedia.findAll({
-            // where: {
-            //     date: {
-            //         [Op.gte]: startAtKst,
-            //         [Op.lte]: endAtKst
-            //     }
-            // },
             where: {
-                [Op.and]: [
-                    literal(`date >= '${startAtKst}'`),
-                    literal(`date <= '${endAtKst}'`)
-                ]
+                date: {
+                    [Op.gte]: startAt,
+                    [Op.lt]: endAt
+                }
             },
             attributes: ['id'],
             order: [['id', 'DESC']],
