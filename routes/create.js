@@ -191,7 +191,8 @@ async function getRecentAndUpdate() {
             if (blockmediaEntry) {
 
                 console.log(`starting title translation for article #${index + 1}, DB id: ${blockmediaEntry.id}`);
-                const title = await translateText(blockmediaEntry.title, 'English');
+                // const title = await translateText(blockmediaEntry.title, 'English');
+                const title = await translateEnglishTitle(blockmediaEntry.title, blockmediaEntry.content);
                 const content = await translateText(blockmediaEntry.content, 'English');
                 const title_kr = await translateText(blockmediaEntry.title, 'Korean');
                 const content_kr = await translateText(blockmediaEntry.content, 'Korean');
@@ -240,6 +241,50 @@ async function getRecentAndUpdate() {
         console.error("Error fetching and updating recent analysis:", error);
         throw error;
     }
+}
+
+async function translateEnglishTitle(title, articleContent) {
+    const messages = [
+        {
+            role: "system",
+            content: `
+You are a professional English news headline translator specializing in
+finance, cryptocurrency, stocks, economics, and politics.
+
+Translate the provided Korean article title into natural English.
+
+The article context is provided only to help identify proper nouns such as
+people, companies, organizations, and places.
+
+Important:
+- Use the official English spelling of identifiable people, companies,
+  organizations, and places.
+- Do not guess an English spelling only from Korean pronunciation when the
+  identity can be determined from the article context.
+- For example, "케빈 워시" is "Kevin Warsh", not "Kevin Wash".
+- Translate only the title.
+- Do not summarize or translate the article context.
+- Return only the translated English title without explanations.
+            `.trim()
+        },
+        {
+            role: "user",
+            content: `
+Title:
+${title}
+
+Article context:
+${articleContent?.slice(0, 3000) || ''}
+            `.trim()
+        }
+    ];
+
+    const response = await openai.chat.completions.create({
+        model: GPT_MODEL,
+        messages: messages
+    });
+
+    return response.choices[0].message.content;
 }
 async function translateText(content, lang) {
     let messages = [
