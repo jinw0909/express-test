@@ -8,8 +8,8 @@ const plainDb = require('../plainConnection');
 
 // Configure AWS S3
 const s3 = new AWS.S3({
-    accessKeyId: process.env.S3_KEY,
-    secretAccessKey: process.env.S3_PASSWORD,
+    // accessKeyId: process.env.S3_KEY,
+    // secretAccessKey: process.env.S3_PASSWORD,
     region: process.env.S3_REGION
 });
 
