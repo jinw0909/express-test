@@ -74,6 +74,19 @@
         <span id="fetchPriceScore" class="system">fetch price/score</span>
         <span id="fetchDominance" class="system">fetch dominance</span>
     </div>
+    <div class="send-request-manual">
+        <h4>Recover Missing Briefing</h4>
+
+        <input type="date" id="manualDate">
+
+        <select id="manualPeriod">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+        </select>
+
+        <button id="manualBriefingButton">Generate</button>
+        <div id="manualBriefingResult"></div>
+    </div>
     <div class="vp-list">
         <h4>Briefing List</h4>
         <div class="result-div-vplist">
@@ -81,6 +94,11 @@
             <div id="vpContainer">
 
             </div>
+        </div>
+        <div class="briefing-jobs">
+            <h4>Briefing Job History</h4>
+            <button id="loadBriefingJobs">Load Jobs</button>
+            <div id="briefingJobsResult"></div>
         </div>
     </div>
 </div>
@@ -182,6 +200,103 @@
                 console.error("failure: ", err);
             })
     })
+
+    document.querySelector('#loadBriefingJobs')
+        .addEventListener('click', async function () {
+            const container = document.querySelector('#briefingJobsResult');
+
+            container.textContent = 'Loading...';
+
+            try {
+                const response = await axios.get('/briefing-jobs?limit=20');
+                const jobs = response.data.jobs;
+
+                container.replaceChildren();
+
+                if (jobs.length === 0) {
+                    container.textContent = 'No briefing jobs found.';
+                    return;
+                }
+
+                jobs.forEach(job => {
+                    const itemDiv = document.createElement('div');
+
+                    const title = document.createElement('h4');
+                    title.textContent = `${job.id} - ${job.status}`;
+
+                    const details = document.createElement('p');
+                    details.textContent =
+                        `Attempts: ${job.attemptCount} | ` +
+                        `Started: ${formatKST(job.startedAt)} | ` +
+                        `Completed: ${formatKST(job.completedAt)}`;
+
+                    const error = document.createElement('p');
+
+                    if (job.lastErrorCode) {
+                        error.style.color = 'red';
+                        error.textContent =
+                            `Error: ${job.lastErrorCode}`;
+                    }
+
+                    const retry = document.createElement('p');
+
+                    if (job.nextRetryAt) {
+                        retry.textContent =
+                            `Next retry: ${formatKST(job.nextRetryAt)}`;
+                    }
+
+                    itemDiv.appendChild(title);
+                    itemDiv.appendChild(details);
+                    itemDiv.appendChild(error);
+                    itemDiv.appendChild(retry);
+
+                    container.appendChild(itemDiv);
+                });
+
+            } catch (err) {
+                console.error('Failed to load briefing jobs:', err);
+                container.textContent = 'Failed to load briefing jobs.';
+            }
+        });
+
+
+    document.querySelector('#manualBriefingButton')
+        .addEventListener('click', async () => {
+            const date = document.querySelector('#manualDate').value;
+            const period = document.querySelector('#manualPeriod').value;
+            const output = document.querySelector('#manualBriefingResult');
+
+            if (!date) {
+                output.textContent = '날짜를 선택하세요.';
+                return;
+            }
+
+            output.textContent = 'Generating...';
+
+            try {
+                const response = await axios.post(
+                    '/briefing-manual/complete',
+                    { date, period }
+                );
+
+                output.textContent = JSON.stringify(response.data);
+            } catch (error) {
+                output.textContent =
+                    error.response?.data?.error ||
+                    error.response?.data?.message ||
+                    'Generation failed';
+            }
+        });
+
+
+    function formatKST(value) {
+        if (!value) return '-';
+
+        return new Date(value).toLocaleString('ko-KR', {
+            timeZone: 'Asia/Seoul',
+            hour12: false
+        });
+    }
 
 
 </script>

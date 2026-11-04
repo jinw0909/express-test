@@ -6,6 +6,7 @@ const { performArticleAnalysis } = require('./routes/create');
 const { performArticleCrawl } = require('./routes/crawl');
 const { performDominanceAnalysis, performDominanceCollect } = require('./routes/dominance');
 const { captureDolphin } = require('./routes/capture');
+const {startScheduledBriefing, retryFailedBriefings} = require("./services/briefingJobService");
 
 const startCronJobs = () => {
 
@@ -51,10 +52,23 @@ const startCronJobs = () => {
     // 8:30 AM KST becomes 23:30 UTC (previous day)
     // 8:30 PM KST becomes 11:30 UTC
     cron.schedule('30 23,11 * * *', async () => {
-        console.log(`Running performArticleAnalysis at ${new Date().toLocaleString()}`);
-        await performArticleAnalysis(); // Call your function
+        try {
+            await startScheduledBriefing();
+        } catch (error) {
+            console.error('[Briefing] Scheduled job failed:', error);
+        }
     }, {
         timezone: "UTC"
+    });
+
+    cron.schedule('*/5 * * * *', async () => {
+        try {
+            await retryFailedBriefings();
+        } catch (error) {
+            console.error('[Briefing] Retry scheduler failed:', error);
+        }
+    }, {
+        timezone: 'UTC'
     });
 
     // Task to run at 13:25 KST, which is 04:25 UTC

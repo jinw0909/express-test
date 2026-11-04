@@ -17,6 +17,7 @@ db.Candidate = require('./candidate');
 db.Translation = require('./translation');
 db.Dominance = require('./dominance');
 db.DominanceAnalysis = require('./dominanceAnalysis');
+db.BriefingJob = require('./briefingJob');
 
 // Define the relationships
 db.Viewpoint.hasMany(db.Analysis, { foreignKey: 'ref' });

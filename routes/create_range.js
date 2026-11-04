@@ -100,8 +100,8 @@ async function getCoinPriceDay() {
         const data = await response.json();
         return JSON.stringify(data, null, 2);
     } catch (err) {
-        console.error("Failed to fetch Bitcoin prices (24hr) : ", err);
-        return { error: err.message };
+        console.error('Error fetching coin price:', err);
+        throw err;
     }
 }
 

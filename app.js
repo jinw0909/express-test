@@ -26,18 +26,20 @@ var captureRouter = require('./routes/capture').router;
 var deleteRouter = require('./routes/delete');
 var screenshotRouter = require('./routes/screenshot').router;
 var createRangeRouter = require('./routes/create_range').router;
+const briefingJobsRouter = require('./routes/briefingJobs');
+const briefingManualRouter = require('./routes/briefingManual');
 
-const start_cron = process.env.START_CRON || false
-if (start_cron) {
-    startCronJobs();
-    console.log("cron jobs enabled");
-}
-console.log('env port: ', process.env.PORT);
+
 
 (async () => {
   try {
     await sequelize.sync();
     console.log('Database synchronized successfully');
+    if (process.env.START_CRON === 'true') {
+      startCronJobs();
+      console.log("cron jobs enabled");
+    }
+    console.log('env port: ', process.env.PORT);
   } catch (error) {
     console.error('Error synchronizing database:', error);
   }
@@ -65,6 +67,8 @@ app.use('/chart', chartRouter);
 app.use('/delete', deleteRouter);
 app.use('/screenshot', screenshotRouter);
 app.use('/create-range', createRangeRouter);
+app.use('/briefing-jobs', briefingJobsRouter);
+app.use('/briefing-manual', briefingManualRouter);
 
 app.post('/', (req, res) => {
   const payload = req.body;

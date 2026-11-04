@@ -12,6 +12,7 @@ const { Sequelize } = require("sequelize");
 const { Op } = require('sequelize');
 const AWS = require("aws-sdk");
 const { Blockmedia, Viewpoint, Analysis, Candidate, Translation } = require('../models');
+const {withOpenAIRetry} = require("../services/openaiRetry");
 
 AWS.config.update({
     region: process.env.S3_REGION,
@@ -47,35 +48,43 @@ async function getCoinPriceDay() {
         return { error: err.message }
     }
 }
-async function getArticlesDay() {
+
+async function getArticlesDay(referenceTime = new Date()) {
     try {
-        //Calculate the datetime 12 hours ago
-        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+        const endTime = new Date(referenceTime);
+        const startTime = new Date(
+            endTime.getTime() - 12 * 60 * 60 * 1000
+        );
+
+        console.log('[DEBUG] referenceTime:', referenceTime);
+        console.log('[DEBUG] startTime UTC:', startTime.toISOString());
+        console.log('[DEBUG] endTime UTC:', endTime.toISOString());
+
         const articleIds = await Blockmedia.findAll({
             where: {
                 date: {
-                    [Sequelize.Op.gte]: twelveHoursAgo
+                    [Op.gte]: startTime,
+                    [Op.lt]: endTime
                 }
             },
             attributes: ['id'],
             order: [['id', 'DESC']],
             raw: true
         });
-        if (!articleIds || !articleIds.length) {
-            console.log('No articles published in the last 12 hours');
-            return null;
+
+        if (articleIds.length === 0) {
+            console.log('No articles found in briefing window');
+            return [];
         }
 
-        // const articleIdList = articleIds.map(article => article.get({plain: true}));
-        // console.log("Article ids within 12 hours: ", articleIdList);
-        // return articleIdList;
-        console.log("article ids within 12 hours: ", articleIds);
         return articleIds;
-    } catch(err) {
-        console.error(err);
-        return { error: err.message }
+
+    } catch (error) {
+        console.error('Error in getArticlesDay:', error);
+        throw error;
     }
 }
+
 async function checkDatabaseTimezone() {
     try {
         const result = await Blockmedia.findOne({
@@ -158,13 +167,22 @@ async function getArticle(index) {
         throw err;
     }
 }
-async function getRecentAndUpdate() {
+async function getRecentAndUpdate(articleIds) {
     try {
         const recentAnalyses = await Analysis.findAll({
-            order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
-            limit: 4,
+            where: {
+                id: {
+                    [Op.in]: articleIds
+                }
+            },
             raw: true
         });
+
+        if (recentAnalyses.length !== articleIds.length) {
+            throw new Error(
+                `Expected ${articleIds.length} analyses, got ${recentAnalyses.length}`
+            );
+        }
 
         // console.log("recent analysis: ", recentAnalyses);
 
@@ -250,7 +268,7 @@ async function getRecentAndUpdate() {
                     summary_cn: analysisCn,
 
                     updatedAt: new Date(),
-                    createdAt: new Date(),
+                    createdAt: analysis.createdAt,
 
                     mp3: "",
                     mp3_jp: "",
@@ -268,8 +286,11 @@ async function getRecentAndUpdate() {
 
         // Optionally, return the updated analyses
         const recentTranslation = await Translation.findAll({
-            order: [['createdAt', 'DESC']], // Optionally re-fetch to send updated data back
-            limit: 4,
+            where: {
+                id: {
+                    [Op.in]: articleIds
+                }
+            },
             raw: true
         });
 
@@ -317,10 +338,12 @@ ${articleContent?.slice(0, 3000) || ''}
         }
     ];
 
-    const response = await openai.chat.completions.create({
-        model: GPT_MODEL,
-        messages: messages
-    });
+    const response = await withOpenAIRetry(() =>
+        openai.chat.completions.create({
+            model: GPT_MODEL,
+            messages: messages
+        })
+    )
 
     return response.choices[0].message.content;
 }
@@ -335,10 +358,12 @@ async function translateText(content, lang) {
         { role: "user", content: `Please translate the following text into ${lang}. I only need the translated output, without any additional comments or indicators. When translating into Korean or Japanese, be respectful to the reader through the overall tone, but do not apply honorifics to the people, organizations, places, or entities mentioned in the article. Text: ${content}`},
     ];
 
-    const response  = await openai.chat.completions.create({
-        model: GPT_MODEL,
-        messages: messages
-    })
+    const response  = await withOpenAIRetry(() =>
+        openai.chat.completions.create({
+            model: GPT_MODEL,
+            messages: messages
+        })
+    );
 
     const responseMessage = response.choices[0].message.content;
     console.log("response message: ", responseMessage);
@@ -475,7 +500,7 @@ async function logInvalidPromptArticles({
         console.error('Failed to log invalid-prompt articles:', logError);
     }
 }
-async function runViewpointConversation() {
+async function runViewpointConversation(articleIds) {
     const messages = [
         { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. You are also capable of deriving the bitcoin market trend by analyzing the bitcoin price movement within a certain period, and capable of deriving the relationship between the trend and real-world events" },
         { role: "user", content: "From the analysis conducted on the Blockmedia articles, provide your final viewpoint derived from the most recent four analyses regarding the Bitcoin and cryptocurrency markets. Also, relate your viewpoint to the price fluctuations in the Bitcoin market over the past 7 days and within the last 24 hours. Additionally, based on your final viewpoint, if possible, provide a rough estimate of the future changes in the price of Bitcoin. Don't mention 'Blockmedia' in your viewpoint response and don't mention the analysis' id or title too. I Also want you to return the id's of four analysis you used to create the viewpoint as refs. Please return the result in JSON format as {'viewpoint': 'text', 'refs': [number, number, number, number, number]}."},
@@ -503,37 +528,39 @@ async function runViewpointConversation() {
             }
         }
     ]
-    const response = await openai.chat.completions.create({
-        model: GPT_MODEL,
-        messages: messages,
-        tools: tools,
-        tool_choice : "auto", //auto is default, but we'll be explicit
-        response_format: {
-            type: "json_schema",
-            json_schema: {
-                name: "Viewpoint",
-                strict: true,
-                schema: {
-                    type: "object",
-                    properties: {
-                        viewpoint: { type: "string" },
-                        refs: {
-                            type : 'array',
-                            items: { type: "number", description: "the id of article used to created the viewpoint." }
-                        }
-                    },
-                    required: ['viewpoint', 'refs'],
-                    additionalProperties: false
+    const response = await withOpenAIRetry(() =>
+        openai.chat.completions.create({
+            model: GPT_MODEL,
+            messages: messages,
+            tools: tools,
+            tool_choice : "auto", //auto is default, but we'll be explicit
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "Viewpoint",
+                    strict: true,
+                    schema: {
+                        type: "object",
+                        properties: {
+                            viewpoint: { type: "string" },
+                            refs: {
+                                type : 'array',
+                                items: { type: "number", description: "the id of article used to created the viewpoint." }
+                            }
+                        },
+                        required: ['viewpoint', 'refs'],
+                        additionalProperties: false
+                    }
                 }
-            }
-        },
-        parallel_tool_calls: true
-    });
+            },
+            parallel_tool_calls: true
+        })
+    );
     const responseMessage = response.choices[0].message;
     const toolCalls = responseMessage.tool_calls;
     if (responseMessage.tool_calls) {
         const availableFunctions = {
-            get_recent_analyses: getRecentAnalyses,
+            get_recent_analyses: () => getRecentAnalyses(articleIds),
             get_coinprice_week : getCoinPriceWeek,
             get_coinprice_day: getCoinPriceDay
         };
@@ -556,86 +583,93 @@ async function runViewpointConversation() {
             })
         }
 
-        const secondResponse = await openai.chat.completions.create({
-            model: GPT_MODEL,
-            // model: "gpt-5",
-            messages: messages,
-            response_format: {
-                type: "json_schema",
-                json_schema: {
-                    name: "Viewpoint",
-                    strict: true,
-                    schema: {
-                        type: "object",
-                        properties: {
-                            viewpoint: { type: "string" },
-                            refs: {
-                                type : 'array',
-                                items: { type: "number", description: "the id of article used to created the viewpoint." }
-                            }
-                        },
-                        required: ['viewpoint', 'refs'],
-                        additionalProperties: false
+        const secondResponse = await withOpenAIRetry(() =>
+            openai.chat.completions.create({
+                model: GPT_MODEL,
+                // model: "gpt-5",
+                messages: messages,
+                response_format: {
+                    type: "json_schema",
+                    json_schema: {
+                        name: "Viewpoint",
+                        strict: true,
+                        schema: {
+                            type: "object",
+                            properties: {
+                                viewpoint: { type: "string" },
+                                refs: {
+                                    type : 'array',
+                                    items: { type: "number", description: "the id of article used to created the viewpoint." }
+                                }
+                            },
+                            required: ['viewpoint', 'refs'],
+                            additionalProperties: false
+                        }
                     }
-                }
-            },
-        });
+                },
+            })
+        );
         // console.log(secondResponse.choices);
         return secondResponse.choices;
     }
 }
-async function getRecentAnalyses() {
-    try {
-        const recentAnalyses = await Analysis.findAll({
-            order: [['createdAt', 'DESC']], // Order by 'createdAt' in descending order
-            limit: 4,
-        });
-        return JSON.stringify(recentAnalyses, null, 2);
-    } catch(error) {
-        console.error(error);
-    }
+
+async function getRecentAnalyses(articleIds) {
+    const analyses = await Analysis.findAll({
+        where: {
+            id: {
+                [Op.in]: articleIds
+            }
+        },
+        raw: true
+    });
+
+    return JSON.stringify(analyses, null, 2);
 }
-async function getViewpointAndUpdate() {
+
+async function getViewpointAndUpdate(briefingId) {
     try {
-        const viewpoint = await getRecentViewpoint();
+        const viewpoint = await Viewpoint.findByPk(briefingId);
 
-        if (viewpoint) {
-
-            const viewpointJp = await translateText(viewpoint.viewpoint, 'Japanese');
-            const viewpointKr = await translateText(viewpoint.viewpoint, 'Korean');
-            const viewpointVn = await translateText(viewpoint.viewpoint, 'Vietnamese');
-            const viewpointCn = await translateText(viewpoint.viewpoint, 'Chinese');
-
-            // const mp3En = await generateTTS(viewpoint.viewpoint, 'English', viewpoint.id);
-            // const mp3Jp = await generateTTS(viewpointJp, 'Japanese', viewpoint.id);
-            // const mp3Kr = await generateTTS(viewpointKr, 'Korean', viewpoint.id);
-            // const mp3Vn = await generateTTS(viewpointVn, 'Vietnamese', viewpoint.id);
-            // const mp3Cn = await generateTTS(viewpointCn, 'Chinese', viewpoint.id);
-
-            // Update the Analysis entry with values from the Blockmedia entry
-            await viewpoint.update({
-                viewpoint_jp: viewpointJp,
-                viewpoint_kr: viewpointKr,
-                viewpoint_vn: viewpointVn,
-                viewpoint_cn: viewpointCn,
-                updatedAt: new Date(),
-                mp3: "", // Path or URL to the English MP3 file
-                mp3_jp: "", // Path or URL to the Japanese MP3 file
-                mp3_kr: "", // Path or URL to the Korean MP3 file
-                mp3_vn: "", // Path or URL to the Vietnamese MP3 file
-                mp3_cn: "", // Path or URL to the Chinese MP3 file
-                // mp3: mp3En, // Path or URL to the English MP3 file
-                // mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
-                // mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
-                // mp3_vn: mp3Vn, // Path or URL to the Vietnamese MP3 file
-                // mp3_cn: mp3Cn // Path or URL to the Chinese MP3 file
-            });
+        if (!viewpoint) {
+            throw new Error(`Viewpoint not found: ${briefingId}`);
         }
 
-        // Optionally, return the updated analyses
-        const updatedViewpoint = await Viewpoint.findOne({
-            order: [['createdAt', 'DESC']], // Optionally re-fetch to send updated data back
+
+
+        const viewpointJp = await translateText(viewpoint.viewpoint, 'Japanese');
+        const viewpointKr = await translateText(viewpoint.viewpoint, 'Korean');
+        const viewpointVn = await translateText(viewpoint.viewpoint, 'Vietnamese');
+        const viewpointCn = await translateText(viewpoint.viewpoint, 'Chinese');
+
+        // const mp3En = await generateTTS(viewpoint.viewpoint, 'English', viewpoint.id);
+        // const mp3Jp = await generateTTS(viewpointJp, 'Japanese', viewpoint.id);
+        // const mp3Kr = await generateTTS(viewpointKr, 'Korean', viewpoint.id);
+        // const mp3Vn = await generateTTS(viewpointVn, 'Vietnamese', viewpoint.id);
+        // const mp3Cn = await generateTTS(viewpointCn, 'Chinese', viewpoint.id);
+
+        // Update the Analysis entry with values from the Blockmedia entry
+        await viewpoint.update({
+            viewpoint_jp: viewpointJp,
+            viewpoint_kr: viewpointKr,
+            viewpoint_vn: viewpointVn,
+            viewpoint_cn: viewpointCn,
+            updatedAt: new Date(),
+            mp3: "", // Path or URL to the English MP3 file
+            mp3_jp: "", // Path or URL to the Japanese MP3 file
+            mp3_kr: "", // Path or URL to the Korean MP3 file
+            mp3_vn: "", // Path or URL to the Vietnamese MP3 file
+            mp3_cn: "", // Path or URL to the Chinese MP3 file
+            // mp3: mp3En, // Path or URL to the English MP3 file
+            // mp3_jp: mp3Jp, // Path or URL to the Japanese MP3 file
+            // mp3_kr: mp3Kr, // Path or URL to the Korean MP3 file
+            // mp3_vn: mp3Vn, // Path or URL to the Vietnamese MP3 file
+            // mp3_cn: mp3Cn // Path or URL to the Chinese MP3 file
         });
+
+
+        // Optionally, return the updated analyses
+        const updatedViewpoint = await Viewpoint.findByPk(briefingId);
 
         return updatedViewpoint;
 
@@ -655,35 +689,44 @@ async function getRecentViewpoint() {
         console.error(error);
     }
 }
-async function makeCandidates() {
-    const candidates = await createCandidates();
-    console.log("candidates to recurse on: ", candidates);
+
+async function makeCandidates(referenceTime = new Date()) {
+    const candidates = await createCandidates(referenceTime);
+
+    console.log("candidates to recurse on:", candidates);
+
     const finals = await recurseFinals(candidates);
-    console.log("final candidates: ", finals);
+
+    console.log("final candidates:", finals);
+
+    if (!Array.isArray(finals) || finals.length !== 4) {
+        throw new Error(
+            `Expected 4 final candidates, got ${finals?.length ?? 0}`
+        );
+    }
+
+    const ids = finals.map(candidate => Number(candidate.id));
+
+    if (new Set(ids).size !== 4) {
+        throw new Error('Duplicate final candidate IDs');
+    }
 
     for (const candidate of finals) {
-        await Candidate.upsert({
+        // 기존 Candidate 테이블에도 기록은 유지
+        await Candidate.create({
             articleId: candidate.id,
             summary: candidate.summary,
-            reason: candidate.reason,
+            reason: candidate.reason
         });
     }
 
-    const recent = await Candidate.findAll({
-        order: [['id', 'DESC']],
-        limit: 4,
-        raw: true
-    });
-
-    return recent.map(candidate => ({
-        id: candidate.articleId,
-        summary: candidate.summary,
-        reason: candidate.reason
-    }));
+    // 다른 작업의 최근 후보가 아닌 현재 선정 결과 반환
+    return finals;
 }
-async function createCandidates() {
+
+async function createCandidates(referenceTime = new Date()) {
     try {
-        const articleIds = await getArticlesDay();
+        const articleIds = await getArticlesDay(referenceTime);
         if (!articleIds || articleIds.length === 0) {
             console.log("No articles found or articleIds is null.");
             return []; // Return an empty array or handle the scenario as per your logic
@@ -702,8 +745,7 @@ async function createCandidates() {
         return candidates;
     } catch (error) {
         console.error("Error in createCandidates: ", error);
-        // Return an empty array or continue based on your requirement
-        return []; // Optionally return an empty array to prevent system crashes
+        throw error;
     }
 }
 async function runCandidateConversation(articleIds) {
@@ -744,41 +786,43 @@ async function runCandidateConversation(articleIds) {
     //     tool_choice: "auto",
     //     response_format: { type: "json_object" }
     // });
-    const response = await openai.chat.completions.create({
-        model: GPT_MODEL,
-        // model: "gpt-5",
-        messages: messages,
-        tools: tools,
-        tool_choice: {type: "function", function: {name: "get_articles_with_ids"}},
-        response_format: {
-            type: "json_schema",
-            json_schema: {
-                name: "Candidates",
-                strict: true,
-                schema: {
-                    type: "object",
-                    properties: {
-                        candidates: {
-                            type: "array",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    id: { type: "number"},
-                                    summary: { type: "string" },
-                                    reason: { type: "string" }
-                                },
-                                required: ["id", "summary", "reason"],
-                                additionalProperties: false
+    const response = await withOpenAIRetry(() =>
+        openai.chat.completions.create({
+            model: GPT_MODEL,
+            // model: "gpt-5",
+            messages: messages,
+            tools: tools,
+            tool_choice: {type: "function", function: {name: "get_articles_with_ids"}},
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "Candidates",
+                    strict: true,
+                    schema: {
+                        type: "object",
+                        properties: {
+                            candidates: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        id: { type: "number"},
+                                        summary: { type: "string" },
+                                        reason: { type: "string" }
+                                    },
+                                    required: ["id", "summary", "reason"],
+                                    additionalProperties: false
+                                }
                             }
-                        }
-                    },
-                    required: ["candidates"],
-                    additionalProperties: false
+                        },
+                        required: ["candidates"],
+                        additionalProperties: false
+                    }
                 }
-            }
-        },
-        parallel_tool_calls: false
-    });
+            },
+            parallel_tool_calls: false
+        })
+    );
 
     let requestedArticleIds = [];
 
@@ -812,37 +856,39 @@ async function runCandidateConversation(articleIds) {
         let secondResponse;
 
         try {
-            secondResponse = await openai.chat.completions.create({
-                model: GPT_MODEL,
-                messages: messages,
-                response_format: {
-                    type: "json_schema",
-                    json_schema: {
-                        name: "Candidates",
-                        strict: true,
-                        schema: {
-                            type: "object",
-                            properties: {
-                                candidates: {
-                                    type: "array",
-                                    items: {
-                                        type: "object",
-                                        properties: {
-                                            id: { type: "number" },
-                                            summary: { type: "string" },
-                                            reason: { type: "string" }
-                                        },
-                                        required: ["id", "summary", "reason"],
-                                        additionalProperties: false
+            secondResponse = await withOpenAIRetry(() =>
+                openai.chat.completions.create({
+                    model: GPT_MODEL,
+                    messages: messages,
+                    response_format: {
+                        type: "json_schema",
+                        json_schema: {
+                            name: "Candidates",
+                            strict: true,
+                            schema: {
+                                type: "object",
+                                properties: {
+                                    candidates: {
+                                        type: "array",
+                                        items: {
+                                            type: "object",
+                                            properties: {
+                                                id: { type: "number" },
+                                                summary: { type: "string" },
+                                                reason: { type: "string" }
+                                            },
+                                            required: ["id", "summary", "reason"],
+                                            additionalProperties: false
+                                        }
                                     }
-                                }
-                            },
-                            required: ["candidates"],
-                            additionalProperties: false
+                                },
+                                required: ["candidates"],
+                                additionalProperties: false
+                            }
                         }
                     }
-                }
-            });
+                })
+            );
         } catch (error) {
             await logInvalidPromptArticles({
                 error,
@@ -897,72 +943,13 @@ async function runVerifyConversation(candidates) {
         }
     ]
 
-    const response = await openai.chat.completions.create({
-        model: GPT_MODEL,
-        // model: "gpt-5",
-        messages: messages,
-        tools: tools,
-        tool_choice: {type: "function", function: {name: "get_articles_with_ids"}},
-        response_format: {
-            type: "json_schema",
-            json_schema: {
-                name: "Candidates",
-                strict: true,
-                schema: {
-                    type: "object",
-                    properties: {
-                        candidates: {
-                            type: "array",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    id: { type: "number"},
-                                    summary: { type: "string" },
-                                    reason: { type: "string" }
-                                },
-                                required: ["id", "summary", "reason"],
-                                additionalProperties: false
-                            }
-                        }
-                    },
-                    required: ["candidates"],
-                    additionalProperties: false
-                }
-            }
-        },
-        parallel_tool_calls: false
-    });
-
-    const responseMessage = response.choices[0].message;
-
-    const toolCalls = responseMessage.tool_calls;
-    if (responseMessage.tool_calls) {
-        const availableFunctions = {
-            get_articles_with_ids : getArticles
-        }
-        messages.push(responseMessage);
-
-        for (const toolCall of toolCalls) {
-            const functionName = toolCall.function.name;
-            console.log("runVerifyConversation functionName: ", functionName);
-            const functionToCall = availableFunctions[functionName];
-            const functionArgs = JSON.parse(toolCall.function.arguments);
-            console.log("runVerifyConversation functionArgs: ", functionArgs);
-            const functionResponse = await functionToCall(
-                functionArgs.indexList,
-            );
-            messages.push({
-                tool_call_id: toolCall.id,
-                role: "tool",
-                name: functionName,
-                content: functionResponse,
-            }); //extend the conversation with function response
-        }
-
-        const secondResponse = await openai.chat.completions.create({
+    const response = await withOpenAIRetry(() =>
+        openai.chat.completions.create({
             model: GPT_MODEL,
             // model: "gpt-5",
             messages: messages,
+            tools: tools,
+            tool_choice: {type: "function", function: {name: "get_articles_with_ids"}},
             response_format: {
                 type: "json_schema",
                 json_schema: {
@@ -990,7 +977,70 @@ async function runVerifyConversation(candidates) {
                     }
                 }
             },
-        });
+            parallel_tool_calls: false
+        })
+    );
+
+    const responseMessage = response.choices[0].message;
+
+    const toolCalls = responseMessage.tool_calls;
+    if (responseMessage.tool_calls) {
+        const availableFunctions = {
+            get_articles_with_ids : getArticles
+        }
+        messages.push(responseMessage);
+
+        for (const toolCall of toolCalls) {
+            const functionName = toolCall.function.name;
+            console.log("runVerifyConversation functionName: ", functionName);
+            const functionToCall = availableFunctions[functionName];
+            const functionArgs = JSON.parse(toolCall.function.arguments);
+            console.log("runVerifyConversation functionArgs: ", functionArgs);
+            const functionResponse = await functionToCall(
+                functionArgs.indexList,
+            );
+            messages.push({
+                tool_call_id: toolCall.id,
+                role: "tool",
+                name: functionName,
+                content: functionResponse,
+            }); //extend the conversation with function response
+        }
+
+        const secondResponse = await withOpenAIRetry(() =>
+            openai.chat.completions.create({
+                model: GPT_MODEL,
+                // model: "gpt-5",
+                messages: messages,
+                response_format: {
+                    type: "json_schema",
+                    json_schema: {
+                        name: "Candidates",
+                        strict: true,
+                        schema: {
+                            type: "object",
+                            properties: {
+                                candidates: {
+                                    type: "array",
+                                    items: {
+                                        type: "object",
+                                        properties: {
+                                            id: { type: "number"},
+                                            summary: { type: "string" },
+                                            reason: { type: "string" }
+                                        },
+                                        required: ["id", "summary", "reason"],
+                                        additionalProperties: false
+                                    }
+                                }
+                            },
+                            required: ["candidates"],
+                            additionalProperties: false
+                        }
+                    }
+                },
+            })
+        );
         const finalResponse= secondResponse.choices[0].message;
         const parsed = JSON.parse(finalResponse.content);
         // console.log("left after verification: ", parsed);
@@ -1009,38 +1059,40 @@ async function runFinalConversation(candidates, limit) {
         { role: "user" ,content: JSON.stringify(candidates)},
         { role: "user", content: `From the provided candidates list , select ${limit} candidates that are the most relevant with the the cryptocurrency market and that are the most helpful in predicting the cryptocurrency market trend. The final ${limit} candidates should not have duplicated or identical content. The given 'reason' is about why this candidate might be important, and the given 'summary' is the summary of the candidate's original content. The given 'id' is the value that points to the original article. Return the final ${limit} candidates in a json format as follows: {'finals' : [{'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, {'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, ...]. Ensure the ID of each element exactly match the ID of the initially provided list` },
     ];
-    const response = await openai.chat.completions.create({
-        model: GPT_MODEL,
-        // model: "gpt-5",
-        messages: messages,
-        response_format: {
-            type: "json_schema",
-            json_schema: {
-                name: "Candidates",
-                strict: true,
-                schema: {
-                    type: "object",
-                    properties: {
-                        finals: {
-                            type: "array",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    id: { type: "number"},
-                                    summary: { type: "string" },
-                                    reason: { type: "string" }
-                                },
-                                required: ["id", "summary", "reason"],
-                                additionalProperties: false
+    const response = await withOpenAIRetry(() =>
+        openai.chat.completions.create({
+            model: GPT_MODEL,
+            // model: "gpt-5",
+            messages: messages,
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "Candidates",
+                    strict: true,
+                    schema: {
+                        type: "object",
+                        properties: {
+                            finals: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        id: { type: "number"},
+                                        summary: { type: "string" },
+                                        reason: { type: "string" }
+                                    },
+                                    required: ["id", "summary", "reason"],
+                                    additionalProperties: false
+                                }
                             }
-                        }
-                    },
-                    required: ["finals"],
-                    additionalProperties: false
+                        },
+                        required: ["finals"],
+                        additionalProperties: false
+                    }
                 }
-            }
-        },
-    });
+            },
+        })
+    );
 
     const responseMessage = response.choices[0].message;
     console.log("responseMessage: ", responseMessage);
@@ -1134,40 +1186,42 @@ async function runCreateConversation(candidates) {
         }
     ]
 
-    const response = await openai.chat.completions.create({
-        model: GPT_MODEL,
-        // model: "gpt-5",
-        messages: messages,
-        tools: tools,
-        tool_choice : { type: "function", function: { name: "get_candidate_articles"}}, //auto is default, but we'll be explicit
-        response_format: {
-            type: "json_schema",
-            json_schema: {
-                name: "Analysis",
-                schema: {
-                    type: "object",
-                    properties: {
-                        summaries_and_analyses : {
-                            type: "array",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    id : { type: "number"},
-                                    analysis: { type: "string"},
-                                    summary: {type: "string"}
-                                },
-                                required: ["id", "analysis", "summary"],
-                                additionalProperties: false
+    const response = await withOpenAIRetry(() =>
+        openai.chat.completions.create({
+            model: GPT_MODEL,
+            // model: "gpt-5",
+            messages: messages,
+            tools: tools,
+            tool_choice : { type: "function", function: { name: "get_candidate_articles"}}, //auto is default, but we'll be explicit
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "Analysis",
+                    schema: {
+                        type: "object",
+                        properties: {
+                            summaries_and_analyses : {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        id : { type: "number"},
+                                        analysis: { type: "string"},
+                                        summary: {type: "string"}
+                                    },
+                                    required: ["id", "analysis", "summary"],
+                                    additionalProperties: false
+                                }
                             }
-                        }
-                    },
-                    required: ["summaries_and_analyses"],
-                    additionalProperties: false
+                        },
+                        required: ["summaries_and_analyses"],
+                        additionalProperties: false
+                    }
                 }
-            }
-        },
-        parallel_tool_calls: false
-    });
+            },
+            parallel_tool_calls: false
+        })
+    );
     const responseMessage = response.choices[0].message;
 
     let requestedArticleIds = [];
@@ -1203,36 +1257,38 @@ async function runCreateConversation(candidates) {
         let secondResponse;
 
         try {
-            secondResponse = await openai.chat.completions.create({
-                model: GPT_MODEL,
-                messages: messages,
-                response_format: {
-                    type: "json_schema",
-                    json_schema: {
-                        name: "Analysis",
-                        schema: {
-                            type: "object",
-                            properties: {
-                                summaries_and_analyses: {
-                                    type: "array",
-                                    items: {
-                                        type: "object",
-                                        properties: {
-                                            id: { type: "number" },
-                                            analysis: { type: "string" },
-                                            summary: { type: "string" }
-                                        },
-                                        required: ["id", "analysis", "summary"],
-                                        additionalProperties: false
+            secondResponse = await withOpenAIRetry(() =>
+                openai.chat.completions.create({
+                    model: GPT_MODEL,
+                    messages: messages,
+                    response_format: {
+                        type: "json_schema",
+                        json_schema: {
+                            name: "Analysis",
+                            schema: {
+                                type: "object",
+                                properties: {
+                                    summaries_and_analyses: {
+                                        type: "array",
+                                        items: {
+                                            type: "object",
+                                            properties: {
+                                                id: { type: "number" },
+                                                analysis: { type: "string" },
+                                                summary: { type: "string" }
+                                            },
+                                            required: ["id", "analysis", "summary"],
+                                            additionalProperties: false
+                                        }
                                     }
-                                }
-                            },
-                            required: ["summaries_and_analyses"],
-                            additionalProperties: false
+                                },
+                                required: ["summaries_and_analyses"],
+                                additionalProperties: false
+                            }
                         }
                     }
-                }
-            });
+                })
+            );
         } catch (error) {
             await logInvalidPromptArticles({
                 error,
@@ -1453,105 +1509,167 @@ async function createViewpointImage() {
         console.error("Error during image generation or upload:", error);
     }
 }
-async function performArticleAnalysis() {
+
+async function performArticleAnalysis({
+                                          briefingId,
+                                          referenceTime,
+                                          savedCandidates = null,
+                                          onCandidatesSelected = async () => {}
+                                      } = {}) {
+    if (!briefingId || !referenceTime) {
+        throw new Error(
+            'briefingId and referenceTime are required'
+        );
+    }
+
     try {
-        // console.log("step 1: candidates: ", candidates);
-        console.log("step 1: select final candidates");
-        const candidates = await makeCandidates();
-        console.log("candidates: ", candidates);
-        if (!candidates || candidates.length === 0) {
-            console.warn(
-                'No candidates were created. Skipping article analysis.'
+        console.log(`[${briefingId}] Step 1: select candidates`);
+
+        const candidates = savedCandidates
+            ?? await makeCandidates(referenceTime);
+
+        if (!Array.isArray(candidates) || candidates.length !== 4) {
+            throw new Error(
+                `Invalid candidate count: ${candidates?.length ?? 0}`
             );
-            return 'Skipped because no candidates were created';
         }
 
-        console.log("step 2: analyze final candidates");
-        // Then, pass these indexes to runCreateConveration
+        const articleIds = candidates.map(c => Number(c.id));
+
+        if (
+            articleIds.some(id => !Number.isInteger(id)) ||
+            new Set(articleIds).size !== 4
+        ) {
+            throw new Error('Invalid or duplicate article IDs');
+        }
+
+        if (savedCandidates === null) {
+            await onCandidatesSelected(candidates);
+        }
+
+        console.log(`[${briefingId}] Candidate IDs:`, articleIds);
+
+        console.log(`[${briefingId}] Step 2: create analyses`);
+
         const createResult = await runCreateConversation(candidates);
-        const analyses = JSON.parse(createResult[0].message.content)['summaries_and_analyses'];
-        console.log("created analyses: ", analyses);
 
-        console.log("step 3: translate analyses: ", analyses);
-        for (const analysis of analyses) { // Loop through each article
-            try {
-                const [instance, created] = await Analysis.upsert({
-                    id: analysis.id,
-                    analysis: analysis.analysis,
-                    summary: analysis.summary,
-                    createdAt: new Date(), // Consider managing this within Sequelize model definition
-                    updatedAt: new Date()  // Sequelize can handle updatedAt automatically
-                });
-
-                if (created) {
-                    console.log(`Analysis with ID ${analysis.id} was created.`);
-                } else {
-                    console.log(`Analysis with ID ${analysis.id} was updated.`);
-                }
-            } catch (err) {
-                console.error('Error upserting article:', err);
-            }
+        if (!createResult?.[0]?.message?.content) {
+            throw new Error('Empty analysis response');
         }
-        const updated = await getRecentAndUpdate();
-        // console.log("translated analyses: ", updated);
 
-        console.log("step 4: create viewpoint");
-        const result = await runViewpointConversation();
-        const content = result[0].message.content;
-        const { viewpoint, refs } = JSON.parse(content);
-        // console.log("viewpoint: ", viewpoint);
-        console.log("refs: ", refs);
+        const analyses = JSON.parse(
+            createResult[0].message.content
+        ).summaries_and_analyses;
 
-        const today = new Date();
-        const kstDate = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-        const kstHours = kstDate.getHours();
-        const period = kstHours >= 12 ? 'PM' : 'AM';
-        // Construct the ID using the KST date and period
-        const year = kstDate.getFullYear();
-        const month = String(kstDate.getMonth() + 1).padStart(2, '0');
-        const day = String(kstDate.getDate()).padStart(2, '0');
-        const id = `${year}${month}${day}_${period}`;
-        console.log("id: ", id); // Logs the constructed ID based on KST date and period
+        if (
+            !Array.isArray(analyses) ||
+            analyses.length !== 4 ||
+            new Set(analyses.map(a => Number(a.id))).size !== 4 ||
+            analyses.some(a => !articleIds.includes(Number(a.id)))
+        ) {
+            throw new Error('Invalid analysis result IDs');
+        }
 
-        try {
-            const [instance, created] = await Viewpoint.upsert({
-                id: id,
-                viewpoint: viewpoint,
-                imageUrl: '/defaultImg.png',
-                createdAt: new Date(),
+        for (const analysis of analyses) {
+            const existing = await Analysis.findByPk(analysis.id);
+
+            await Analysis.upsert({
+                id: analysis.id,
+                analysis: analysis.analysis,
+                summary: analysis.summary,
+                createdAt: existing?.createdAt ?? new Date(),
                 updatedAt: new Date()
             });
-            if (created) {
-                console.log('New Viewpoint instance created:', instance.toJSON());
-            } else {
-                console.log('Viewpoint updated:', instance.toJSON());
-            }
-            // Update ref column in analysis table
-            if (refs && refs.length > 0) {
-                await Analysis.update({ ref: id }, {
-                    where: {
-                        id: refs  // Assuming `refs` is an array of IDs
-                    }
-                });
-            }
-        } catch (error) {
-            console.error(error);
         }
 
-        console.log("step 5: translate viewpoints and create viewpoint image (viewpoint image temporary disabled)");
+        console.log(`[${briefingId}] Step 3: translate analyses`);
 
-        const updatedVp = await getViewpointAndUpdate();
-        // await createViewpointImage();
+        await getRecentAndUpdate(articleIds);
 
-        console.log("translatedVp: ", updatedVp);
-        console.log("successfully created and saved article analysis")
-        // res.status(200).send('ok');
-        return "Successfully created and saved article analysis"
+        console.log(`[${briefingId}] Step 4: create viewpoint`);
+
+        const result = await runViewpointConversation(articleIds);
+
+        if (!result?.[0]?.message?.content) {
+            throw new Error('Empty viewpoint response');
+        }
+
+        const { viewpoint, refs } = JSON.parse(
+            result[0].message.content
+        );
+
+        if (
+            typeof viewpoint !== 'string' ||
+            !viewpoint.trim() ||
+            !Array.isArray(refs) ||
+            refs.length !== 4 ||
+            new Set(refs.map(Number)).size !== 4 ||
+            refs.some(id => !articleIds.includes(Number(id)))
+        ) {
+            throw new Error('Invalid viewpoint or refs');
+        }
+
+        // 기존 브리핑의 생성 시각과 이미지 보존
+        const existingViewpoint = await Viewpoint.findByPk(
+            briefingId
+        );
+
+        await Viewpoint.upsert({
+            id: briefingId,
+            viewpoint,
+            imageUrl:
+                existingViewpoint?.imageUrl ?? '/defaultImg.png',
+            createdAt:
+                existingViewpoint?.createdAt
+                ?? new Date(referenceTime),
+            updatedAt: new Date()
+        });
+
+        await Analysis.update(
+            { ref: briefingId },
+            {
+                where: {
+                    id: {
+                        [Op.in]: articleIds
+                    }
+                }
+            }
+        );
+
+        console.log(`[${briefingId}] Step 5: translate viewpoint`);
+
+        const updatedVp = await getViewpointAndUpdate(
+            briefingId
+        );
+
+        if (
+            !updatedVp?.viewpoint_jp ||
+            !updatedVp?.viewpoint_kr ||
+            !updatedVp?.viewpoint_vn ||
+            !updatedVp?.viewpoint_cn
+        ) {
+            throw new Error('Incomplete viewpoint translation');
+        }
+
+        console.log(`[${briefingId}] Completed successfully`);
+
+        return {
+            briefingId,
+            articleIds,
+            status: 'COMPLETED'
+        };
+
     } catch (error) {
-        console.error("Error during operations: ", error);
-        throw new Error('Error creating articles analysis');
+        console.error(
+            `[${briefingId}] Briefing generation failed:`,
+            error
+        );
+
+        // 원래 오류 코드와 status를 유지
+        throw error;
     }
 }
+
 
 router.get('/', async function(req, res) {
     // const vpList = await getAllViewpointWithAnalysisIds();
@@ -1561,104 +1679,30 @@ router.get('/open', async function(req, res) {
    const vpList = await getAllViewpointWithAnalysisIds();
    res.send(vpList);
 });
-router.post('/complete', async function(req, res) {
-    await performArticleAnalysis();
-    // try {
-    //     // console.log("step 1: candidates: ", candidates);
-    //     const candidates = await makeCandidates();
-    //     console.log("candidates: ", candidates);
-    //     // Then, pass these indexes to runCreateConveration
-    //     const createResult = await runCreateConversation(candidates);
-    //
-    //     const articles = JSON.parse(createResult[0].message.content)['summaries_and_analyses'];
-    //     console.log("step 2: articles: ", articles);
-    //
-    //     for (const article of articles) { // Loop through each article
-    //         try {
-    //             const [instance, created] = await Analysis.upsert({
-    //                 id: article.id,
-    //                 analysis: article.analysis,
-    //                 summary: article.summary,
-    //                 createdAt: new Date(), // Consider managing this within Sequelize model definition
-    //                 updatedAt: new Date()  // Sequelize can handle updatedAt automatically
-    //             });
-    //
-    //             if (created) {
-    //                 console.log(`Analysis with ID ${article.id} was created.`);
-    //             } else {
-    //                 console.log(`Analysis with ID ${article.id} was updated.`);
-    //             }
-    //         } catch (err) {
-    //             console.error('Error upserting article:', err);
-    //         }
-    //     }
-    //
-    //     const updated = await getRecentAndUpdate();
-    //     console.log("updated: ", updated);
-    //
-    //     const result = await runViewpointConversation();
-    //     const content = result[0].message.content;
-    //     const { viewpoint, refs } = JSON.parse(content);
-    //     console.log("viewpoint: ", viewpoint);
-    //     console.log("refs: ", refs);
-    //
-    //     const today = new Date();
-    //     console.log("today: ", today); // Logs current date and time in UTC
-    //
-    //     // Convert to KST using toLocaleString
-    //     const kstDate = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-    //     console.log("kstDate: ", kstDate); // Logs the adjusted date and time for KST
-    //
-    //     // Get the KST hours using local time
-    //     const kstHours = kstDate.getHours();
-    //     console.log("kstHours: ", kstHours); // Logs the KST hours correctly
-    //
-    //     // Determine AM/PM suffix
-    //     const period = kstHours >= 12 ? 'PM' : 'AM';
-    //
-    //     // Construct the ID using the KST date and period
-    //     const year = kstDate.getFullYear();
-    //     const month = String(kstDate.getMonth() + 1).padStart(2, '0');
-    //     const day = String(kstDate.getDate()).padStart(2, '0');
-    //     const id = `${year}${month}${day}_${period}`;
-    //     console.log("id: ", id); // Logs the constructed ID based on KST date and period
-    //
-    //     try {
-    //         const [instance, created] = await Viewpoint.upsert({
-    //             id: id,
-    //             viewpoint: viewpoint,
-    //             imageUrl: '/defaultImg.png',
-    //             createdAt: new Date(),
-    //             updatedAt: new Date()
-    //         });
-    //         if (created) {
-    //             console.log('New Viewpoint instance created:', instance.toJSON());
-    //         } else {
-    //             console.log('Viewpoint updated:', instance.toJSON());
-    //         }
-    //         // Update ref column in analysis table
-    //         if (refs && refs.length > 0) {
-    //             await Analysis.update({ ref: id }, {
-    //                 where: {
-    //                     id: refs  // Assuming `refs` is an array of IDs
-    //                 }
-    //             });
-    //         }
-    //     } catch (error) {
-    //         console.error(error);
-    //     }
-    //
-    //     const updatedVp = await getViewpointAndUpdate();
-    //     console.log("updatedVp: ", updatedVp);
-    //     const imageUrl = await createViewpointImage();
-    //
-    //     // res.status(200).send('ok');
-    //     res.send('ok');
-    // } catch (error) {
-    //     console.error("Error during operations: ", error);
-    //     res.status(500).send("An error occurred");
-    // }
+
+
+router.post('/complete', async function (req, res) {
+    try {
+        const { startScheduledBriefing } =
+            require('../services/briefingJobService');
+
+        const result = await startScheduledBriefing();
+
+        return res.status(200).json({
+            message: 'Briefing execution finished',
+            result
+        });
+
+    } catch (error) {
+        console.error('Manual briefing failed:', error);
+
+        return res.status(500).json({
+            error: error.message
+        });
+    }
 });
+
+
 router.get('/recent', async function(req, res) {
     try {
         const result = await getArticlesDay();
