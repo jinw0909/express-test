@@ -13,6 +13,10 @@ const { Op } = require('sequelize');
 const AWS = require("aws-sdk");
 const { Blockmedia, Viewpoint, Analysis, Candidate, Translation } = require('../models');
 const {withOpenAIRetry} = require("../services/openaiRetry");
+const { responseText, responseJson, idListTool, noArgsTool,
+    candidateSchema, finalSchema, analysisSchema, viewpointSchema
+} = require('../services/openaiResponses');
+
 
 AWS.config.update({
     region: process.env.S3_REGION,
@@ -26,7 +30,7 @@ const Polly = new AWS.Polly({
     region: 'us-east-1'
 });
 
-const GPT_MODEL = 'gpt-5.2'
+const GPT_MODEL = 'gpt-6.1-sol'
 
 async function getCoinPriceWeek() {
     try {
@@ -338,14 +342,7 @@ ${articleContent?.slice(0, 3000) || ''}
         }
     ];
 
-    const response = await withOpenAIRetry(() =>
-        openai.chat.completions.create({
-            model: GPT_MODEL,
-            messages: messages
-        })
-    )
-
-    return response.choices[0].message.content;
+    return responseText(messages);
 }
 
 async function translateText(content, lang) {
@@ -358,17 +355,9 @@ async function translateText(content, lang) {
         { role: "user", content: `Please translate the following text into ${lang}. I only need the translated output, without any additional comments or indicators. When translating into Korean or Japanese, be respectful to the reader through the overall tone, but do not apply honorifics to the people, organizations, places, or entities mentioned in the article. Text: ${content}`},
     ];
 
-    const response  = await withOpenAIRetry(() =>
-        openai.chat.completions.create({
-            model: GPT_MODEL,
-            messages: messages
-        })
-    );
-
-    const responseMessage = response.choices[0].message.content;
-    console.log("response message: ", responseMessage);
-    return responseMessage;
+    return responseText(messages);
 }
+
 async function generateTTS(content, lang, id) {
     if (lang === 'Vietnamese') {
         // Use OpenAI TTS for Vietnamese
@@ -502,116 +491,43 @@ async function logInvalidPromptArticles({
 }
 async function runViewpointConversation(articleIds) {
     const messages = [
-        { role: "system", content: "You are a cryptocurrency and Bitcoin expert and consultant. You can analyze various articles and indicators related to cryptocurrencies and Bitcoin, and you have the ability to accurately convey your analysis and predictions to clients. Additionally, you can interpret cryptocurrency-related articles within the overall flow of the coin market, and understand the main points and significance of the articles in that context. You are also capable of deriving the bitcoin market trend by analyzing the bitcoin price movement within a certain period, and capable of deriving the relationship between the trend and real-world events" },
+        {
+            role: "system",
+            content: `You are a cryptocurrency and Bitcoin market analyst.
+
+            Write professional, objective, client-facing market analysis.
+            
+            Writing rules:
+            - Present market conditions and conclusions directly.
+            - Never refer to yourself, the AI, or the analysis process.
+            - Do not use first-person expressions such as
+              "I", "we", "my view", "my analysis", or "I believe".
+            - Do not start with "My final view", "Based on my analysis",
+              or similar introductory phrases.
+            - Start directly with the current Bitcoin market outlook.
+            - Maintain a professional, neutral financial-reporting tone.
+            - Clearly distinguish facts, interpretations, and conditional forecasts.
+            - Do not mention the source publication or article IDs in the viewpoint text.`
+        },
         { role: "user", content: "From the analysis conducted on the Blockmedia articles, provide your final viewpoint derived from the most recent four analyses regarding the Bitcoin and cryptocurrency markets. Also, relate your viewpoint to the price fluctuations in the Bitcoin market over the past 7 days and within the last 24 hours. Additionally, based on your final viewpoint, if possible, provide a rough estimate of the future changes in the price of Bitcoin. Don't mention 'Blockmedia' in your viewpoint response and don't mention the analysis' id or title too. I Also want you to return the id's of four analysis you used to create the viewpoint as refs. Please return the result in JSON format as {'viewpoint': 'text', 'refs': [number, number, number, number, number]}."},
     ]
-    const tools = [
-        {
-            type: "function",
-            function: {
-                name: "get_recent_analyses",
-                description: "returns the list of the four most recent analyses created."
-            }
-        },
-        {
-            type: "function",
-            function: {
-                name: "get_coinprice_week",
-                description: "returns the bitcoin price movement within the last seven days."
-            }
-        },
-        {
-            type: "function",
-            function: {
-                name: "get_coinprice_day",
-                description: "returns the bitcoin price movement within the last 24 hours."
-            }
-        }
-    ]
-    const response = await withOpenAIRetry(() =>
-        openai.chat.completions.create({
-            model: GPT_MODEL,
-            messages: messages,
-            tools: tools,
-            tool_choice : "auto", //auto is default, but we'll be explicit
-            response_format: {
-                type: "json_schema",
-                json_schema: {
-                    name: "Viewpoint",
-                    strict: true,
-                    schema: {
-                        type: "object",
-                        properties: {
-                            viewpoint: { type: "string" },
-                            refs: {
-                                type : 'array',
-                                items: { type: "number", description: "the id of article used to created the viewpoint." }
-                            }
-                        },
-                        required: ['viewpoint', 'refs'],
-                        additionalProperties: false
-                    }
-                }
-            },
-            parallel_tool_calls: true
-        })
-    );
-    const responseMessage = response.choices[0].message;
-    const toolCalls = responseMessage.tool_calls;
-    if (responseMessage.tool_calls) {
-        const availableFunctions = {
+    const parsed = await responseJson({
+        messages,
+        name: 'Viewpoint',
+        schema: viewpointSchema,
+        tools: [
+            noArgsTool('get_recent_analyses', 'Return analyses for the selected article IDs'),
+            noArgsTool('get_coinprice_week', 'Return BTC prices over the last seven days'),
+            noArgsTool('get_coinprice_day', 'Return BTC prices over the last 24 hours')
+        ],
+        handlers: {
             get_recent_analyses: () => getRecentAnalyses(articleIds),
-            get_coinprice_week : getCoinPriceWeek,
-            get_coinprice_day: getCoinPriceDay
-        };
-        messages.push(responseMessage);
-        for (const toolCall of toolCalls) {
-            const functionName = toolCall.function.name;
-            const functionToCall = availableFunctions[functionName];
-            console.log("functionToCall: ", functionToCall);
-            const functionArgs = JSON.parse(toolCall.function.arguments || "{}");
-            const functionResponse = await functionToCall(
-                functionArgs
-            )
-            console.log("functionResponse: ", functionResponse);
-
-            messages.push({
-                tool_call_id: toolCall.id,
-                role: "tool",
-                name: functionName,
-                content: functionResponse,
-            })
+            get_coinprice_week: () => getCoinPriceWeek(),
+            get_coinprice_day: () => getCoinPriceDay()
         }
-
-        const secondResponse = await withOpenAIRetry(() =>
-            openai.chat.completions.create({
-                model: GPT_MODEL,
-                // model: "gpt-5",
-                messages: messages,
-                response_format: {
-                    type: "json_schema",
-                    json_schema: {
-                        name: "Viewpoint",
-                        strict: true,
-                        schema: {
-                            type: "object",
-                            properties: {
-                                viewpoint: { type: "string" },
-                                refs: {
-                                    type : 'array',
-                                    items: { type: "number", description: "the id of article used to created the viewpoint." }
-                                }
-                            },
-                            required: ['viewpoint', 'refs'],
-                            additionalProperties: false
-                        }
-                    }
-                },
-            })
-        );
-        // console.log(secondResponse.choices);
-        return secondResponse.choices;
-    }
+    });
+    // Preserve existing performArticleAnalysis response contract.
+    return [{ message: { content: JSON.stringify(parsed) } }];
 }
 
 async function getRecentAnalyses(articleIds) {
@@ -755,159 +671,17 @@ async function runCandidateConversation(articleIds) {
         { role: "user", content: JSON.stringify(articleIds)},
         { role: "user", content: "From the provided articles, select four articles that is most relevant with the movement of the cryptocurrency market and that is helpful to predict the cryptocurrency movement as candidates. Return the selected candidates in a json format as follows.  {'candidates' : [{'id': 'INT', 'summary' : 'TEXT', 'reason' : 'TEXT'}, {'id': 'INT', 'summary' : 'TEXT', 'reason' : 'TEXT'}, {'id': 'INT', 'summary' : 'TEXT', 'reason' : 'TEXT'}, {'id': 'INT', 'summary' : 'TEXT', 'reason' : 'TEXT'}].  The 'id' should be same to the id of the article that the candidate refers to. The 'summary' should be the brief summary of the provided article's content. and the 'reason' should be the reason why you selected that article as a candidate. The generated 'summary' and 'reason' should be in English." }
     ];
-    const tools = [
-        {
-            type: "function",
-            function: {
-                name: "get_articles_with_ids",
-                strict: true,
-                description: "Get the original article of each candidate based on its id.",
-                parameters: {
-                    type: "object",
-                    properties: {
-                        indexList: {
-                            type: "array",
-                            items: {
-                                type: "integer",
-                                description: "candidate articles' ID that point to its original article"
-                            }
-                        }
-                    },
-                    required: ["indexList"],
-                    additionalProperties: false
-                }
-            }
-        }
-    ]
-    // const response = await openai.chat.completions.create({
-    //     model: GPT_MODEL,
-    //     messages: messages,
-    //     tools: tools,
-    //     tool_choice: "auto",
-    //     response_format: { type: "json_object" }
-    // });
-    const response = await withOpenAIRetry(() =>
-        openai.chat.completions.create({
-            model: GPT_MODEL,
-            // model: "gpt-5",
-            messages: messages,
-            tools: tools,
-            tool_choice: {type: "function", function: {name: "get_articles_with_ids"}},
-            response_format: {
-                type: "json_schema",
-                json_schema: {
-                    name: "Candidates",
-                    strict: true,
-                    schema: {
-                        type: "object",
-                        properties: {
-                            candidates: {
-                                type: "array",
-                                items: {
-                                    type: "object",
-                                    properties: {
-                                        id: { type: "number"},
-                                        summary: { type: "string" },
-                                        reason: { type: "string" }
-                                    },
-                                    required: ["id", "summary", "reason"],
-                                    additionalProperties: false
-                                }
-                            }
-                        },
-                        required: ["candidates"],
-                        additionalProperties: false
-                    }
-                }
-            },
-            parallel_tool_calls: false
-        })
-    );
-
-    let requestedArticleIds = [];
-
-    const responseMessage = response.choices[0].message;
-
-    const toolCalls = responseMessage.tool_calls;
-    if (responseMessage.tool_calls) {
-        const availableFunctions = {
-            get_articles_with_ids : getArticles
-        }
-        messages.push(responseMessage);
-
-        for (const toolCall of toolCalls) {
-            const functionName = toolCall.function.name;
-            console.log("runCandidateConversation functionName: ", functionName);
-            const functionToCall = availableFunctions[functionName];
-            const functionArgs = JSON.parse(toolCall.function.arguments);
-            requestedArticleIds = functionArgs.indexList;
-            console.log("runCandidateConversation functionArgs: ", functionArgs);
-            const functionResponse = await functionToCall(
-                functionArgs.indexList,
-            );
-            messages.push({
-                tool_call_id: toolCall.id,
-                role: "tool",
-                name: functionName,
-                content: functionResponse,
-            }); //extend the conversation with function response
-        }
-
-        let secondResponse;
-
-        try {
-            secondResponse = await withOpenAIRetry(() =>
-                openai.chat.completions.create({
-                    model: GPT_MODEL,
-                    messages: messages,
-                    response_format: {
-                        type: "json_schema",
-                        json_schema: {
-                            name: "Candidates",
-                            strict: true,
-                            schema: {
-                                type: "object",
-                                properties: {
-                                    candidates: {
-                                        type: "array",
-                                        items: {
-                                            type: "object",
-                                            properties: {
-                                                id: { type: "number" },
-                                                summary: { type: "string" },
-                                                reason: { type: "string" }
-                                            },
-                                            required: ["id", "summary", "reason"],
-                                            additionalProperties: false
-                                        }
-                                    }
-                                },
-                                required: ["candidates"],
-                                additionalProperties: false
-                            }
-                        }
-                    }
-                })
-            );
-        } catch (error) {
-            await logInvalidPromptArticles({
-                error,
-                stage: 'runCandidateConversation.secondResponse',
-                articleIds: requestedArticleIds
-            });
-
-            throw error;
-        }
-        const finalResponse= secondResponse.choices[0].message;
-        const parsed = JSON.parse(finalResponse.content);
-        // console.log("parsed: ", parsed);
-        return parsed['candidates'];
-    }
-
-    const parsed = JSON.parse(responseMessage.content);
-    // console.log("parsed: ", parsed);
-    return parsed['candidates'];
+    const parsed = await responseJson({
+        messages,
+        name: 'Candidates',
+        schema: candidateSchema,
+        tools: [idListTool('get_articles_with_ids', 'Retrieve articles by their IDs')],
+        forcedTool: 'get_articles_with_ids',
+        handlers: { get_articles_with_ids: ({ indexList }) => getArticles(indexList) }
+    });
+    return parsed.candidates;
 }
+
 async function runVerifyConversation(candidates) {
     console.log("runVerifyConversation()");
     const messages = [
@@ -917,140 +691,17 @@ async function runVerifyConversation(candidates) {
         // { role: "user", content: "The provided candidate's id point to its original article. The 'summary' is the summary of the article that it refers to. The 'reason' is why the article was selected as a candidate. Using the id of the provided candidate, look up the original article that it points to and check if the summary of the article is correctly made. If the summary is not correct, then drop that candidate from the provided list. After checking all the candidates in the list, return the list that dropped the candidates whose summary was not correct. Return the list in a json format as follows. {'candidates' : [{'id': 'INT', 'summary' : 'TEXT', 'reason' : 'TEXT'}, ...] The length of the list depends on how many candidates were dropped from the initially provided list." },
         { role: "user", content: "The provided candidate's id point to its original article. The 'summary' is the summary of the article that it refers to. The 'reason' is why the article was selected as a candidate. Using the id of the provided candidate, look up the original article that it points to and check if the summary of the article is correctly made. Unless the provided list has only a single element, drop one candidate element from the list that you think is the least relevant to the cryptocurrency market trend and return the rest in the next json format. {'candidates' : [{'id': 'INT', 'summary' : 'TEXT', 'reason' : 'TEXT'}, ...]}"}
     ];
-    const tools = [
-        {
-            type: "function",
-            function: {
-                name: "get_articles_with_ids",
-                strict: true,
-                description: "Get the original article of each candidate based on its id.",
-                parameters: {
-                    type: "object",
-                    properties: {
-                        indexList: {
-                            type: "array",
-                            items: {
-                                type: "number",
-                                description: "candidate articles' ID that point to its original article"
-                            }
-                        }
-                    },
-                    required: ["indexList"],
-                    additionalProperties: false
-                }
-
-            }
-        }
-    ]
-
-    const response = await withOpenAIRetry(() =>
-        openai.chat.completions.create({
-            model: GPT_MODEL,
-            // model: "gpt-5",
-            messages: messages,
-            tools: tools,
-            tool_choice: {type: "function", function: {name: "get_articles_with_ids"}},
-            response_format: {
-                type: "json_schema",
-                json_schema: {
-                    name: "Candidates",
-                    strict: true,
-                    schema: {
-                        type: "object",
-                        properties: {
-                            candidates: {
-                                type: "array",
-                                items: {
-                                    type: "object",
-                                    properties: {
-                                        id: { type: "number"},
-                                        summary: { type: "string" },
-                                        reason: { type: "string" }
-                                    },
-                                    required: ["id", "summary", "reason"],
-                                    additionalProperties: false
-                                }
-                            }
-                        },
-                        required: ["candidates"],
-                        additionalProperties: false
-                    }
-                }
-            },
-            parallel_tool_calls: false
-        })
-    );
-
-    const responseMessage = response.choices[0].message;
-
-    const toolCalls = responseMessage.tool_calls;
-    if (responseMessage.tool_calls) {
-        const availableFunctions = {
-            get_articles_with_ids : getArticles
-        }
-        messages.push(responseMessage);
-
-        for (const toolCall of toolCalls) {
-            const functionName = toolCall.function.name;
-            console.log("runVerifyConversation functionName: ", functionName);
-            const functionToCall = availableFunctions[functionName];
-            const functionArgs = JSON.parse(toolCall.function.arguments);
-            console.log("runVerifyConversation functionArgs: ", functionArgs);
-            const functionResponse = await functionToCall(
-                functionArgs.indexList,
-            );
-            messages.push({
-                tool_call_id: toolCall.id,
-                role: "tool",
-                name: functionName,
-                content: functionResponse,
-            }); //extend the conversation with function response
-        }
-
-        const secondResponse = await withOpenAIRetry(() =>
-            openai.chat.completions.create({
-                model: GPT_MODEL,
-                // model: "gpt-5",
-                messages: messages,
-                response_format: {
-                    type: "json_schema",
-                    json_schema: {
-                        name: "Candidates",
-                        strict: true,
-                        schema: {
-                            type: "object",
-                            properties: {
-                                candidates: {
-                                    type: "array",
-                                    items: {
-                                        type: "object",
-                                        properties: {
-                                            id: { type: "number"},
-                                            summary: { type: "string" },
-                                            reason: { type: "string" }
-                                        },
-                                        required: ["id", "summary", "reason"],
-                                        additionalProperties: false
-                                    }
-                                }
-                            },
-                            required: ["candidates"],
-                            additionalProperties: false
-                        }
-                    }
-                },
-            })
-        );
-        const finalResponse= secondResponse.choices[0].message;
-        const parsed = JSON.parse(finalResponse.content);
-        // console.log("left after verification: ", parsed);
-        return parsed['candidates'];
-    }
-
-    const parsed = JSON.parse(responseMessage.content);
-    // console.log("left after verification (when you see this code, check the function runVerifyConversation because did not call a function): ", parsed);
-    return parsed['candidates'];
+    const parsed = await responseJson({
+        messages,
+        name: 'Candidates',
+        schema: candidateSchema,
+        tools: [idListTool('get_articles_with_ids', 'Retrieve original articles by IDs')],
+        forcedTool: 'get_articles_with_ids',
+        handlers: { get_articles_with_ids: ({ indexList }) => getArticles(indexList) }
+    });
+    return parsed.candidates;
 }
+
 async function runFinalConversation(candidates, limit) {
     console.log("runFinalConversation()");
     const messages = [
@@ -1059,45 +710,14 @@ async function runFinalConversation(candidates, limit) {
         { role: "user" ,content: JSON.stringify(candidates)},
         { role: "user", content: `From the provided candidates list , select ${limit} candidates that are the most relevant with the the cryptocurrency market and that are the most helpful in predicting the cryptocurrency market trend. The final ${limit} candidates should not have duplicated or identical content. The given 'reason' is about why this candidate might be important, and the given 'summary' is the summary of the candidate's original content. The given 'id' is the value that points to the original article. Return the final ${limit} candidates in a json format as follows: {'finals' : [{'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, {'id': 'EXACT_ID_FROM_THE_PASSED_LIST', 'summary' : 'EXACT_SUMMARY_FROM_THE_PASSED_LIST', 'reason' : 'EXACT_REASON_FROM_THE_PASSED_LIST'}, ...]. Ensure the ID of each element exactly match the ID of the initially provided list` },
     ];
-    const response = await withOpenAIRetry(() =>
-        openai.chat.completions.create({
-            model: GPT_MODEL,
-            // model: "gpt-5",
-            messages: messages,
-            response_format: {
-                type: "json_schema",
-                json_schema: {
-                    name: "Candidates",
-                    strict: true,
-                    schema: {
-                        type: "object",
-                        properties: {
-                            finals: {
-                                type: "array",
-                                items: {
-                                    type: "object",
-                                    properties: {
-                                        id: { type: "number"},
-                                        summary: { type: "string" },
-                                        reason: { type: "string" }
-                                    },
-                                    required: ["id", "summary", "reason"],
-                                    additionalProperties: false
-                                }
-                            }
-                        },
-                        required: ["finals"],
-                        additionalProperties: false
-                    }
-                }
-            },
-        })
-    );
-
-    const responseMessage = response.choices[0].message;
-    console.log("responseMessage: ", responseMessage);
-    return JSON.parse(responseMessage.content)['finals'];
+    const parsed = await responseJson({
+        messages,
+        name: 'FinalCandidates',
+        schema: finalSchema
+    });
+    return parsed.finals;
 }
+
 async function runCreateConversation(candidates) {
     //Step 1 : send the conversation and available functions to the model
     const messages = [
@@ -1162,150 +782,18 @@ async function runCreateConversation(candidates) {
             }
         `},
     ];
-    const tools = [
-        {
-            type: "function",
-            function: {
-                name: "get_candidate_articles",
-                description: "Get the original article of each candidate based on its id.",
-                parameters: {
-                    type: "object",
-                    properties: {
-                        indexList: {
-                            type: "array",
-                            items: {
-                                type: "number",
-                                description: "candidate articles' ID that point to its original article"
-                            }
-                        }
-                    },
-                    required: ["indexList"],
-                    additionalProperties: false
-                }
-            }
-        }
-    ]
-
-    const response = await withOpenAIRetry(() =>
-        openai.chat.completions.create({
-            model: GPT_MODEL,
-            // model: "gpt-5",
-            messages: messages,
-            tools: tools,
-            tool_choice : { type: "function", function: { name: "get_candidate_articles"}}, //auto is default, but we'll be explicit
-            response_format: {
-                type: "json_schema",
-                json_schema: {
-                    name: "Analysis",
-                    schema: {
-                        type: "object",
-                        properties: {
-                            summaries_and_analyses : {
-                                type: "array",
-                                items: {
-                                    type: "object",
-                                    properties: {
-                                        id : { type: "number"},
-                                        analysis: { type: "string"},
-                                        summary: {type: "string"}
-                                    },
-                                    required: ["id", "analysis", "summary"],
-                                    additionalProperties: false
-                                }
-                            }
-                        },
-                        required: ["summaries_and_analyses"],
-                        additionalProperties: false
-                    }
-                }
-            },
-            parallel_tool_calls: false
-        })
-    );
-    const responseMessage = response.choices[0].message;
-
-    let requestedArticleIds = [];
-
-    // Step 2: check if the model wanted to call a function
-    const toolCalls = responseMessage.tool_calls;
-    if (responseMessage.tool_calls) {
-        // Step3. call the function
-        // Note: the JSON response may not always be valid; be sure to handle errors
-        const availableFunctions = {
-            get_candidate_articles : getCandidates
-        }; //only one function in this example, but you can have multiple
-        messages.push(responseMessage); //extend the conversation with assistant's reply
-        for (const toolCall of toolCalls) {
-            const functionName = toolCall.function.name;
-            console.log("runCreateConversation functionName: ", functionName);
-            const functionToCall = availableFunctions[functionName];
-            const functionArgs = JSON.parse(toolCall.function.arguments);
-            console.log("runCreateConversation functionArgs", functionArgs);
-            requestedArticleIds = functionArgs.indexList;
-
-            const functionResponse = await functionToCall(
-                functionArgs.indexList,
-            );
-            messages.push({
-                tool_call_id: toolCall.id,
-                role: "tool",
-                name: functionName,
-                content: functionResponse,
-            }); //extend the conversation with function response
-        }
-
-        let secondResponse;
-
-        try {
-            secondResponse = await withOpenAIRetry(() =>
-                openai.chat.completions.create({
-                    model: GPT_MODEL,
-                    messages: messages,
-                    response_format: {
-                        type: "json_schema",
-                        json_schema: {
-                            name: "Analysis",
-                            schema: {
-                                type: "object",
-                                properties: {
-                                    summaries_and_analyses: {
-                                        type: "array",
-                                        items: {
-                                            type: "object",
-                                            properties: {
-                                                id: { type: "number" },
-                                                analysis: { type: "string" },
-                                                summary: { type: "string" }
-                                            },
-                                            required: ["id", "analysis", "summary"],
-                                            additionalProperties: false
-                                        }
-                                    }
-                                },
-                                required: ["summaries_and_analyses"],
-                                additionalProperties: false
-                            }
-                        }
-                    }
-                })
-            );
-        } catch (error) {
-            await logInvalidPromptArticles({
-                error,
-                stage: 'runCreateConversation.secondResponse',
-                articleIds: requestedArticleIds.length
-                    ? requestedArticleIds
-                    : candidates.map(candidate => candidate.id)
-            });
-
-            throw error;
-        }
-        // console.log("secondResponse: ", secondResponse.choices);
-        return secondResponse.choices;
-
-    }
-
+    const parsed = await responseJson({
+        messages,
+        name: 'Analysis',
+        schema: analysisSchema,
+        tools: [idListTool('get_candidate_articles', 'Retrieve original articles for the candidates')],
+        forcedTool: 'get_candidate_articles',
+        handlers: { get_candidate_articles: ({ indexList }) => getCandidates(indexList) }
+    });
+    // Preserve the downstream .choices style return shape.
+    return [{ message: { content: JSON.stringify(parsed) } }];
 }
+
 // async function recurseFinals(candidates, limit = 4, results = []) {
 //     const finalists = [];
 //     console.log("recurseFinals()");
@@ -1676,8 +1164,8 @@ router.get('/', async function(req, res) {
     res.render('create');
 });
 router.get('/open', async function(req, res) {
-   const vpList = await getAllViewpointWithAnalysisIds();
-   res.send(vpList);
+    const vpList = await getAllViewpointWithAnalysisIds();
+    res.send(vpList);
 });
 
 
@@ -1723,9 +1211,9 @@ router.get('/recent', async function(req, res) {
     }
 })
 router.get('/candidates', async function(req, res) {
-   const candidates = await makeCandidates();
-   console.log("candidates: ", candidates);
-   res.json(candidates);
+    const candidates = await makeCandidates();
+    console.log("candidates: ", candidates);
+    res.json(candidates);
 });
 router.post('/image', async function(req, res) {
     try {

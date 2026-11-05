@@ -49,14 +49,38 @@ async function createScheduledBriefing(schedule) {
     return job;
 }
 
-async function executeBriefingJob(jobId) {
+async function executeBriefingJob(jobId, {manual = false } = {}) {
     const now = new Date();
+
+    const statusConditions = [
+        { status: 'PENDING' }
+    ];
+
+    if (manual) {
+        // 수동 실행: FAILED 원인에 관계없이 재실행
+        statusConditions.push({status: 'FAILED'});
+    } else {
+        // 자동 실행: 요금 부족일 때만 재시도
+        statusConditions.push({
+            status: 'FAILED',
+            lastErrorCode: {
+                [Op.in]: [
+                    'insufficient_quota',
+                    'credit_balance_exhausted'
+                ]
+            },
+            nextRetryAt: {
+                [Op.lte]: now
+            }
+        });
+    }
 
     // 조건부 UPDATE를 사용해 동시에 실행되는 작업을 방지
     const [claimed] = await BriefingJob.update(
         {
             status: 'RUNNING',
             startedAt: now,
+            completedAt: null,
             attemptCount: require('sequelize').literal(
                 'attemptCount + 1'
             ),
@@ -65,24 +89,12 @@ async function executeBriefingJob(jobId) {
         {
             where: {
                 id: jobId,
-                attemptCount: {
-                    [Op.lt]: MAX_JOB_ATTEMPTS
-                },
-                [Op.or]: [
-                    { status: 'PENDING' },
-                    {
-                        status: 'FAILED',
-                        lastErrorCode: {
-                            [Op.in]: [
-                                'insufficient_quota',
-                                'credit_balance_exhausted'
-                            ]
-                        },
-                        nextRetryAt: {
-                            [Op.lte]: now
-                        }
+                ...(manual ? {} : {
+                    attemptCount: {
+                        [Op.lt]: MAX_JOB_ATTEMPTS
                     }
-                ]
+                }),
+                [Op.or]: statusConditions
             }
         }
     );
